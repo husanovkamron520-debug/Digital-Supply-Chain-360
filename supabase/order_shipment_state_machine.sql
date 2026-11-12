@@ -18,6 +18,7 @@ begin
   select * into v_order
   from public.orders
   where id = p_order_id
+    and scenario_id is null
   for update;
 
   if not found then
@@ -84,6 +85,7 @@ begin
   select * into v_shipment
   from public.shipments
   where id = p_shipment_id
+    and scenario_id is null
   for update;
 
   if not found then
