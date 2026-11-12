@@ -17,6 +17,7 @@
   <script type="module" src="./auth.js"></script>
   <script type="module" src="./classroom.js"></script>
   <script type="module" src="./inventory.js"></script>
+  <script type="module" src="./operations.js"></script>
 </head>
 <body>
   <section class="auth-gate" id="authGate" aria-label="Account access">
@@ -133,6 +134,51 @@
           <div id="inventoryHistory"><p class="empty-state">No activity yet.</p></div>
         </div>
         <p class="inventory-message" id="inventoryMessage" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="panel operations-workspace" id="operationsWorkspace" hidden>
+        <div class="panel-heading">
+          <div><div class="section-kicker">ORDER-TO-DELIVERY EXECUTION</div><h2>Orders & shipments</h2></div>
+          <span class="muted-label">OMS · TMS</span>
+        </div>
+        <p class="operations-note" id="operationsAccessNote">Loading operational permissions…</p>
+        <div class="operations-class-picker">
+          <label for="operationsClassSelect">Classroom</label>
+          <select id="operationsClassSelect" aria-label="Select classroom"></select>
+        </div>
+        <div class="operations-forms">
+          <form class="operations-form" id="createOrderForm" hidden>
+            <h3>Create customer order</h3>
+            <label for="orderNumber">Order number</label>
+            <input id="orderNumber" maxlength="40" minlength="3" placeholder="e.g. ORD-1001" required>
+            <label for="orderProduct">Product</label>
+            <input id="orderProduct" maxlength="120" minlength="2" placeholder="e.g. Packaging boxes" required>
+            <div class="operations-two-col">
+              <div><label for="orderQuantity">Quantity</label><input id="orderQuantity" type="number" min="1" max="1000000" value="10" required></div>
+              <div><label for="orderDueAt">Due date</label><input id="orderDueAt" type="datetime-local"></div>
+            </div>
+            <button class="primary-button" type="submit">＋ Create order</button>
+          </form>
+          <form class="operations-form" id="createShipmentForm" hidden>
+            <h3>Plan shipment</h3>
+            <label for="shipmentOrder">Linked order (optional)</label>
+            <select id="shipmentOrder"><option value="">No linked order</option></select>
+            <label for="shipmentOrigin">Origin</label>
+            <input id="shipmentOrigin" maxlength="120" minlength="2" placeholder="e.g. Samarkand warehouse" required>
+            <label for="shipmentDestination">Destination</label>
+            <input id="shipmentDestination" maxlength="120" minlength="2" placeholder="e.g. Tashkent distribution centre" required>
+            <div class="operations-two-col">
+              <div><label for="shipmentCarrier">Carrier</label><input id="shipmentCarrier" maxlength="80" value="Demo carrier" required></div>
+              <div><label for="shipmentEta">Estimated arrival</label><input id="shipmentEta" type="datetime-local"></div>
+            </div>
+            <button class="primary-button" type="submit">＋ Plan shipment</button>
+          </form>
+        </div>
+        <div class="operations-records">
+          <div class="operations-record-panel"><h3>Customer orders</h3><div id="ordersList"><p class="empty-state">Loading orders…</p></div></div>
+          <div class="operations-record-panel"><h3>Shipment tracking</h3><div id="shipmentsList"><p class="empty-state">Loading shipments…</p></div></div>
+        </div>
+        <p class="operations-message" id="operationsMessage" role="status" aria-live="polite"></p>
       </section>
       <section class="welcome-row">
         <div><div class="eyebrow"><span id="todayLabel">CLASSROOM WORKSPACE</span> <span class="eyebrow-line"></span> LIVE MODEL</div><h1>Supply chain <em>overview</em></h1><p class="subtitle">One connected view from raw material to final delivery.</p></div>
