@@ -1,5 +1,5 @@
 // Public browser configuration only.
-// Paste the Supabase Project URL and anon/publishable key from Project Settings → API.
-// Never put the service_role/secret key in this file.
-export const SUPABASE_URL = "PASTE_YOUR_SUPABASE_PROJECT_URL_HERE";
-export const SUPABASE_ANON_KEY = "PASTE_YOUR_SUPABASE_PUBLIC_ANON_OR_PUBLISHABLE_KEY_HERE";
+// This file may be committed because the publishable key is designed for client-side use.
+// Never put a service_role or secret key in this file.
+export const SUPABASE_URL = "https://otkdwzvzsqhzicwbaeng.supabase.co";
+export const SUPABASE_ANON_KEY = "sb_publishable_JLgEM0OHQCdN6CHMDufVCg_WoVkVgPO";
