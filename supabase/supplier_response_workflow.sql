@@ -105,7 +105,9 @@ begin
  end if;
  if v_po.status='cancelled' then raise exception 'Cancelled purchase orders cannot be received'; end if;
  if v_po.supplier_response='rejected' then raise exception 'The supplier rejected this purchase order'; end if;
- if v_po.supplier_response='pending' and not public.is_class_teacher(v_po.classroom_id) then
+ if v_po.supplier_response='pending'
+    and exists(select 1 from public.suppliers s where s.id=v_po.supplier_id and s.supplier_user_id is not null)
+    and not public.is_class_teacher(v_po.classroom_id) then
    raise exception 'The supplier must accept the purchase order before warehouse receipt';
  end if;
  if p_quantity is null or p_quantity<1 then raise exception 'Receive quantity must be at least one'; end if;
