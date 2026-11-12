@@ -130,7 +130,7 @@ if (root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith
     button.disabled=true;say("");
     try{
       const name=document.querySelector("#classroomName").value.trim();
-      const {data,error}=await db.from("classrooms").insert({teacher_id:currentUser.id,name,join_code:makeCode()}).select("id").single();
+      const {data,error}=await db.rpc("create_classroom",{p_name:name,p_join_code:makeCode()});
       if(error)throw error;
       createForm.reset();say("Classroom created. Share its join code with students.",true);await refresh();
     }catch(error){say(error.message);}
