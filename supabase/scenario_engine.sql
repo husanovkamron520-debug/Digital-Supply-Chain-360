@@ -16,7 +16,8 @@ create index if not exists scenario_decisions_scenario_idx on public.scenario_de
 alter table public.scenario_decisions enable row level security;
 drop policy if exists scenario_decisions_select_members on public.scenario_decisions;
 create policy scenario_decisions_select_members on public.scenario_decisions for select to authenticated using(public.is_class_member(classroom_id));
-revoke insert,update,delete on public.scenario_decisions from anon,authenticated;
+revoke all on public.scenario_decisions from public,anon;
+revoke insert,update,delete on public.scenario_decisions from authenticated;
 grant select on public.scenario_decisions to authenticated;
 
 -- Teacher-only launch. Scenario configuration contains action labels, never scoring weights.
