@@ -8,3 +8,4 @@ alter function public.join_classroom(text) set search_path = '';
 alter function public.current_user_is_teacher() set search_path = '';
 alter function public.is_class_member(uuid) set search_path = '';
 alter function public.is_class_teacher(uuid) set search_path = '';
+alter function public.handle_new_user() set search_path = '';
