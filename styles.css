@@ -254,3 +254,6 @@
   font-size: .82rem;
   color: var(--muted, #94a3b8);
 }
+
+.procurement-cancel-button{width:100%;margin-top:9px;border:1px solid #6a3c43;background:#321f29;color:#f0a7ad;border-radius:5px;padding:7px;font:9px var(--font);cursor:pointer}
+.procurement-cancel-button:disabled{opacity:.5}
