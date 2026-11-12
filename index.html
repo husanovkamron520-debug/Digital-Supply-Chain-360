@@ -15,6 +15,7 @@
   </script>
   <script type="module" src="./app.js"></script>
   <script type="module" src="./auth.js"></script>
+  <script type="module" src="./classroom.js"></script>
 </head>
 <body>
   <section class="auth-gate" id="authGate" aria-label="Account access">
@@ -70,6 +71,34 @@
         <div class="top-actions"><span class="demo-tag"><i></i> SIMULATED DATA</span><span class="user-role" id="userRole">STUDENT</span><button class="icon-button" id="resetBtn" title="Reset simulation" aria-label="Reset simulation">↺</button><button class="signout-button" id="signOutBtn" type="button">Sign out</button><div class="top-avatar" id="userAvatar">U</div></div>
       </header>
 
+
+      <section class="classroom-workspace panel" id="classroomWorkspace" aria-live="polite">
+        <div class="panel-heading">
+          <div><div class="section-kicker">CLASSROOM MANAGEMENT</div><h2 id="classroomHeading">Your classroom</h2></div>
+          <span class="muted-label" id="classroomRoleLabel">LOADING ROLE</span>
+        </div>
+        <p class="classroom-intro" id="classroomIntro">Connect your account to a learning group.</p>
+        <div class="classroom-grid">
+          <form class="classroom-form" id="createClassForm" hidden>
+            <h3>Create a classroom</h3>
+            <label for="classroomName">Classroom name</label>
+            <input id="classroomName" maxlength="100" minlength="2" placeholder="e.g. LOG-324 Supply Chain Lab" required>
+            <button class="primary-button" type="submit">＋ Create classroom</button>
+          </form>
+          <form class="classroom-form" id="joinClassForm" hidden>
+            <h3>Join a classroom</h3>
+            <label for="joinCode">Class code</label>
+            <input id="joinCode" maxlength="10" minlength="6" placeholder="ENTER CODE" autocapitalize="characters" required>
+            <button class="primary-button" type="submit">Join classroom</button>
+            <p class="form-hint">Ask your teacher for the 6–10 character code.</p>
+          </form>
+          <div class="classroom-list-wrap">
+            <h3 id="classListTitle">Your classrooms</h3>
+            <div class="classroom-list" id="classroomList"><p class="empty-state">Loading classrooms…</p></div>
+          </div>
+        </div>
+        <p class="classroom-message" id="classroomMessage" role="status" aria-live="polite"></p>
+      </section>
       <section class="welcome-row">
         <div><div class="eyebrow"><span id="todayLabel">CLASSROOM WORKSPACE</span> <span class="eyebrow-line"></span> LIVE MODEL</div><h1>Supply chain <em>overview</em></h1><p class="subtitle">One connected view from raw material to final delivery.</p></div>
         <button class="primary-button" id="scenarioBtn"><span>＋</span> Run disruption scenario</button>
