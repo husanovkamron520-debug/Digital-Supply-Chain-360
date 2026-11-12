@@ -257,3 +257,10 @@
 
 .procurement-cancel-button{width:100%;margin-top:9px;border:1px solid #6a3c43;background:#321f29;color:#f0a7ad;border-radius:5px;padding:7px;font:9px var(--font);cursor:pointer}
 .procurement-cancel-button:disabled{opacity:.5}
+
+.procurement-response-label{font-size:8px;color:#a9bfd1;margin-top:9px;overflow-wrap:anywhere}
+.procurement-supplier-actions{display:flex;gap:7px;margin-top:9px}
+.procurement-accept-button,.procurement-reject-button{flex:1;border-radius:5px;padding:8px 6px;font:9px var(--font);cursor:pointer}
+.procurement-accept-button{border:1px solid #28604e;background:#12352d;color:#75ddb1}
+.procurement-reject-button{border:1px solid #6a3c43;background:#321f29;color:#f0a7ad}
+.procurement-accept-button:disabled,.procurement-reject-button:disabled{opacity:.5}
