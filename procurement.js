@@ -72,7 +72,7 @@ if (root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith
       card.append(head);
       const progress=po.received_quantity+" / "+po.quantity+" units received";
       card.append(el("div","procurement-progress-label",progress));
-      card.append(el("div","procurement-response-label","Supplier response · "+(po.supplier_response||"pending").toUpperCase()+(po.supplier_note?" · "+po.supplier_note:"")));
+      card.append(el("div","procurement-response-label",po.suppliers?.supplier_user_id?"Supplier response · "+(po.supplier_response||"pending").toUpperCase()+(po.supplier_note?" · "+po.supplier_note:""):"Supplier account · not linked"));
       const track=el("div","procurement-progress");
       const bar=el("i");
       bar.style.width=Math.min(100,po.received_quantity/po.quantity*100)+"%";
