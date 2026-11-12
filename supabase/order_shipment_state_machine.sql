@@ -140,3 +140,29 @@ revoke all on function public.set_supply_order_status(uuid,text) from public, an
 revoke all on function public.set_supply_shipment_status(uuid,text) from public, anon;
 grant execute on function public.set_supply_order_status(uuid,text) to authenticated;
 grant execute on function public.set_supply_shipment_status(uuid,text) to authenticated;
+
+
+-- Keep operational shipment creation isolated from scenario-tagged orders.
+
+create or replace function public.create_supply_shipment(p_classroom_id uuid,p_order_id uuid,p_origin text,p_destination text,p_carrier text default 'Demo carrier',p_eta timestamptz default null)
+returns uuid language plpgsql security definer set search_path = '' as $$
+declare v_id uuid; v_role text; v_origin text:=trim(coalesce(p_origin,'')); v_destination text:=trim(coalesce(p_destination,'')); v_carrier text:=trim(coalesce(p_carrier,'Demo carrier'));
+begin
+  if (select auth.uid()) is null then raise exception 'Sign in is required'; end if;
+  if not public.is_class_teacher(p_classroom_id) then
+    select m.operational_role into v_role from public.classroom_members m where m.classroom_id=p_classroom_id and m.student_id=(select auth.uid());
+    if v_role is distinct from 'transport' then raise exception 'Only the teacher or assigned Transport Manager can create shipments'; end if;
+  end if;
+  if char_length(v_origin) not between 2 and 120 or char_length(v_destination) not between 2 and 120 then raise exception 'Origin and destination must be 2-120 characters'; end if;
+  if char_length(v_carrier) not between 2 and 80 then raise exception 'Carrier must be 2-80 characters'; end if;
+  if p_eta is not null and p_eta<now()-interval '1 day' then raise exception 'ETA is too far in the past'; end if;
+  if p_order_id is not null and not exists(select 1 from public.orders o where o.id=p_order_id and o.classroom_id=p_classroom_id and o.scenario_id is null) then raise exception 'Selected operational order does not belong to this classroom'; end if;
+  insert into public.shipments(classroom_id,order_id,created_by,origin,destination,carrier,eta)
+  values(p_classroom_id,p_order_id,(select auth.uid()),v_origin,v_destination,v_carrier,p_eta) returning id into v_id;
+  insert into public.activity_logs(classroom_id,actor_id,event_type,description,metadata)
+  values(p_classroom_id,(select auth.uid()),'shipment_created','Shipment created: '||v_origin||' → '||v_destination,
+    jsonb_build_object('shipment_id',v_id,'order_id',p_order_id,'carrier',v_carrier));
+  return v_id;
+end; $$;
+revoke all on function public.create_supply_shipment(uuid,uuid,text,text,text,timestamptz) from public,anon;
+grant execute on function public.create_supply_shipment(uuid,uuid,text,text,text,timestamptz) to authenticated;
