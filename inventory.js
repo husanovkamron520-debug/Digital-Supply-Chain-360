@@ -167,6 +167,7 @@ if (root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith
         if (membershipError) throw membershipError;
         const warehouse = (memberships || []).some(row => row.operational_role === "warehouse");
         if (!warehouse) { root.hidden = true; return; }
+        role = "warehouse";
         root.hidden = false;
         accessNote.textContent = "Warehouse Manager workspace · stock changes are saved and recorded.";
         await selectClassrooms(user, "warehouse");
