@@ -17,6 +17,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Validate JavaScript syntax
+        run: |
+          for file in ./*.js; do
+            node --input-type=module --check < "$file"
+          done
+
       - name: Prepare static site
         run: |
           mkdir -p dist
