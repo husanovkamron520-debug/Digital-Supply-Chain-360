@@ -1,6 +1,6 @@
-# Digital Supply Chain 360
+# SupplyChain14
 
-A mobile-first, interactive supply-chain learning platform. The project is being developed in two layers:
+A mobile-first, interactive supply-chain learning and simulation platform. The project is being developed in two layers:
 
 - **Control tower:** interactive 3D supply-chain network and simulated operational KPIs.
 - **Classroom platform:** teacher/student accounts, class join codes, operational roles, scenarios and saved activity.
@@ -10,13 +10,15 @@ All supply-chain figures and transactions are simulated for classroom learning. 
 ## Current project structure
 
 - `index.html`, `styles.css`, `app.js` — 3D control-tower interface.
+- `operations.js` — classroom-scoped order management and shipment tracking.
+- `inventory.js` — warehouse stock control and movement history.
 - `auth.js` — Supabase sign-up, sign-in, session handling and role display.
 - `supabase-config.js` — public Supabase URL/key configuration template.
 - `supabase/schema.sql` — database schema, role model, class join function and Row Level Security policies.
 
 ## Platform architecture
 
-- **Cloudflare Pages** — static frontend hosting.
+- **Cloudflare Workers Static Assets** — static frontend hosting, deployed automatically from GitHub Actions.
 - **Supabase Auth** — sign-up and sign-in.
 - **Supabase PostgreSQL** — profiles, classrooms, memberships, scenarios, orders, inventory, shipments and activity history.
 - **Row Level Security (RLS)** — database-side access control.
@@ -66,8 +68,22 @@ Cloudflare Pages can connect directly to this GitHub repository:
 4. Build output directory: `/` (repository root).
 5. Add the Supabase frontend configuration as public environment variables only if/when the app build is configured to read them.
 
-The frontend now contains the Supabase authentication screen. It becomes usable only after `supabase/schema.sql` is applied and `supabase-config.js` contains the correct Project URL and public key. Classroom management and database-backed operational workflows are being built in subsequent stages.
+The frontend now contains the Supabase authentication screen. It becomes usable only after `supabase/schema.sql` is applied and `supabase-config.js` contains the correct Project URL and public key. Classroom management, inventory, order creation, shipment planning, role-checked status updates, and activity history are connected to Supabase. Scenario simulation, scoring, and teacher analytics remain planned modules.
 
 ## Learning note
 
 This is an educational simulation. It is intended for classroom exercises and must not be used for real operational or financial decisions.
+
+
+## SupplyChain14 operations
+
+- Teachers can create and manage classroom orders and update order statuses.
+- Students assigned **Customer** or **Retailer** can create orders.
+- Students assigned **Transport** can plan shipments and update shipment statuses.
+- Warehouse Managers use the inventory workspace to receive and issue stock.
+- Operational mutations are validated by database functions and written to `activity_logs`.
+- The dashboard KPI figures and 3D control-tower demo events remain simulated; they are not live company data.
+
+## Deploy automation
+
+Every push to `main` triggers `.github/workflows/deploy.yml`. The workflow copies static HTML, CSS, and JavaScript files into `dist/` and deploys them to the Cloudflare Worker configured by `wrangler.toml`. Keep `CLOUDFLARE_API_TOKEN` as a GitHub Actions secret and `CLOUDFLARE_ACCOUNT_ID` as a repository variable. Never commit API tokens or database secret keys.
