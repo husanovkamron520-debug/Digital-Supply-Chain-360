@@ -14,8 +14,37 @@
     {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js"}}
   </script>
   <script type="module" src="./app.js"></script>
+  <script type="module" src="./auth.js"></script>
 </head>
 <body>
+  <section class="auth-gate" id="authGate" aria-label="Account access">
+    <div class="auth-card">
+      <a class="brand auth-brand" href="#" aria-label="Digital Supply Chain 360">
+        <span class="brand-mark"><span></span><span></span><span></span></span>
+        <span><strong>DSC<span>360</span></strong><small>CLASSROOM PLATFORM</small></span>
+      </a>
+      <div class="auth-heading">
+        <div class="section-kicker">DIGITAL SUPPLY CHAIN LAB</div>
+        <h1 id="authTitle">Welcome back</h1>
+        <p id="authSubtitle">Sign in to enter your classroom workspace.</p>
+      </div>
+      <form id="authForm" class="auth-form">
+        <label for="authName" id="authNameLabel" hidden>Full name</label>
+        <input id="authName" name="full_name" type="text" autocomplete="name" placeholder="Full name" hidden>
+        <label for="authEmail">Email address</label>
+        <input id="authEmail" name="email" type="email" autocomplete="email" placeholder="you@example.com" required>
+        <label for="authPassword">Password</label>
+        <input id="authPassword" name="password" type="password" autocomplete="current-password" placeholder="At least 8 characters" minlength="8" required>
+        <button class="primary-button auth-submit" id="authSubmit" type="submit">Sign in</button>
+      </form>
+      <p class="auth-message" id="authMessage" role="status" aria-live="polite"></p>
+      <div class="auth-switch">
+        <span id="authSwitchText">New to the platform?</span>
+        <button type="button" id="authSwitch">Create student account</button>
+      </div>
+      <p class="auth-footnote">Educational simulation · Demo supply-chain data</p>
+    </div>
+  </section>
   <div class="app-shell">
     <aside class="sidebar">
       <a class="brand" href="#" aria-label="Digital Supply Chain 360 home">
@@ -31,18 +60,18 @@
       </nav>
       <div class="side-bottom">
         <div class="live-card"><span class="live-dot"></span><div><b>Simulation active</b><small>Demo environment</small></div></div>
-        <div class="profile"><div class="avatar">SC</div><div><b>Supply chain lab</b><small>Classroom workspace</small></div><span class="more">···</span></div>
+        <div class="profile"><div class="avatar">SC</div><div><b id="sidebarUserName">My account</b><small id="sidebarUserRole">Student workspace</small></div><span class="more">···</span></div>
       </div>
     </aside>
 
     <main class="main-content" id="overview">
       <header class="topbar">
         <div class="crumb">Workspace <span>/</span> <b>Global overview</b></div>
-        <div class="top-actions"><span class="demo-tag"><i></i> SIMULATED DATA</span><button class="icon-button" id="resetBtn" title="Reset simulation" aria-label="Reset simulation">↺</button><div class="top-avatar">K</div></div>
+        <div class="top-actions"><span class="demo-tag"><i></i> SIMULATED DATA</span><span class="user-role" id="userRole">STUDENT</span><button class="icon-button" id="resetBtn" title="Reset simulation" aria-label="Reset simulation">↺</button><button class="signout-button" id="signOutBtn" type="button">Sign out</button><div class="top-avatar" id="userAvatar">U</div></div>
       </header>
 
       <section class="welcome-row">
-        <div><div class="eyebrow">MONDAY, 16 NOVEMBER 2026 <span class="eyebrow-line"></span> LIVE MODEL</div><h1>Supply chain <em>overview</em></h1><p class="subtitle">One connected view from raw material to final delivery.</p></div>
+        <div><div class="eyebrow"><span id="todayLabel">CLASSROOM WORKSPACE</span> <span class="eyebrow-line"></span> LIVE MODEL</div><h1>Supply chain <em>overview</em></h1><p class="subtitle">One connected view from raw material to final delivery.</p></div>
         <button class="primary-button" id="scenarioBtn"><span>＋</span> Run disruption scenario</button>
       </section>
 
