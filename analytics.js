@@ -26,7 +26,7 @@ if (root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith
     if (!activeClassId) return;
     note.textContent = "Refreshing classroom data…";
     grid.replaceChildren();
-    const [orders, shipments, inventory, decisions] = await Promise.all([
+    const [orders, shipments, inventory, decisions, members] = await Promise.all([
       db.from("orders").select("id,status", { count: "exact" }).eq("classroom_id", activeClassId),
       db.from("shipments").select("id,status", { count: "exact" }).eq("classroom_id", activeClassId),
       db.from("inventory").select("quantity,reorder_level").eq("classroom_id", activeClassId),
