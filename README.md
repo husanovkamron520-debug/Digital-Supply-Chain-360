@@ -9,8 +9,10 @@ All supply-chain figures and transactions are simulated for classroom learning. 
 
 ## Current project structure
 
-- `index.html`, `styles.css`, `app.js` — current 3D control-tower prototype.
-- `supabase/schema.sql` — initial database schema, role model, class join function and Row Level Security policies.
+- `index.html`, `styles.css`, `app.js` — 3D control-tower interface.
+- `auth.js` — Supabase sign-up, sign-in, session handling and role display.
+- `supabase-config.js` — public Supabase URL/key configuration template.
+- `supabase/schema.sql` — database schema, role model, class join function and Row Level Security policies.
 
 ## Platform architecture
 
@@ -38,7 +40,9 @@ The frontend will use only the Supabase project URL and the public anon/publisha
    );
    ```
 
-6. Keep the project URL and public anon/publishable key ready for frontend configuration. Do not share the service-role key.
+6. Copy the **Project URL** and **anon/public or publishable key** from Project Settings → API. Never copy the service-role/secret key into the browser or GitHub.
+7. Replace the two placeholder values in `supabase-config.js` with the Project URL and public key.
+8. In Authentication → URL Configuration, add your deployed website URL to the allowed Site URL / Redirect URLs after hosting is set up.
 
 New sign-ups receive the `student` role automatically. Students join a classroom through the `join_classroom(code)` database function; they cannot create their own teacher role or forge membership rows.
 
@@ -62,7 +66,7 @@ Cloudflare Pages can connect directly to this GitHub repository:
 4. Build output directory: `/` (repository root).
 5. Add the Supabase frontend configuration as public environment variables only if/when the app build is configured to read them.
 
-The existing prototype is static. Authentication and database-backed classroom features are the next implementation stage and are not live yet.
+The frontend now contains the Supabase authentication screen. It becomes usable only after `supabase/schema.sql` is applied and `supabase-config.js` contains the correct Project URL and public key. Classroom management and database-backed operational workflows are being built in subsequent stages.
 
 ## Learning note
 
