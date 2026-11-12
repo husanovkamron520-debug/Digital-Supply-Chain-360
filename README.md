@@ -11,6 +11,7 @@ All supply-chain figures and transactions are simulated for classroom learning. 
 
 - `index.html`, `styles.css`, `app.js` — 3D control-tower interface.
 - `operations.js` — classroom-scoped order management and shipment tracking.
+- `scenarios.js` — teacher-launched disruption exercises, student decisions, and scoring.
 - `inventory.js` — warehouse stock control and movement history.
 - `auth.js` — Supabase sign-up, sign-in, session handling and role display.
 - `supabase-config.js` — public Supabase URL/key configuration template.
@@ -68,7 +69,7 @@ Cloudflare Pages can connect directly to this GitHub repository:
 4. Build output directory: `/` (repository root).
 5. Add the Supabase frontend configuration as public environment variables only if/when the app build is configured to read them.
 
-The frontend now contains the Supabase authentication screen. It becomes usable only after `supabase/schema.sql` is applied and `supabase-config.js` contains the correct Project URL and public key. Classroom management, inventory, order creation, shipment planning, role-checked status updates, and activity history are connected to Supabase. Scenario simulation, scoring, and teacher analytics remain planned modules.
+The frontend now contains the Supabase authentication screen. It becomes usable only after `supabase/schema.sql` is applied and `supabase-config.js` contains the correct Project URL and public key. Classroom management, inventory, order creation, shipment planning, role-checked status updates, and activity history are connected to Supabase. Advanced multi-round simulation, procurement, and expanded teacher analytics remain planned modules.
 
 ## Learning note
 
@@ -82,6 +83,8 @@ This is an educational simulation. It is intended for classroom exercises and mu
 - Students assigned **Transport** can plan shipments and update shipment statuses.
 - Warehouse Managers use the inventory workspace to receive and issue stock.
 - Operational mutations are validated by database functions and written to `activity_logs`.
+- Teachers can launch supplier-delay, demand-spike, and route-disruption exercises; students submit one decision per scenario and receive a database-calculated score and feedback.
+- Scenario scoring weights are kept in server-side functions, not exposed in browser-visible scenario configuration; decisions are unique per student and scenario.
 - The dashboard KPI figures and 3D control-tower demo events remain simulated; they are not live company data.
 
 ## Deploy automation
