@@ -19,6 +19,7 @@
   <script type="module" src="./inventory.js"></script>
   <script type="module" src="./operations.js"></script>
   <script type="module" src="./scenarios.js"></script>
+  <script type="module" src="./procurement.js"></script>
 </head>
 <body>
   <section class="auth-gate" id="authGate" aria-label="Account access">
@@ -61,6 +62,7 @@
         <a class="nav-link" href="#network"><span class="nav-icon">⌘</span> Network map</a>
         <a class="nav-link" href="#operationsWorkspace"><span class="nav-icon">▤</span> Orders & shipments</a>
         <a class="nav-link" href="#scenarioWorkspace"><span class="nav-icon">⚡</span> Scenario lab</a>
+        <a class="nav-link" href="#procurementWorkspace"><span class="nav-icon">⌂</span> Procurement</a>
         <a class="nav-link" href="#intelligence"><span class="nav-icon">✳</span> Intelligence</a>
       </nav>
       <div class="side-bottom">
@@ -204,6 +206,53 @@
         </form>
         <div id="scenarioList" class="scenario-list"><p class="empty-state">Loading scenarios…</p></div>
         <p class="scenario-message" id="scenarioMessage" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="panel procurement-workspace" id="procurementWorkspace" hidden>
+        <div class="panel-heading">
+          <div><div class="section-kicker">SOURCE-TO-PAY EXECUTION</div><h2>Procurement & suppliers</h2></div>
+          <span class="muted-label">SRM · PURCHASING</span>
+        </div>
+        <p class="procurement-note" id="procurementAccessNote">Loading procurement permissions…</p>
+        <div class="procurement-class-picker">
+          <label for="procurementClassSelect">Classroom</label>
+          <select id="procurementClassSelect" aria-label="Select classroom"></select>
+        </div>
+        <div class="procurement-forms">
+          <form class="procurement-form" id="createSupplierForm" hidden>
+            <h3>Register supplier</h3>
+            <label for="supplierCode">Supplier code</label>
+            <input id="supplierCode" maxlength="30" minlength="2" placeholder="SUP-001" required>
+            <label for="supplierName">Supplier name</label>
+            <input id="supplierName" maxlength="120" minlength="2" placeholder="Regional packaging supplier" required>
+            <label for="supplierLeadTime">Lead time (days)</label>
+            <input id="supplierLeadTime" type="number" min="0" max="365" value="7" required>
+            <button class="primary-button" type="submit">＋ Add supplier</button>
+          </form>
+          <form class="procurement-form" id="createPurchaseOrderForm" hidden>
+            <h3>Create purchase order</h3>
+            <label for="poSupplier">Supplier</label>
+            <select id="poSupplier" required></select>
+            <label for="poNumber">PO number</label>
+            <input id="poNumber" maxlength="40" minlength="3" placeholder="PO-1001" required>
+            <div class="procurement-two-col">
+              <div><label for="poSku">SKU</label><input id="poSku" maxlength="40" minlength="2" placeholder="SKU-1001" required></div>
+              <div><label for="poQuantity">Quantity</label><input id="poQuantity" type="number" min="1" max="1000000" value="100" required></div>
+            </div>
+            <label for="poItemName">Item name</label>
+            <input id="poItemName" maxlength="120" minlength="2" placeholder="Packaging material" required>
+            <div class="procurement-two-col">
+              <div><label for="poUnitCost">Unit cost</label><input id="poUnitCost" type="number" min="0" step="0.01" value="0" required></div>
+              <div><label for="poExpectedAt">Expected date</label><input id="poExpectedAt" type="datetime-local"></div>
+            </div>
+            <button class="primary-button" type="submit">＋ Create purchase order</button>
+          </form>
+        </div>
+        <div class="procurement-records">
+          <div class="procurement-record-panel"><h3>Supplier register</h3><div id="suppliersList"><p class="empty-state">Loading suppliers…</p></div></div>
+          <div class="procurement-record-panel"><h3>Purchase orders & receipts</h3><div id="purchaseOrdersList"><p class="empty-state">Loading purchase orders…</p></div></div>
+        </div>
+        <p class="procurement-message" id="procurementMessage" role="status" aria-live="polite"></p>
       </section>
       <section class="welcome-row">
         <div><div class="eyebrow"><span id="todayLabel">CLASSROOM WORKSPACE</span> <span class="eyebrow-line"></span> LIVE MODEL</div><h1>Supply chain <em>overview</em></h1><p class="subtitle">One connected view from raw material to final delivery.</p></div>
