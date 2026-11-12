@@ -16,6 +16,7 @@
   <script type="module" src="./app.js"></script>
   <script type="module" src="./auth.js"></script>
   <script type="module" src="./classroom.js"></script>
+  <script type="module" src="./inventory.js"></script>
 </head>
 <body>
   <section class="auth-gate" id="authGate" aria-label="Account access">
@@ -98,6 +99,44 @@
           </div>
         </div>
         <p class="classroom-message" id="classroomMessage" role="status" aria-live="polite"></p>
+      </section>
+      <section class="panel inventory-workspace" id="inventoryWorkspace" hidden>
+        <div class="panel-heading">
+          <div><div class="section-kicker">WAREHOUSE MANAGEMENT</div><h2>Inventory workspace</h2></div>
+          <span class="muted-label">WMS · STOCK CONTROL</span>
+        </div>
+        <p class="inventory-access-note" id="inventoryAccessNote">Loading inventory permissions…</p>
+        <div class="inventory-class-picker">
+          <label for="inventoryClassSelect">Classroom</label>
+          <select id="inventoryClassSelect" aria-label="Select classroom"></select>
+        </div>
+        <div class="inventory-layout">
+          <form class="inventory-add-panel" id="addInventoryForm" hidden>
+            <h3>Add a product</h3>
+            <label for="inventorySku">SKU</label>
+            <input id="inventorySku" maxlength="40" minlength="2" placeholder="e.g. SKU-1001" required>
+            <label for="inventoryItemName">Product name</label>
+            <input id="inventoryItemName" maxlength="120" minlength="2" placeholder="e.g. Packaging boxes" required>
+            <div class="inventory-number-grid">
+              <div><label for="inventoryOpeningQty">Opening stock</label><input id="inventoryOpeningQty" type="number" min="0" step="1" value="0" required></div>
+              <div><label for="inventoryReorderLevel">Reorder level</label><input id="inventoryReorderLevel" type="number" min="0" step="1" value="10" required></div>
+            </div>
+            <button class="primary-button" type="submit">＋ Add to inventory</button>
+          </form>
+          <div class="inventory-stock-panel" id="inventoryAddPanel" hidden>
+            <h3>Stock register</h3>
+            <div class="inventory-list" id="inventoryList"><p class="empty-state">Loading stock…</p></div>
+          </div>
+          <div class="inventory-stock-panel inventory-student-stock" id="inventoryReadPanel">
+            <h3>Stock register</h3>
+            <div class="inventory-list" id="inventoryListFallback"><p class="empty-state">Loading stock…</p></div>
+          </div>
+        </div>
+        <div class="inventory-history-panel">
+          <h3>Recent inventory activity</h3>
+          <div id="inventoryHistory"><p class="empty-state">No activity yet.</p></div>
+        </div>
+        <p class="inventory-message" id="inventoryMessage" role="status" aria-live="polite"></p>
       </section>
       <section class="welcome-row">
         <div><div class="eyebrow"><span id="todayLabel">CLASSROOM WORKSPACE</span> <span class="eyebrow-line"></span> LIVE MODEL</div><h1>Supply chain <em>overview</em></h1><p class="subtitle">One connected view from raw material to final delivery.</p></div>
