@@ -8,6 +8,10 @@ create unique index if not exists suppliers_class_supplier_user_uidx
   on public.suppliers(classroom_id, supplier_user_id)
   where supplier_user_id is not null;
 
+create index if not exists suppliers_supplier_user_id_idx
+  on public.suppliers(supplier_user_id)
+  where supplier_user_id is not null;
+
 alter table public.purchase_orders
   add column if not exists supplier_response text not null default 'pending'
     check (supplier_response in ('pending','accepted','rejected')),
