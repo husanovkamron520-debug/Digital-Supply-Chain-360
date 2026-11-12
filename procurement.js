@@ -37,7 +37,7 @@ if (root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith
   }
 
   async function loadSuppliers() {
-    const {data,error}=await db.from("suppliers").select("id,supplier_code,name,lead_time_days,status")
+    const {data,error}=await db.from("suppliers").select("id,supplier_code,name,lead_time_days,status,supplier_user_id")
       .eq("classroom_id",activeClassId).order("name");
     if(error) throw error;
     suppliersList.replaceChildren();
@@ -48,7 +48,7 @@ if (root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith
       const card=el("div","procurement-record");
       const head=el("div","procurement-record-head");
       const title=el("div","procurement-record-title");
-      title.append(el("b","",supplier.name),el("small","",supplier.supplier_code+" · "+supplier.lead_time_days+" day lead time"));
+      title.append(el("b","",supplier.name),el("small","",supplier.supplier_code+" · "+supplier.lead_time_days+" day lead time"+(supplier.supplier_user_id===user.id?" · Your supplier account":"")));
       head.append(title,el("span","procurement-status "+supplier.status,supplier.status.toUpperCase()));
       card.append(head); suppliersList.append(card);
       if(supplier.status==="active") supplierSelect.append(option(supplier.name+" · "+supplier.supplier_code,supplier.id));
@@ -58,7 +58,7 @@ if (root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith
 
   async function loadPurchaseOrders() {
     const {data,error}=await db.from("purchase_orders")
-      .select("id,po_number,sku,item_name,quantity,received_quantity,unit_cost,status,expected_at,created_at,suppliers(name,supplier_code)")
+      .select("id,po_number,sku,item_name,quantity,received_quantity,unit_cost,status,supplier_response,supplier_note,supplier_responded_at,expected_at,created_at,suppliers(name,supplier_code,supplier_user_id)")
       .eq("classroom_id",activeClassId).order("created_at",{ascending:false}).limit(50);
     if(error) throw error;
     ordersList.replaceChildren();
@@ -72,6 +72,7 @@ if (root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith
       card.append(head);
       const progress=po.received_quantity+" / "+po.quantity+" units received";
       card.append(el("div","procurement-progress-label",progress));
+      card.append(el("div","procurement-response-label","Supplier response · "+(po.supplier_response||"pending").toUpperCase()+(po.supplier_note?" · "+po.supplier_note:"")));
       const track=el("div","procurement-progress");
       const bar=el("i");
       bar.style.width=Math.min(100,po.received_quantity/po.quantity*100)+"%";
@@ -80,6 +81,27 @@ if (root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith
       meta.append(el("span","","Unit cost · "+Number(po.unit_cost).toFixed(2)));
       meta.append(el("span","","Expected · "+dateText(po.expected_at)));
       card.append(meta);
+      if(role()==="supplier" && po.suppliers?.supplier_user_id===user.id && po.status==="placed" && po.supplier_response==="pending"){
+        const responseActions=el("div","procurement-supplier-actions");
+        for(const [response,label] of [["accepted","Accept purchase order"],["rejected","Reject purchase order"]]){
+          const responseButton=el("button",response==="accepted"?"procurement-accept-button":"procurement-reject-button",label);
+          responseButton.type="button";
+          responseButton.addEventListener("click",async()=>{
+            responseButton.disabled=true;
+            try{
+              const {error:responseError}=await db.rpc("respond_to_purchase_order",{
+                p_purchase_order_id:po.id,p_response:response,
+                p_note:response==="accepted"?"Accepted by supplier":"Supplier cannot fulfil this order"
+              });
+              if(responseError)throw responseError;
+              say("Purchase order "+response+".",true);
+              await loadPurchaseOrders();
+            }catch(error){say(error.message);responseButton.disabled=false;}
+          });
+          responseActions.append(responseButton);
+        }
+        card.append(responseActions);
+      }
       if(isTeacher && po.status==="placed" && po.received_quantity===0){
         const cancel=el("button","procurement-cancel-button","Cancel purchase order");
         cancel.type="button";
