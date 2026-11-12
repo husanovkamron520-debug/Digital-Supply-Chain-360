@@ -140,7 +140,8 @@ if (root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith
               p_rationale: rationale.value.trim()
             });
             if (submitError) throw submitError;
-            const effect = data.simulation ? " · Simulation: " + data.simulation.order_status.replaceAll("_", " ") + (data.simulation.stock_units ? " · " + data.simulation.stock_units + " stock units" : "") + (data.simulation.shipment_count ? " · " + data.simulation.shipment_count + " shipments" : "") : "";\n            say("Decision saved · Score " + data.score + "/100. " + data.feedback + effect, true);
+            const effect = data.simulation ? " · Simulation: " + data.simulation.order_status.replaceAll("_", " ") + (data.simulation.stock_units ? " · " + data.simulation.stock_units + " stock units" : "") + (data.simulation.shipment_count ? " · " + data.simulation.shipment_count + " shipments" : "") : "";
+            say("Decision saved · Score " + data.score + "/100. " + data.feedback + effect, true);
             await loadScenarios();
           } catch (error) { say(error.message); submit.disabled = false; }
         });
