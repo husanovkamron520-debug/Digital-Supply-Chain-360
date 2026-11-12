@@ -41,6 +41,28 @@ if (root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith
     card.append(el("p", "scenario-impact", "Potential impact: " + (scenario.configuration?.impact || "Operational performance may be affected.")));
     card.append(el("small", "scenario-date", "Started " + dateLabel(scenario.started_at || scenario.created_at)));
 
+    const [simOrders, simShipments, simStock] = await Promise.all([
+      db.from("orders").select("order_number,product_name,quantity,status").eq("scenario_id", scenario.id),
+      db.from("shipments").select("origin,destination,status,eta").eq("scenario_id", scenario.id),
+      db.from("inventory").select("sku,item_name,quantity,reorder_level").eq("scenario_id", scenario.id)
+    ]);
+    for (const result of [simOrders, simShipments, simStock]) {
+      if (result.error) throw result.error;
+    }
+    const simulation = el("div", "scenario-operations-snapshot");
+    simulation.append(el("b", "", "Simulated operations"));
+    for (const order of simOrders.data || []) {
+      simulation.append(el("p", "", order.order_number + " · " + order.status.replaceAll("_", " ") + " · " + Number(order.quantity).toLocaleString() + " units"));
+    }
+    for (const stock of simStock.data || []) {
+      simulation.append(el("p", "", stock.item_name + " · " + Number(stock.quantity).toLocaleString() + " units · reorder at " + stock.reorder_level));
+    }
+    if (simShipments.data?.length) {
+      const moving = simShipments.data.filter(item => item.status === "in_transit").length;
+      simulation.append(el("p", "", simShipments.data.length + " shipments · " + moving + " in transit"));
+    }
+    card.append(simulation);
+
     const { data: decisions, error } = await db.from("scenario_decisions")
       .select("id,student_id,selected_action,rationale,score,feedback,submitted_at")
       .eq("scenario_id", scenario.id)
@@ -118,7 +140,7 @@ if (root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith
               p_rationale: rationale.value.trim()
             });
             if (submitError) throw submitError;
-            say("Decision saved · Score " + data.score + "/100. " + data.feedback, true);
+            const effect = data.simulation ? " · Simulation: " + data.simulation.order_status.replaceAll("_", " ") + (data.simulation.stock_units ? " · " + data.simulation.stock_units + " stock units" : "") + (data.simulation.shipment_count ? " · " + data.simulation.shipment_count + " shipments" : "") : "";\n            say("Decision saved · Score " + data.score + "/100. " + data.feedback + effect, true);
             await loadScenarios();
           } catch (error) { say(error.message); submit.disabled = false; }
         });
