@@ -27,9 +27,9 @@ if (root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith
     note.textContent = "Refreshing classroom data…";
     grid.replaceChildren();
     const [orders, shipments, inventory, decisions, members] = await Promise.all([
-      db.from("orders").select("id,status", { count: "exact" }).eq("classroom_id", activeClassId),
-      db.from("shipments").select("id,status", { count: "exact" }).eq("classroom_id", activeClassId),
-      db.from("inventory").select("quantity,reorder_level").eq("classroom_id", activeClassId),
+      db.from("orders").select("id,status", { count: "exact" }).eq("classroom_id", activeClassId).is("scenario_id", null),
+      db.from("shipments").select("id,status", { count: "exact" }).eq("classroom_id", activeClassId).is("scenario_id", null),
+      db.from("inventory").select("quantity,reorder_level").eq("classroom_id", activeClassId).is("scenario_id", null),
       db.from("scenario_decisions").select("score,student_id").eq("classroom_id", activeClassId),
       db.from("classroom_members").select("id", { count: "exact", head: true }).eq("classroom_id", activeClassId)
     ]);
