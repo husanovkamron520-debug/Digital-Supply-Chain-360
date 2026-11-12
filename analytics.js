@@ -30,15 +30,19 @@ if (root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith
       db.from("orders").select("id,status", { count: "exact" }).eq("classroom_id", activeClassId),
       db.from("shipments").select("id,status", { count: "exact" }).eq("classroom_id", activeClassId),
       db.from("inventory").select("quantity,reorder_level").eq("classroom_id", activeClassId),
-      db.from("scenario_decisions").select("score").eq("classroom_id", activeClassId)
+      db.from("scenario_decisions").select("score,student_id").eq("classroom_id", activeClassId),
+      db.from("classroom_members").select("id", { count: "exact", head: true }).eq("classroom_id", activeClassId)
     ]);
-    for (const result of [orders, shipments, inventory, decisions]) {
+    for (const result of [orders, shipments, inventory, decisions, members]) {
       if (result.error) throw result.error;
     }
     const orderRows = orders.data || [];
     const shipmentRows = shipments.data || [];
     const stockRows = inventory.data || [];
     const scoreRows = decisions.data || [];
+    const studentCount = members.count ?? 0;
+    const participating = new Set(scoreRows.map(row => row.student_id)).size;
+    const participationRate = studentCount ? Math.round(participating / studentCount * 100) : 0;
     const units = stockRows.reduce((sum, row) => sum + Number(row.quantity || 0), 0);
     const lowStock = stockRows.filter(row => Number(row.quantity) <= Number(row.reorder_level)).length;
     const inTransit = shipmentRows.filter(row => ["dispatched", "in_transit"].includes(row.status)).length;
@@ -49,7 +53,8 @@ if (root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith
       metric("Customer orders", String(orders.count ?? orderRows.length), orderRows.filter(row => !["delivered", "cancelled"].includes(row.status)).length + " open / active"),
       metric("Shipments in transit", String(inTransit), (shipments.count ?? shipmentRows.length) + " total shipments"),
       metric("Inventory units", units.toLocaleString(), stockRows.length + " SKUs · " + lowStock + " at/below reorder level"),
-      metric("Scenario average", average === null ? "—" : average + "/100", scoreRows.length + " student decisions")
+      metric("Scenario average", average === null ? "—" : average + "/100", scoreRows.length + " student decisions"),
+      metric("Student participation", participating + " / " + studentCount, participationRate + "% of enrolled students submitted at least one decision")
     );
     note.textContent = "Live classroom records · refreshed " + new Date().toLocaleTimeString();
   }
