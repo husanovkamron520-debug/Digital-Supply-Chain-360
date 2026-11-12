@@ -54,3 +54,48 @@
 .classroom-message{min-height:16px;color:#f1bd6c;font-size:10px;margin:10px 0 0}
 .classroom-message.success{color:#58d6a3}
 @media(max-width:700px){.classroom-grid{grid-template-columns:1fr}.classroom-workspace{padding:13px}.classroom-card-head{align-items:center}}
+
+
+/* Warehouse inventory workspace */
+.inventory-workspace{margin:0 0 16px;padding:18px 20px}
+.inventory-workspace[hidden]{display:none}
+.inventory-access-note{font-size:10px;color:#8da2b6;margin:8px 0 13px}
+.inventory-class-picker{display:flex;align-items:center;gap:10px;margin-bottom:13px}
+.inventory-class-picker label,.inventory-add-panel label{font-size:9px;color:#9db0c2}
+.inventory-class-picker select,.inventory-add-panel input{background:#081523;color:#e5edf5;border:1px solid #2a4055;border-radius:6px;padding:9px 10px;font:10px var(--font);min-width:0}
+.inventory-class-picker select{min-width:190px}
+.inventory-layout{display:grid;grid-template-columns:minmax(220px,.75fr) minmax(280px,1.25fr);gap:13px}
+.inventory-add-panel,.inventory-stock-panel,.inventory-history-panel{background:#0d1b2b;border:1px solid #243b50;border-radius:9px;padding:13px;min-width:0}
+.inventory-add-panel[hidden],.inventory-stock-panel[hidden]{display:none}
+.inventory-add-panel h3,.inventory-stock-panel h3,.inventory-history-panel h3{font-size:11px;margin:0 0 11px;color:#dce8f3}
+.inventory-add-panel label{display:block;margin:8px 0 5px}
+.inventory-add-panel input{width:100%}
+.inventory-number-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.inventory-add-panel .primary-button{width:100%;margin-top:13px}
+.inventory-list{display:grid;gap:8px}
+.stock-card{border:1px solid #263e52;background:#102236;border-radius:7px;padding:11px}
+.stock-card-head{display:flex;align-items:center;gap:10px;min-width:0}
+.stock-details{min-width:0;flex:1}
+.stock-details b{display:block;font-size:10px;color:#e0eaf4;overflow-wrap:anywhere}
+.stock-details small,.stock-reorder{display:block;color:#8499ad;font-size:8px;margin-top:4px}
+.stock-amount{text-align:right;min-width:42px}
+.stock-amount strong{display:block;font-size:17px;font-variant-numeric:tabular-nums}
+.stock-amount small{font-size:8px;color:#8296aa}
+.stock-status{font:7px 'DM Mono',monospace;letter-spacing:.4px;padding:5px 6px;border-radius:4px;white-space:nowrap}
+.stock-status.healthy{background:#14332e;color:#69d9aa}
+.stock-status.low{background:#3b3020;color:#f3b95f}
+.stock-actions{display:flex;align-items:center;gap:6px;margin-top:9px}
+.stock-actions input{width:58px;background:#081523;color:#e5edf5;border:1px solid #2a4055;border-radius:5px;padding:6px;font:10px var(--font)}
+.stock-actions button{border-radius:5px;padding:6px 8px;font:9px var(--font);cursor:pointer}
+.stock-receive{border:1px solid #28604e;background:#12352d;color:#75ddb1}
+.stock-issue{border:1px solid #654b2c;background:#342919;color:#f1bd6c}
+.stock-actions button:disabled{opacity:.5;cursor:wait}
+.inventory-history-panel{margin-top:12px}
+#inventoryHistory{display:grid;gap:0}
+.inventory-history-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #1a2a3b}
+.inventory-history-row:last-child{border:0}
+.inventory-history-row span{font-size:9px;color:#b7c7d7}
+.inventory-history-row small{font-size:8px;color:#71869b;text-align:right;white-space:nowrap}
+.inventory-message{min-height:16px;color:#f1bd6c;font-size:10px;margin:9px 0 0}
+.inventory-message.success{color:#58d6a3}
+@media(max-width:700px){.inventory-layout{grid-template-columns:1fr}.inventory-workspace{padding:13px}.inventory-class-picker{align-items:flex-start;flex-direction:column;gap:6px}.inventory-class-picker select{width:100%}.stock-card-head{gap:7px}.stock-status{font-size:6px}.inventory-history-row{align-items:flex-start;flex-direction:column;gap:3px}.inventory-history-row small{text-align:left}}
