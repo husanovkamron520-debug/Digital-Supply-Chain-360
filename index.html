@@ -18,6 +18,7 @@
   <script type="module" src="./classroom.js"></script>
   <script type="module" src="./inventory.js"></script>
   <script type="module" src="./operations.js"></script>
+  <script type="module" src="./scenarios.js"></script>
 </head>
 <body>
   <section class="auth-gate" id="authGate" aria-label="Account access">
@@ -179,6 +180,29 @@
           <div class="operations-record-panel"><h3>Shipment tracking</h3><div id="shipmentsList"><p class="empty-state">Loading shipments…</p></div></div>
         </div>
         <p class="operations-message" id="operationsMessage" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="panel scenario-workspace" id="scenarioWorkspace" hidden>
+        <div class="panel-heading">
+          <div><div class="section-kicker">DECISION-BASED LEARNING</div><h2>Scenario simulation lab</h2></div>
+          <span class="muted-label">SCENARIO ENGINE · SCORING</span>
+        </div>
+        <p class="scenario-access-note" id="scenarioAccessNote">Loading scenario permissions…</p>
+        <div class="scenario-class-picker">
+          <label for="scenarioClassSelect">Classroom</label>
+          <select id="scenarioClassSelect" aria-label="Select classroom"></select>
+        </div>
+        <form class="scenario-launch-form" id="scenarioLaunchForm" hidden>
+          <label for="scenarioType">Launch a disruption scenario</label>
+          <select id="scenarioType">
+            <option value="supplier_delay">Supplier delay</option>
+            <option value="demand_spike">Demand spike</option>
+            <option value="route_disruption">Transport route disruption</option>
+          </select>
+          <button class="primary-button" type="submit">＋ Launch scenario</button>
+        </form>
+        <div id="scenarioList" class="scenario-list"><p class="empty-state">Loading scenarios…</p></div>
+        <p class="scenario-message" id="scenarioMessage" role="status" aria-live="polite"></p>
       </section>
       <section class="welcome-row">
         <div><div class="eyebrow"><span id="todayLabel">CLASSROOM WORKSPACE</span> <span class="eyebrow-line"></span> LIVE MODEL</div><h1>Supply chain <em>overview</em></h1><p class="subtitle">One connected view from raw material to final delivery.</p></div>
