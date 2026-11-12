@@ -75,11 +75,22 @@ if (root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith
       meta.append(el("span", "", "Created " + new Date(order.created_at).toLocaleDateString()));
       card.append(meta);
       if (isTeacher()) {
-        card.append(statusSelect(order.status, [
-          ["created","Created"],["approved","Approved"],["in_production","In production"],
-          ["ready","Ready"],["in_transit","In transit"],["delivered","Delivered"],
-          ["delayed","Delayed"],["cancelled","Cancelled"]
-        ], async next => {
+        const orderTransitions = {
+          created: ["approved","delayed","cancelled"],
+          approved: ["in_production","delayed","cancelled"],
+          in_production: ["ready","delayed"],
+          ready: ["in_transit","delayed"],
+          in_transit: ["delivered","delayed"],
+          delayed: ["approved","in_production","ready","in_transit","cancelled"],
+          delivered: [], cancelled: []
+        };
+        const orderLabels = {
+          created: "Created", approved: "Approved", in_production: "In production",
+          ready: "Ready", in_transit: "In transit", delivered: "Delivered",
+          delayed: "Delayed", cancelled: "Cancelled"
+        };
+        const orderChoices = [[order.status, orderLabels[order.status]], ...(orderTransitions[order.status] || []).map(s => [s, orderLabels[s]])];
+        card.append(statusSelect(order.status, orderChoices, async next => {
           const { error: updateError } = await db.rpc("set_supply_order_status", { p_order_id: order.id, p_status: next });
           if (updateError) throw updateError;
           say("Order status updated.", true);
@@ -113,10 +124,19 @@ if (root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith
       meta.append(el("span", "", shipment.eta ? "ETA " + new Date(shipment.eta).toLocaleString() : "ETA not set"));
       card.append(meta);
       if (canShip()) {
-        card.append(statusSelect(shipment.status, [
-          ["planned","Planned"],["dispatched","Dispatched"],["in_transit","In transit"],
-          ["delayed","Delayed"],["delivered","Delivered"]
-        ], async next => {
+        const shipmentTransitions = {
+          planned: ["dispatched","delayed"],
+          dispatched: ["in_transit","delayed"],
+          in_transit: ["delivered","delayed"],
+          delayed: ["planned","dispatched","in_transit"],
+          delivered: []
+        };
+        const shipmentLabels = {
+          planned: "Planned", dispatched: "Dispatched", in_transit: "In transit",
+          delayed: "Delayed", delivered: "Delivered"
+        };
+        const shipmentChoices = [[shipment.status, shipmentLabels[shipment.status]], ...(shipmentTransitions[shipment.status] || []).map(s => [s, shipmentLabels[s]])];
+        card.append(statusSelect(shipment.status, shipmentChoices, async next => {
           const { error: updateError } = await db.rpc("set_supply_shipment_status", { p_shipment_id: shipment.id, p_status: next });
           if (updateError) throw updateError;
           say("Shipment status updated.", true);
