@@ -133,3 +133,51 @@
 .operations-message{min-height:16px;color:#f1bd6c;font-size:10px;margin:9px 0 0}
 .operations-message.success{color:#58d6a3}
 @media(max-width:700px){.operations-workspace{padding:13px}.operations-forms,.operations-records{grid-template-columns:1fr}.operations-class-picker{align-items:flex-start;flex-direction:column;gap:6px}.operations-class-picker select{width:100%}.operation-record-meta{flex-direction:column;gap:4px}}
+
+
+/* SupplyChain14 scenario simulation lab */
+.scenario-workspace{margin:0 0 16px;padding:18px 20px}
+.scenario-workspace[hidden]{display:none}
+.scenario-access-note{font-size:10px;color:#8da2b6;margin:8px 0 13px}
+.scenario-class-picker{display:flex;align-items:center;gap:10px;margin-bottom:13px}
+.scenario-class-picker label,.scenario-launch-form label,.scenario-decision-form label{font-size:9px;color:#9db0c2}
+.scenario-class-picker select,.scenario-launch-form select,.scenario-action-select,.scenario-rationale{background:#081523;color:#e5edf5;border:1px solid #2a4055;border-radius:6px;padding:9px 10px;font:10px var(--font);min-width:0}
+.scenario-class-picker select{min-width:190px}
+.scenario-launch-form{display:grid;grid-template-columns:minmax(160px,1fr) minmax(150px,auto);align-items:end;gap:10px;background:#0d1b2b;border:1px solid #243b50;border-radius:9px;padding:13px;margin-bottom:13px}
+.scenario-launch-form[hidden]{display:none}
+.scenario-launch-form label{grid-column:1/-1;margin-bottom:-5px}
+.scenario-launch-form select{width:100%}
+.scenario-launch-form .primary-button{width:100%}
+.scenario-list{display:grid;gap:11px}
+.scenario-card{background:#0d1b2b;border:1px solid #263e52;border-radius:9px;padding:14px;min-width:0}
+.scenario-card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.scenario-title-wrap{min-width:0}
+.scenario-title-wrap h3{font-size:12px;margin:0;color:#e0eaf4}
+.scenario-description,.scenario-impact{font-size:10px;line-height:1.6;color:#91a5b9;margin:7px 0 0}
+.scenario-impact{color:#d5b77d}
+.scenario-status{font:7px 'DM Mono',monospace;letter-spacing:.6px;padding:6px 8px;border-radius:5px;background:#1c3044;color:#a8bfd4;white-space:nowrap}
+.scenario-status.active{background:#15352f;color:#69d9aa}
+.scenario-status.completed{background:#1d2d42;color:#a8b9d0}
+.scenario-date{display:block;font-size:8px;color:#687f94;margin-top:9px}
+.scenario-decision-form{display:grid;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid #263e52}
+.scenario-action-select,.scenario-rationale{width:100%}
+.scenario-rationale{resize:vertical;line-height:1.5}
+.scenario-decision-form .primary-button{width:100%}
+.scenario-own-result{margin-top:12px;padding:12px;border-radius:7px;background:#14332e;border:1px solid #28604e}
+.scenario-own-result b{font-size:11px;color:#75ddb1}
+.scenario-own-result p{font-size:10px;line-height:1.55;color:#b3d9cb;margin:6px 0}
+.scenario-own-result small{font-size:8px;color:#7fae9d}
+.scenario-results-summary{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:12px;padding:10px;background:#102236;border-radius:6px}
+.scenario-results-summary span{font-size:9px;color:#8fa5ba}
+.scenario-results-summary b{font-size:10px;color:#7bdab2}
+.scenario-results{display:grid;gap:6px;margin-top:8px}
+.scenario-result-row{display:grid;grid-template-columns:minmax(80px,1fr) auto;gap:5px 10px;padding:9px;border-bottom:1px solid #1c3044}
+.scenario-result-row span{font-size:9px;color:#b6c8d8}
+.scenario-result-row b{font:10px 'DM Mono',monospace;color:#6dd9ac}
+.scenario-result-row small{grid-column:1/-1;font-size:8px;color:#71869b;overflow-wrap:anywhere}
+.scenario-secondary-button{margin-top:11px;border:1px solid #345064;background:#142a3e;color:#b5cadb;border-radius:6px;padding:9px 11px;font:10px var(--font);cursor:pointer}
+.scenario-secondary-button:disabled{opacity:.5}
+.scenario-closed-note{font-size:10px;color:#8296aa;margin:12px 0 0}
+.scenario-message{min-height:16px;color:#f1bd6c;font-size:10px;margin:9px 0 0}
+.scenario-message.success{color:#58d6a3}
+@media(max-width:700px){.scenario-workspace{padding:13px}.scenario-class-picker{align-items:flex-start;flex-direction:column;gap:6px}.scenario-class-picker select{width:100%}.scenario-launch-form{grid-template-columns:1fr}.scenario-launch-form label{grid-column:auto}.scenario-results-summary{align-items:flex-start;flex-direction:column}}
