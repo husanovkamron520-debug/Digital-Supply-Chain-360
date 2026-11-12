@@ -20,6 +20,7 @@
   <script type="module" src="./operations.js"></script>
   <script type="module" src="./scenarios.js"></script>
   <script type="module" src="./procurement.js"></script>
+  <script type="module" src="./analytics.js"></script>
 </head>
 <body>
   <section class="auth-gate" id="authGate" aria-label="Account access">
@@ -254,6 +255,19 @@
         </div>
         <p class="procurement-message" id="procurementMessage" role="status" aria-live="polite"></p>
       </section>
+      <section class="panel teacher-analytics" id="teacherAnalytics" hidden>
+        <div class="panel-heading">
+          <div><div class="section-kicker">CLASSROOM PERFORMANCE</div><h2>Operational analytics</h2></div>
+          <span class="muted-label">LIVE CLASS RECORDS</span>
+        </div>
+        <div class="analytics-toolbar">
+          <label for="analyticsClassSelect">Classroom</label>
+          <select id="analyticsClassSelect" aria-label="Analytics classroom"></select>
+        </div>
+        <div class="analytics-metrics" id="analyticsMetrics"></div>
+        <p class="analytics-note" id="analyticsNote">Loading classroom analytics…</p>
+      </section>
+
       <section class="welcome-row">
         <div><div class="eyebrow"><span id="todayLabel">CLASSROOM WORKSPACE</span> <span class="eyebrow-line"></span> LIVE MODEL</div><h1>Supply chain <em>overview</em></h1><p class="subtitle">One connected view from raw material to final delivery.</p></div>
         <button class="primary-button" id="scenarioBtn"><span>＋</span> Run disruption scenario</button>
