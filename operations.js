@@ -95,6 +95,7 @@ if (root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith
     const { data, error } = await db.from("shipments")
       .select("id,order_id,origin,destination,carrier,status,eta,created_at,orders(order_number)")
       .eq("classroom_id", activeClassId)
+      .is("scenario_id", null)
       .order("created_at", { ascending: false }).limit(50);
     if (error) throw error;
     shipmentsList.replaceChildren();
