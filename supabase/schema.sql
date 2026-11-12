@@ -289,7 +289,11 @@ begin
     execute format('drop policy if exists %I on public.%I', t || '_select_members', t);
     execute format('create policy %I on public.%I for select to authenticated using (public.is_class_member(classroom_id))', t || '_select_members', t);
     execute format('drop policy if exists %I on public.%I', t || '_insert_members', t);
-    execute format('create policy %I on public.%I for insert to authenticated with check (public.is_class_member(classroom_id))', t || '_insert_members', t);
+    if t = 'inventory' then
+      execute format('create policy %I on public.%I for insert to authenticated with check (public.is_class_member(classroom_id))', t || '_insert_members', t);
+    else
+      execute format('create policy %I on public.%I for insert to authenticated with check (public.is_class_member(classroom_id) and created_by = auth.uid())', t || '_insert_members', t);
+    end if;
     execute format('drop policy if exists %I on public.%I', t || '_update_teacher', t);
     execute format('create policy %I on public.%I for update to authenticated using (public.is_class_teacher(classroom_id)) with check (public.is_class_teacher(classroom_id))', t || '_update_teacher', t);
     execute format('drop policy if exists %I on public.%I', t || '_delete_teacher', t);
