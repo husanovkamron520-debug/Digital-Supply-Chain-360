@@ -99,3 +99,37 @@
 .inventory-message{min-height:16px;color:#f1bd6c;font-size:10px;margin:9px 0 0}
 .inventory-message.success{color:#58d6a3}
 @media(max-width:700px){.inventory-layout{grid-template-columns:1fr}.inventory-workspace{padding:13px}.inventory-class-picker{align-items:flex-start;flex-direction:column;gap:6px}.inventory-class-picker select{width:100%}.stock-card-head{gap:7px}.stock-status{font-size:6px}.inventory-history-row{align-items:flex-start;flex-direction:column;gap:3px}.inventory-history-row small{text-align:left}}
+
+
+/* SupplyChain14 order management and shipment execution */
+.operations-workspace{margin:0 0 16px;padding:18px 20px}
+.operations-workspace[hidden]{display:none}
+.operations-note{font-size:10px;color:#8da2b6;margin:8px 0 13px}
+.operations-class-picker{display:flex;align-items:center;gap:10px;margin-bottom:13px}
+.operations-class-picker label,.operations-form label{font-size:9px;color:#9db0c2}
+.operations-class-picker select,.operations-form input,.operations-form select{background:#081523;color:#e5edf5;border:1px solid #2a4055;border-radius:6px;padding:9px 10px;font:10px var(--font);min-width:0}
+.operations-class-picker select{min-width:190px}
+.operations-forms{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.operations-form,.operations-record-panel{background:#0d1b2b;border:1px solid #243b50;border-radius:9px;padding:13px;min-width:0}
+.operations-form[hidden]{display:none}
+.operations-form h3,.operations-record-panel h3{font-size:11px;margin:0 0 11px;color:#dce8f3}
+.operations-form label{display:block;margin:8px 0 5px}
+.operations-form input,.operations-form select{width:100%}
+.operations-two-col{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.operations-form .primary-button{width:100%;margin-top:13px}
+.operations-records{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-top:13px}
+.operation-record{border:1px solid #263e52;background:#102236;border-radius:7px;padding:11px;margin-top:8px;min-width:0}
+.operation-record-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.operation-record-title{min-width:0}
+.operation-record-title b{display:block;font-size:10px;color:#e0eaf4;overflow-wrap:anywhere}
+.operation-record-title small{display:block;font-size:8px;color:#8499ad;margin-top:4px;overflow-wrap:anywhere}
+.record-pill{font:7px 'DM Mono',monospace;letter-spacing:.35px;padding:5px 6px;border-radius:4px;white-space:nowrap;background:#1a3044;color:#9eb6ca}
+.record-pill.delayed,.record-pill.cancelled{background:#3b3020;color:#f1bd6c}
+.record-pill.delivered{background:#14332e;color:#69d9aa}
+.record-pill.in_transit,.record-pill.dispatched{background:#172e49;color:#8db8ff}
+.operation-record-meta{display:flex;justify-content:space-between;gap:8px;margin-top:9px}
+.operation-record-meta span{font-size:8px;color:#778da2}
+.record-status{width:100%;margin-top:9px;background:#081523;color:#b8c9d8;border:1px solid #2a4055;border-radius:5px;padding:7px;font:9px var(--font)}
+.operations-message{min-height:16px;color:#f1bd6c;font-size:10px;margin:9px 0 0}
+.operations-message.success{color:#58d6a3}
+@media(max-width:700px){.operations-workspace{padding:13px}.operations-forms,.operations-records{grid-template-columns:1fr}.operations-class-picker{align-items:flex-start;flex-direction:column;gap:6px}.operations-class-picker select{width:100%}.operation-record-meta{flex-direction:column;gap:4px}}
