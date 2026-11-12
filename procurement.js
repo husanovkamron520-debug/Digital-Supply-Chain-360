@@ -80,6 +80,20 @@ if (root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith
       meta.append(el("span","","Unit cost · "+Number(po.unit_cost).toFixed(2)));
       meta.append(el("span","","Expected · "+dateText(po.expected_at)));
       card.append(meta);
+      if(isTeacher && po.status==="placed" && po.received_quantity===0){
+        const cancel=el("button","procurement-cancel-button","Cancel purchase order");
+        cancel.type="button";
+        cancel.addEventListener("click",async()=>{
+          cancel.disabled=true;
+          try{
+            const {error:cancelError}=await db.rpc("cancel_purchase_order",{p_purchase_order_id:po.id});
+            if(cancelError) throw cancelError;
+            say("Purchase order cancelled.",true);
+            await loadPurchaseOrders();
+          }catch(error){say(error.message);cancel.disabled=false;}
+        });
+        card.append(cancel);
+      }
       if(canReceive() && ["placed","partially_received"].includes(po.status)){
         const receiveForm=el("form","procurement-receive-form");
         const qty=el("input",""); qty.type="number"; qty.min="1"; qty.max=String(po.quantity-po.received_quantity); qty.value=qty.max; qty.required=true;
