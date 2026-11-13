@@ -116,7 +116,7 @@ if (root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith
         });
         card.append(cancel);
       }
-      if(canReceive() && ["placed","partially_received"].includes(po.status)){
+      if(canReceive() && ["placed","partially_received"].includes(po.status) && (isTeacher || !po.suppliers?.supplier_user_id || po.supplier_response==="accepted")){
         const receiveForm=el("form","procurement-receive-form");
         const qty=el("input",""); qty.type="number"; qty.min="1"; qty.max=String(po.quantity-po.received_quantity); qty.value=qty.max; qty.required=true;
         qty.setAttribute("aria-label","Quantity received");
