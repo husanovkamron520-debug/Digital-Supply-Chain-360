@@ -133,3 +133,47 @@ $$;
 
 revoke all on function public.respond_to_purchase_order(uuid,text,text) from public,anon;
 grant execute on function public.respond_to_purchase_order(uuid,text,text) to authenticated;
+
+-- Restrict supplier-role users to their own supplier record and purchase orders.
+drop policy if exists suppliers_select_members on public.suppliers;
+create policy suppliers_select_members
+on public.suppliers for select to authenticated
+using (
+  public.is_class_teacher(classroom_id)
+  or (
+    public.is_class_member(classroom_id)
+    and (
+      not exists (
+        select 1 from public.classroom_members cm
+        where cm.classroom_id=suppliers.classroom_id
+          and cm.student_id=(select auth.uid())
+          and cm.operational_role='supplier'
+      )
+      or supplier_user_id=(select auth.uid())
+    )
+  )
+);
+
+drop policy if exists purchase_orders_select_members on public.purchase_orders;
+create policy purchase_orders_select_members
+on public.purchase_orders for select to authenticated
+using (
+  public.is_class_teacher(classroom_id)
+  or (
+    public.is_class_member(classroom_id)
+    and (
+      not exists (
+        select 1 from public.classroom_members cm
+        where cm.classroom_id=purchase_orders.classroom_id
+          and cm.student_id=(select auth.uid())
+          and cm.operational_role='supplier'
+      )
+      or exists (
+        select 1 from public.suppliers s
+        where s.id=purchase_orders.supplier_id
+          and s.classroom_id=purchase_orders.classroom_id
+          and s.supplier_user_id=(select auth.uid())
+      )
+    )
+  )
+);
