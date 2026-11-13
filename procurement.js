@@ -33,7 +33,11 @@ if (root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith
     poForm.hidden = !canCreatePO();
     note.textContent = isTeacher
       ? "Teacher mode · manage suppliers, create purchase orders, and receive stock."
-      : "Assigned role · " + role() + " · supplier, purchasing, and receiving permissions are checked by the database.";
+      : role()==="supplier"
+        ? "Supplier role · register your supplier profile to receive and respond to purchase orders assigned to you."
+        : role()==="manufacturer"
+          ? "Manufacturer role · create purchase orders from registered suppliers."
+          : "Warehouse role · receive stock after the supplier accepts the purchase order.";
   }
 
   async function loadSuppliers() {
