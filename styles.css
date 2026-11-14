@@ -291,5 +291,6 @@
     white-space:nowrap;text-align:center;
   }
   .mobile-nav .nav-link.active{background:#14273a;color:#eaf5ff}
+  .mobile-nav .nav-link[hidden]{display:none!important}
   .mobile-nav .nav-icon{width:auto;font-size:16px;line-height:1}
 }
