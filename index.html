@@ -154,12 +154,13 @@
             <input id="competitionTitle" maxlength="140" minlength="3" placeholder="e.g. LOG-324 Supply Chain Challenge" required>
             <button class="primary-button" id="competitionCreateButton" type="submit">＋ Create competition</button>
           </form>
+          <div id="competitionManager" hidden>
           <div class="competition-setup">
             <div class="competition-section-head"><h3>Company teams</h3><p id="competitionSetupNote">Create balanced teams and assign students.</p></div>
             <div class="competition-auto-setup" id="competitionAutoSetup">
               <label for="competitionTeamCount">Number of teams</label>
               <select id="competitionTeamCount"><option value="4" selected>4 teams</option><option value="3">3 teams</option><option value="2">2 teams</option></select>
-              <button class="primary-button" type="button">Create balanced teams & assign students</button>
+              <button class="primary-button" id="competitionAutoSetupButton" type="button">Create balanced teams & assign students</button>
             </div>
             <form class="competition-inline-form" id="competitionManualTeamForm" hidden>
               <input id="competitionManualTeamName" maxlength="80" minlength="2" placeholder="Team name" required>
@@ -188,6 +189,7 @@
             <h3>Student decisions & evaluation</h3>
             <p class="form-hint">Evaluate reasoning and evidence. Operational performance scoring will be connected to the live simulation engine in the next phase.</p>
             <div id="competitionDecisionList" class="competition-record-list"><p class="empty-state">No decisions yet.</p></div>
+          </div>
           </div>
         </div>
         <div id="competitionStudentPanel" hidden>
