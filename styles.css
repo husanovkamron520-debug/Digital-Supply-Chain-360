@@ -315,3 +315,28 @@
   .workspace-switch-button{min-width:0;width:100%;min-height:42px;padding:9px 7px;font-size:10px;white-space:normal;line-height:1.25}
 }
 @media(max-width:360px){.workspace-switch-button{font-size:9px;padding-inline:5px}.dashboard-scope-copy span{font-size:9px}}
+
+
+/* Responsive navigation and compact-screen overflow fixes. */
+@media (min-width:601px) and (max-width:850px){
+  .sidebar .nav-link:not(.active){display:flex}
+  .sidebar .nav-link span:not(.nav-icon){display:none}
+  .sidebar .nav-link{min-height:42px}
+}
+@media(max-width:600px){
+  .demo-tag{display:none}
+  .topbar{min-width:0;gap:8px}
+  .crumb{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .top-actions{flex:none;gap:7px}
+  .mobile-nav .nav-link,
+  .mobile-nav .nav-link:not(.active){
+    flex:1 1 0;min-width:0;padding:5px 3px;white-space:normal;
+  }
+  .mobile-nav .nav-link span:not(.nav-icon){overflow-wrap:anywhere}
+}
+@media(max-width:420px){
+  .stage b,.stage small{white-space:normal;overflow-wrap:anywhere;line-height:1.25}
+  .stage b{min-height:20px}
+  .stage-strip{grid-template-columns:repeat(5,minmax(0,1fr))}
+  .stage{min-width:0}
+}
