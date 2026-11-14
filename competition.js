@@ -80,7 +80,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
 
  async function renderTeacherCompetition(){
   const [{data:teams,error:teamError},{data:students,error:studentError},{data:tasks,error:taskError},{data:decisions,error:decisionError}]=await Promise.all([
-   db.from("competition_teams").select("id,name,company_template_id,company_templates(name,industry,business_model)").eq("competition_id",activeCompetition.id).order("created_at"),
+   db.from("competition_teams").select("id,name,company_template_id,company_templates(name,industry,business_model,case_study_note,source_urls)").eq("competition_id",activeCompetition.id).order("created_at"),
    db.from("classroom_members").select("student_id,profiles(full_name)").eq("classroom_id",activeClassId).order("joined_at"),
    db.from("competition_tasks").select("id,team_id,title,description,assigned_role,status,due_at,due_round,submitted_round,submission,review_note").eq("competition_id",activeCompetition.id).order("created_at",{ascending:false}),
    db.from("competition_decisions").select("id,team_id,student_id,domain,decision_type,selected_option,rationale,score,feedback,created_at,profiles(full_name)").eq("competition_id",activeCompetition.id).order("created_at",{ascending:false})
