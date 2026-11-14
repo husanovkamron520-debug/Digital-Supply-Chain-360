@@ -58,6 +58,7 @@ function setWorkspaceNavVisible(href, visible) {
 async function syncWorkspaceNavigation(user, profile) {
   const teacher = profile?.platform_role === "teacher";
   if (teacher) {
+    document.body.dataset.myWorkspaceTarget = "#teacherAnalytics";
     setWorkspaceNavVisible("#operationsWorkspace", true);
     setWorkspaceNavVisible("#procurementWorkspace", true);
     return;
@@ -72,6 +73,11 @@ async function syncWorkspaceNavigation(user, profile) {
   }
 
   const roles = new Set((data || []).map(row => row.operational_role));
+  const target = roles.has("warehouse") ? "#inventoryWorkspace"
+    : ["supplier","manufacturer"].some(role => roles.has(role)) ? "#procurementWorkspace"
+    : ["customer","retailer","transport"].some(role => roles.has(role)) ? "#operationsWorkspace"
+    : "#scenarioWorkspace";
+  document.body.dataset.myWorkspaceTarget = target;
   setWorkspaceNavVisible("#operationsWorkspace",
     ["customer", "retailer", "transport"].some(role => roles.has(role)));
   setWorkspaceNavVisible("#procurementWorkspace",
