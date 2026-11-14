@@ -36,7 +36,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   }
   $("competitionClassSelect").replaceChildren(...classrooms.map(c=>option(c.name,c.id)));
   if(!classrooms.length){activeClassId=null;setHidden("competitionCreateForm",true);setHidden("competitionManager",true);setHidden("competitionList",false);setHidden("competitionStudentPanel",true);addEmpty($("competitionList"),"Create or join a classroom first.");return;}
-  setHidden("competitionList",true);setHidden("competitionCreateForm",isTeacher);
+  setHidden("competitionList",true);setHidden("competitionCreateForm",!isTeacher);
   activeClassId=classrooms[0].id;$("competitionClassSelect").value=activeClassId;
   await loadCompetitions();
  }
@@ -98,6 +98,8 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   for(const e of [teamError,studentError,taskError,decisionError])if(e)throw e;
   const teamRows=teams||[],studentRows=students||[],taskRows=tasks||[],decisionRows=decisions||[];
   $("competitionTeams").replaceChildren();
+  let assignedStudentCount=0;const teamSizes=[];let allTeamsReady=teamRows.length>=2&&teamRows.length<=4;
+  const coreRoles=["procurement","supplier","manufacturer","warehouse","transport"];
   if(!teamRows.length){
    addEmpty($("competitionTeams"),"Create a balanced 4-team setup to assign students and company models.");
   }else{
@@ -113,13 +115,22 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
     const {data:members,error:membersError}=await db.from("competition_team_members").select("id,student_id,operational_role,profiles(full_name)")
      .eq("competition_id",activeCompetition.id).eq("team_id",team.id).order("joined_at");
     if(membersError)throw membersError;
+    const teamMembers=members||[];assignedStudentCount+=teamMembers.length;teamSizes.push(teamMembers.length);
+    const presentRoles=new Set(teamMembers.map(member=>member.operational_role));
+    const missingRoles=coreRoles.filter(role=>!presentRoles.has(role));
+    const teamReady=teamMembers.length>=5&&missingRoles.length===0;
+    if(!teamReady)allTeamsReady=false;
+    head.lastChild.textContent=presentRoles.size+"/5 core roles";
+    const readiness=el("small","competition-readiness",teamReady
+      ?"Ready · "+teamMembers.length+" students"
+      :"Needs "+(missingRoles.length?missingRoles.map(statusLabel).join(", "):"")+" "+(teamMembers.length<5?"· "+(5-teamMembers.length)+" more student(s)":""));
     const list=el("div","competition-member-list");
-    for(const member of members||[]){
+    for(const member of teamMembers){
      const line=el("div","competition-member-line");
      line.append(el("span","",member.profiles?.full_name||"Student"),el("small","",statusLabel(member.operational_role)));
      list.append(line);
     }
-    card.append(list);
+    card.append(readiness,list);
     if(activeCompetition.status==="draft"){
      const form=el("form","competition-inline-form");
      const studentSelect=el("select","");studentSelect.required=true;studentSelect.append(option("Select student…",""));
@@ -216,13 +227,18 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   setHidden("competitionManualTeamForm",!draft);
   setHidden("competitionTaskForm",!["draft","active"].includes(activeCompetition.status)||!teamRows.length);
   setHidden("competitionTaskPackButton",!["draft","active"].includes(activeCompetition.status)||!teamRows.length||taskRows.length>0);
+  const sizeBalanced=teamSizes.length>0&&Math.max(...teamSizes)-Math.min(...teamSizes)<=1;
+  const everyStudentAssigned=assignedStudentCount===studentRows.length;
+  const readyToStart=allTeamsReady&&sizeBalanced&&everyStudentAssigned;
   setHidden("competitionStartButton",!draft||teamRows.length<2);
   $("competitionStartButton").textContent="Start competition";
+  $("competitionStartButton").disabled=!readyToStart;
   setHidden("competitionPauseButton",!["active","paused"].includes(activeCompetition.status));
   $("competitionPauseButton").textContent=activeCompetition.status==="paused"?"Resume competition":"Pause competition";
   $("competitionAutoSetupButton").disabled=!draft||teamRows.length>0;
+  setHidden("competitionManualTeamForm",!draft||teamRows.length>=4);
   if(!draft){$("competitionSetupNote").textContent="Team assignments are locked after the competition starts."; }
-  else $("competitionSetupNote").textContent="Create 2–4 balanced company teams. Every team needs five core roles: Procurement, Supplier, Manufacturer, Warehouse and Transport (minimum five students per team).";
+  else $("competitionSetupNote").textContent="Start is enabled when every team has at least five students and all five core roles, every classroom student is assigned, and team sizes differ by no more than one. "+(readyToStart?"All setup checks passed.":"Complete the team setup checks shown on each team card.");
  }
 
  async function renderStudentCompetition(){
