@@ -1,5 +1,4 @@
--- Freight spend is bounded to the company benchmark and determines transit speed:
--- economy <=90%: 3 days; standard: 2 days; express >=125%: 1 day.
+-- Current authoritative function snapshot; apply after the base competition RPCs.
 CREATE OR REPLACE FUNCTION public.competition_dispatch_shipment(p_order_id uuid, p_quantity integer, p_origin text, p_destination text, p_carrier text, p_transport_cost numeric DEFAULT 0)
  RETURNS uuid
  LANGUAGE plpgsql
@@ -9,7 +8,7 @@ AS $function$
 declare
  v_order public.competition_customer_orders%rowtype;
  v_profile jsonb; v_transport_rate numeric; v_min_transport numeric; v_max_transport numeric; v_transit_days integer;
- v_stock integer; v_shipped integer; v_id uuid; v_cash numeric;
+ v_stock integer; v_shipped integer; v_id uuid; v_cash numeric; v_final_virtual timestamptz; v_eta timestamptz;
  v_clock public.competition_simulation_clock%rowtype;
 begin
  if (select auth.uid()) is null then raise exception 'Sign in is required'; end if;
@@ -32,6 +31,9 @@ begin
  if p_transport_cost<=p_quantity*v_transport_rate*0.9 then v_transit_days:=3;
  elsif p_transport_cost>=p_quantity*v_transport_rate*1.25 then v_transit_days:=1;
  else v_transit_days:=2; end if;
+ v_final_virtual:=v_clock.virtual_now+make_interval(days=>greatest(0,v_clock.round_limit-v_clock.current_round)*7);
+ v_eta:=v_clock.virtual_now+make_interval(days=>v_transit_days);
+ if v_eta>v_final_virtual then raise exception 'Shipment ETA would fall after competition close (%)',v_final_virtual; end if;
  select coalesce(sum(quantity),0) into v_shipped from public.competition_shipments where order_id=p_order_id and status<>'cancelled';
  if v_shipped+p_quantity>v_order.quantity then raise exception 'Shipment quantity exceeds the outstanding customer order'; end if;
  select quantity into v_stock from public.competition_inventory where team_id=v_order.team_id and sku=v_order.sku and item_type='finished_goods' for update;
@@ -41,7 +43,7 @@ begin
  update public.competition_inventory set quantity=quantity-p_quantity,updated_at=now() where team_id=v_order.team_id and sku=v_order.sku;
  insert into public.competition_shipments(competition_id,team_id,classroom_id,order_id,quantity,origin,destination,carrier,transport_cost,eta,dispatched_at)
  values(v_order.competition_id,v_order.team_id,v_order.classroom_id,p_order_id,p_quantity,trim(p_origin),trim(p_destination),trim(p_carrier),p_transport_cost,
-  v_clock.virtual_now+make_interval(days=>v_transit_days),v_clock.virtual_now)
+  v_eta,v_clock.virtual_now)
  returning id into v_id;
  update public.competition_customer_orders set status='in_transit' where id=p_order_id and status<>'delivered';
  update public.competition_teams set cash_balance=cash_balance-p_transport_cost where id=v_order.team_id;
@@ -50,9 +52,7 @@ begin
  insert into public.competition_operational_events(competition_id,team_id,classroom_id,actor_id,actor_role,event_type,description,metadata)
  values(v_order.competition_id,v_order.team_id,v_order.classroom_id,(select auth.uid()),'transport','shipment_dispatched','Dispatched '||p_quantity||' units to '||p_destination,
  jsonb_build_object('shipment_id',v_id,'order_id',p_order_id,'stock_after',v_stock-p_quantity,'transport_cost',p_transport_cost,
- 'transport_benchmark_per_unit',v_transport_rate,'transit_days',v_transit_days,'eta',v_clock.virtual_now+make_interval(days=>v_transit_days)));
+ 'transport_benchmark_per_unit',v_transport_rate,'transit_days',v_transit_days,'eta',v_eta));
  return v_id;
 end; $function$
 ;
-revoke all on function public.competition_dispatch_shipment(uuid,integer,text,text,text,numeric) from public,anon;
-grant execute on function public.competition_dispatch_shipment(uuid,integer,text,text,text,numeric) to authenticated;
