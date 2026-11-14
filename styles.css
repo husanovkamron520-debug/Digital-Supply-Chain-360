@@ -299,9 +299,19 @@
 .nav-link[hidden]{display:none!important}
 
 
-/* Clear, accessible dashboard scope switch */
-.workspace-switch{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
-.workspace-switch-button{border:1px solid var(--line);background:#101e2e;color:#a7b7c9;border-radius:7px;padding:10px 13px;font:700 10px var(--font);cursor:pointer;transition:background .18s,border-color .18s,color .18s}
+/* Dashboard scope switch: separate row prevents topbar collisions on narrow screens. */
+.dashboard-scope-bar{display:flex;align-items:center;justify-content:space-between;gap:18px;margin:16px 0 18px;padding:13px 15px;background:linear-gradient(110deg,#102338,#0c1a2a);border:1px solid #20384d;border-radius:10px}
+.dashboard-scope-copy{display:flex;flex-direction:column;gap:4px;min-width:0}
+.dashboard-scope-copy strong{font-size:11px;color:#e6eef8}
+.dashboard-scope-copy span{font-size:10px;color:var(--muted);line-height:1.45}
+.workspace-switch{display:flex;gap:7px;align-items:center;flex:none}
+.workspace-switch-button{min-height:38px;min-width:138px;border:1px solid var(--line);background:#101e2e;color:#a7b7c9;border-radius:7px;padding:9px 14px;font:700 10px var(--font);cursor:pointer;transition:background .18s,border-color .18s,color .18s}
 .workspace-switch-button:hover{border-color:#3b6678;color:var(--text)}
-.workspace-switch-button.active{background:#173345;border-color:#53d5d0;color:#53d5d0}
-@media(max-width:700px){.welcome-row{align-items:flex-start;flex-direction:column;gap:14px}.workspace-switch{width:100%}.workspace-switch-button{flex:1}}
+.workspace-switch-button.active{background:#173345;border-color:#53d5d0;color:#53d5d0;box-shadow:inset 0 0 0 1px #53d5d022}
+.main-content>[data-scope-hidden="true"]{display:none!important}
+@media(max-width:700px){
+  .dashboard-scope-bar{align-items:stretch;flex-direction:column;gap:11px;margin:12px 0;padding:12px}
+  .workspace-switch{display:grid;grid-template-columns:1fr 1fr;width:100%;gap:7px}
+  .workspace-switch-button{min-width:0;width:100%;min-height:42px;padding:9px 7px;font-size:10px;white-space:normal;line-height:1.25}
+}
+@media(max-width:360px){.workspace-switch-button{font-size:9px;padding-inline:5px}.dashboard-scope-copy span{font-size:9px}}
