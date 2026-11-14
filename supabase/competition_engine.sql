@@ -43,7 +43,7 @@ create table if not exists public.competitions (
  created_by uuid not null references public.profiles(id),
  title text not null check (char_length(title) between 3 and 140),
  status text not null default 'draft' check (status in ('draft','active','paused','completed')),
- settings jsonb not null default '{"round_count":4,"round_duration_minutes":20,"scoring_version":"v1"}'::jsonb,
+ settings jsonb not null default '{"round_count":5,"round_duration_minutes":20,"scoring_version":"v1"}'::jsonb,
  starts_at timestamptz,
  ends_at timestamptz,
  completed_at timestamptz,
