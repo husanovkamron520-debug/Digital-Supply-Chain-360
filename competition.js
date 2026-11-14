@@ -31,7 +31,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  }
 
  async function loadTemplates(){
-  const {data,error}=await db.from("company_templates").select("id,name,industry,business_model").order("name");
+  const {data,error}=await db.from("company_templates").select("id,name,industry,business_model,case_study_note,source_urls").order("name");
   if(error)throw error;templates=data||[];
   $("competitionTemplateSelect").replaceChildren(...templates.map(t=>option(t.name+" · "+t.industry,t.id)));
  }
@@ -94,6 +94,10 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
     const card=el("article","competition-team-card");
     const head=el("div","competition-card-head");
     const copy=el("div");copy.append(el("h4","",team.name),el("p","",team.company_templates?.industry+" · "+team.company_templates?.business_model));
+    if(team.company_templates?.case_study_note)copy.append(el("small","competition-case-note",team.company_templates.case_study_note));
+    const teamSources=el("div","competition-source-links");
+    (team.company_templates?.source_urls||[]).forEach((url,i)=>{const link=el("a","","Official source "+(i+1));link.href=url;link.target="_blank";link.rel="noopener noreferrer";teamSources.append(link);});
+    if(teamSources.childElementCount)copy.append(teamSources);
     head.append(copy,el("span","competition-status",teamRows.length+" teams"));card.append(head);
     const {data:members,error:membersError}=await db.from("competition_team_members").select("id,student_id,operational_role,profiles(full_name)")
      .eq("competition_id",activeCompetition.id).eq("team_id",team.id).order("joined_at");
@@ -211,10 +215,13 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   const {data:membership,error}=await db.from("competition_team_members").select("team_id,operational_role")
    .eq("competition_id",activeCompetition.id).eq("student_id",user.id).single();
   if(error)throw error;activeTeam=membership.team_id;activeRole=membership.operational_role;
-  const {data:team,error:teamError}=await db.from("competition_teams").select("id,name,company_templates(name,industry,business_model)")
+  const {data:team,error:teamError}=await db.from("competition_teams").select("id,name,company_templates(name,industry,business_model,case_study_note,source_urls)")
    .eq("id",activeTeam).single();
   if(teamError)throw teamError;
   $("competitionStudentTeam").textContent=team.name+" · "+team.company_templates?.name;
+   $("competitionStudentCompanyNote").textContent=team.company_templates?.case_study_note||"Educational case study; simulation figures are synthetic.";
+   const studentSources=$("competitionStudentCompanySources");studentSources.replaceChildren();
+   (team.company_templates?.source_urls||[]).forEach((url,i)=>{const link=el("a","", "Official source "+(i+1));link.href=url;link.target="_blank";link.rel="noopener noreferrer";studentSources.append(link);});
   $("competitionStudentRole").textContent=statusLabel(activeRole);
   const {data:tasks,error:taskError}=await db.from("competition_tasks").select("id,title,description,assigned_role,assigned_to,status,due_at,due_round,submitted_round,submission,review_note")
    .eq("competition_id",activeCompetition.id).eq("team_id",activeTeam).order("created_at",{ascending:false});
