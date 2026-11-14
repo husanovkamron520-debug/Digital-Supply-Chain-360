@@ -66,7 +66,9 @@ if (root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith
       if (error) throw error;
       if (profile.platform_role !== "teacher") { root.hidden = true; return; }
       const analyticsNav = document.querySelector("#analyticsNavLink");
+      const mobileAnalyticsNav = document.querySelector("#mobileAnalyticsNavLink");
       if (analyticsNav) analyticsNav.hidden = false;
+      if (mobileAnalyticsNav) mobileAnalyticsNav.hidden = false;
       const { data: classes, error: classError } = await db.from("classrooms").select("id,name")
         .eq("teacher_id", session.user.id).order("created_at", { ascending: false });
       if (classError) throw classError;
