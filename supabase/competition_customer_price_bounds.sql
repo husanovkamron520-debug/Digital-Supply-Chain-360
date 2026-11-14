@@ -1,5 +1,4 @@
--- Prevent teams from creating artificial revenue by setting arbitrary customer prices.
--- Prices are constrained to 80–100% of the company's synthetic benchmark.
+-- Prevent artificial revenue, invalid due dates and new orders after the final round.
 CREATE OR REPLACE FUNCTION public.competition_create_customer_order(p_team_id uuid, p_order_number text, p_sku text, p_item_name text, p_quantity integer, p_unit_price numeric, p_due_at timestamp with time zone)
  RETURNS uuid
  LANGUAGE plpgsql
@@ -9,7 +8,7 @@ AS $function$
 declare
  v_team public.competition_teams%rowtype;
  v_clock public.competition_simulation_clock%rowtype;
- v_competition_id uuid; v_id uuid; v_profile jsonb; v_market_price numeric; v_min_price numeric;
+ v_competition_id uuid; v_id uuid; v_profile jsonb; v_market_price numeric; v_min_price numeric; v_final_virtual timestamptz;
 begin
  if (select auth.uid()) is null then raise exception 'Sign in is required'; end if;
  select competition_id into v_competition_id from public.competition_teams where id=p_team_id;
@@ -32,8 +31,10 @@ begin
  if p_unit_price is null or p_unit_price not between v_min_price and v_market_price then
   raise exception 'Unit price must be within the company benchmark range %–%',v_min_price,v_market_price;
  end if;
- if p_due_at is null or p_due_at<=v_clock.virtual_now then
-  raise exception 'Due date must be after the current simulation date (%)',v_clock.virtual_now;
+ v_final_virtual:=v_clock.virtual_now+make_interval(days=>greatest(0,v_clock.round_limit-v_clock.current_round)*7);
+ if v_clock.current_round>=v_clock.round_limit then raise exception 'New customer orders are closed in the final round'; end if;
+ if p_due_at is null or p_due_at<=v_clock.virtual_now or p_due_at>v_final_virtual then
+  raise exception 'Due date must fall after the current simulation date and on or before competition close (%)',v_final_virtual;
  end if;
  insert into public.competition_customer_orders(competition_id,team_id,classroom_id,order_number,sku,item_name,quantity,unit_price,due_at)
  values(v_team.competition_id,v_team.id,v_team.classroom_id,upper(trim(p_order_number)),upper(trim(p_sku)),trim(p_item_name),p_quantity,p_unit_price,p_due_at)
