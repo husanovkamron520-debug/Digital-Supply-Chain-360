@@ -243,7 +243,12 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   $("competitionRoundInfo").textContent=clock?"Round "+clock.current_round+" / "+clock.round_limit+" · Simulation date "+new Date(clock.virtual_now).toLocaleDateString():"Rounds begin when the competition starts.";
   setHidden("competitionAdvanceRound",activeCompetition.status!=="active");
   $("competitionAdvanceRound").disabled=!clock||clock.current_round>=clock.round_limit;
+  const pendingDecisionCount=decisionRows.filter(d=>d.score===null).length;
   setHidden("competitionCompleteButton",activeCompetition.status!=="active"||!clock||clock.current_round<clock.round_limit);
+  $("competitionCompleteButton").disabled=pendingDecisionCount>0;
+  $("competitionCompleteButton").textContent=pendingDecisionCount
+   ?"Evaluate "+pendingDecisionCount+" pending decision(s) first"
+   :"Complete competition & finalise results";
   const draft=activeCompetition.status==="draft";
   setHidden("competitionAutoSetup",!draft||teamRows.length>0);
   setHidden("competitionManualTeamForm",!draft);
@@ -470,6 +475,12 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   }catch(err){root.hidden=false;say("Competition engine could not load: "+err.message);}
  }
 
+ $("competitionRefreshButton").addEventListener("click",async()=>{
+  const btn=$("competitionRefreshButton");btn.disabled=true;
+  try{if(activeCompetition)await loadCompetition();else await loadCompetitions();say("Competition data refreshed.",true);}
+  catch(err){say(err.message);}
+  finally{btn.disabled=false;}
+ });
  $("competitionClassSelect").addEventListener("change",async()=>{activeClassId=$("competitionClassSelect").value;try{await loadCompetitions();say("");}catch(err){say(err.message);}});
  $("competitionSelect").addEventListener("change",async()=>{activeCompetition={id:$("competitionSelect").value};try{await loadCompetition();say("");}catch(err){say(err.message);}});
  $("competitionCreateForm").addEventListener("submit",async e=>{
