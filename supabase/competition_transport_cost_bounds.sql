@@ -1,4 +1,4 @@
--- Current authoritative function snapshot; apply after the base competition RPCs.
+-- Current authoritative competition RPC snapshot.
 CREATE OR REPLACE FUNCTION public.competition_dispatch_shipment(p_order_id uuid, p_quantity integer, p_origin text, p_destination text, p_carrier text, p_transport_cost numeric DEFAULT 0)
  RETURNS uuid
  LANGUAGE plpgsql
@@ -56,3 +56,5 @@ begin
  return v_id;
 end; $function$
 ;
+revoke all on function public.competition_dispatch_shipment(uuid,integer,text,text,text,numeric) from public,anon;
+grant execute on function public.competition_dispatch_shipment(uuid,integer,text,text,text,numeric) to authenticated;
