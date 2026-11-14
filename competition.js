@@ -12,6 +12,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
 
  function say(message,success=false){$("competitionMessage").textContent=message;$("competitionMessage").classList.toggle("success",success);}
  function statusLabel(value){return (value||"").replaceAll("_"," ").toUpperCase();}
+ function localDateTimeValue(value){const d=new Date(value);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);}
  function addEmpty(host,message){host.replaceChildren(el("p","empty-state",message));}
  function setHidden(id,value){$(id).hidden=value;}
 
@@ -276,6 +277,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   for(const r of [metricResult,supplierResult,inventoryResult,poResult,orderResult,shipmentResult,clockResult,taskMetricResult,teamResult,productionResult])if(r.error)throw r.error;
   const producedThisRound=(productionResult.data||[]).filter(x=>x.production_round===clockResult.data.current_round).reduce((sum,x)=>sum+Number(x.produced_quantity),0);
   const remainingProductionCapacity=Math.max(0,Number(teamResult.data.production_capacity_units)-producedThisRound);
+  $("competitionCustomerDue").min=localDateTimeValue(clockResult.data.virtual_now);
   $("competitionProductionQuantity").max=String(Math.max(1,remainingProductionCapacity));
   $("competitionProductionQuantity").disabled=remainingProductionCapacity===0||activeCompetition.status!=="active";
   $("competitionProductionCapacityNote").textContent="Round "+clockResult.data.current_round+": "+producedThisRound+" / "+teamResult.data.production_capacity_units+" units produced · "+remainingProductionCapacity+" remaining.";
