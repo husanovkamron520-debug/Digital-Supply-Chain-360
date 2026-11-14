@@ -49,6 +49,35 @@ function showApp(user, profile) {
   document.querySelector("#todayLabel").textContent = new Intl.DateTimeFormat("en", {weekday:"long", day:"numeric", month:"long", year:"numeric"}).format(new Date()).toUpperCase();
   document.body.dataset.platformRole = role;
 }
+function setWorkspaceNavVisible(href, visible) {
+  document.querySelectorAll(`.nav-link[href="${href}"]`).forEach(link => {
+    link.hidden = !visible;
+  });
+}
+
+async function syncWorkspaceNavigation(user, profile) {
+  const teacher = profile?.platform_role === "teacher";
+  if (teacher) {
+    setWorkspaceNavVisible("#operationsWorkspace", true);
+    setWorkspaceNavVisible("#procurementWorkspace", true);
+    return;
+  }
+
+  const {data, error} = await supabase.from("classroom_members")
+    .select("operational_role").eq("student_id", user.id);
+  if (error) {
+    setWorkspaceNavVisible("#operationsWorkspace", false);
+    setWorkspaceNavVisible("#procurementWorkspace", false);
+    return;
+  }
+
+  const roles = new Set((data || []).map(row => row.operational_role));
+  setWorkspaceNavVisible("#operationsWorkspace",
+    ["customer", "retailer", "transport"].some(role => roles.has(role)));
+  setWorkspaceNavVisible("#procurementWorkspace",
+    ["supplier", "manufacturer", "warehouse"].some(role => roles.has(role)));
+}
+
 async function loadProfile(user) {
   const { data, error } = await supabase.from("profiles")
     .select("full_name, platform_role").eq("id", user.id).single();
@@ -63,6 +92,7 @@ async function handleSession(session) {
   try {
     const profile = await loadProfile(session.user);
     showApp(session.user, profile);
+    await syncWorkspaceNavigation(session.user, profile);
   } catch (error) {
     gate.hidden = false;
     showMessage("Could not load your profile. Check that supabase/schema.sql has been run. " + error.message);
