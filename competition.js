@@ -24,8 +24,8 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    if(error)throw error;classrooms=(data||[]).map(x=>x.classrooms).filter(Boolean);
   }
   $("competitionClassSelect").replaceChildren(...classrooms.map(c=>option(c.name,c.id)));
-  if(!classrooms.length){activeClassId=null;setHidden("competitionCreateForm",true);setHidden("competitionManager",true);addEmpty($("competitionList"),"Create or join a classroom first.");return;}
-  setHidden("competitionCreateForm",isTeacher);
+  if(!classrooms.length){activeClassId=null;setHidden("competitionCreateForm",true);setHidden("competitionManager",true);setHidden("competitionList",false);setHidden("competitionStudentPanel",true);addEmpty($("competitionList"),"Create or join a classroom first.");return;}
+  setHidden("competitionList",true);setHidden("competitionCreateForm",isTeacher);
   activeClassId=classrooms[0].id;$("competitionClassSelect").value=activeClassId;
   await loadCompetitions();
  }
@@ -54,12 +54,13 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   }
   $("competitionSelect").replaceChildren(...rows.map(c=>option(c.title+" · "+statusLabel(c.status),c.id)));
   if(!rows.length){
-   activeCompetition=null;setHidden("competitionWorkspaceEmpty",false);setHidden("competitionManager",true);
+   activeCompetition=null;setHidden("competitionWorkspaceEmpty",false);setHidden("competitionManager",true);setHidden("competitionList",false);
+   setHidden("competitionStudentPanel",true);setHidden("competitionTeacherPanel",!isTeacher);
    addEmpty($("competitionList"),isTeacher?"No competition yet. Create one to begin.":"No active competition has been assigned to you yet.");
    setHidden("competitionTeacherPanel",!isTeacher);setHidden("competitionStudentPanel",isTeacher);
    return;
   }
-  setHidden("competitionWorkspaceEmpty",true);
+  setHidden("competitionWorkspaceEmpty",true);setHidden("competitionList",true);
   activeCompetition=rows[0];$("competitionSelect").value=activeCompetition.id;
   await loadCompetition();
  }
