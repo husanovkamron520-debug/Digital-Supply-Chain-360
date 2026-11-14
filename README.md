@@ -154,7 +154,7 @@ Before calling a release classroom-ready, test on an actual phone:
 - Scenario launch, student decisions, completion, and isolation from baseline data.
 - Teacher analytics, refresh, sign-out/sign-in, empty/error states, and narrow-screen layout.
 
-A successful GitHub deployment confirms syntax validation and deployment, not full manual browser QA. See `docs/CLASSROOM_QA_CHECKLIST.md` for the detailed test plan.
+A successful GitHub deployment confirms syntax validation and deployment, not full manual browser QA. See `docs/CLASSROOM_QA_CHECKLIST.md` and `docs/COMPETITION_QA_CHECKLIST.md` for the detailed classroom and competition test plans.
 
 ## Important limitation
 
