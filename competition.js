@@ -81,7 +81,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   const [{data:teams,error:teamError},{data:students,error:studentError},{data:tasks,error:taskError},{data:decisions,error:decisionError}]=await Promise.all([
    db.from("competition_teams").select("id,name,company_template_id,company_templates(name,industry,business_model)").eq("competition_id",activeCompetition.id).order("created_at"),
    db.from("classroom_members").select("student_id,profiles(full_name)").eq("classroom_id",activeClassId).order("joined_at"),
-   db.from("competition_tasks").select("id,team_id,title,description,assigned_role,status,due_at,submission,review_note").eq("competition_id",activeCompetition.id).order("created_at",{ascending:false}),
+   db.from("competition_tasks").select("id,team_id,title,description,assigned_role,status,due_at,due_round,submitted_round,submission,review_note").eq("competition_id",activeCompetition.id).order("created_at",{ascending:false}),
    db.from("competition_decisions").select("id,team_id,student_id,domain,decision_type,selected_option,rationale,score,feedback,created_at,profiles(full_name)").eq("competition_id",activeCompetition.id).order("created_at",{ascending:false})
   ]);
   for(const e of [teamError,studentError,taskError,decisionError])if(e)throw e;
@@ -131,7 +131,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   if(!taskRows.length)addEmpty($("competitionTaskList"),"No team tasks yet.");
   for(const task of taskRows){
    const card=el("article","competition-task-card");
-   card.append(el("div","competition-card-head",task.title),el("p","",task.description||"No additional instructions"),el("small","",statusLabel(task.assigned_role)+" · "+statusLabel(task.status)));
+   card.append(el("div","competition-card-head",task.title),el("p","",task.description||"No additional instructions"),el("small","",statusLabel(task.assigned_role)+" · "+statusLabel(task.status)+(task.due_round?" · Due round "+task.due_round:"")+(task.submitted_round?" · Submitted round "+task.submitted_round:"")+(task.due_round&&task.submitted_round>task.due_round?" · LATE":"")));
    if(task.submission)card.append(el("pre","competition-submission",JSON.stringify(task.submission,null,2)));
    if(task.status==="submitted"){
     const review=el("div","competition-review");
@@ -213,7 +213,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   if(teamError)throw teamError;
   $("competitionStudentTeam").textContent=team.name+" · "+team.company_templates?.name;
   $("competitionStudentRole").textContent=statusLabel(activeRole);
-  const {data:tasks,error:taskError}=await db.from("competition_tasks").select("id,title,description,assigned_role,assigned_to,status,due_at,submission,review_note")
+  const {data:tasks,error:taskError}=await db.from("competition_tasks").select("id,title,description,assigned_role,assigned_to,status,due_at,due_round,submitted_round,submission,review_note")
    .eq("competition_id",activeCompetition.id).eq("team_id",activeTeam).order("created_at",{ascending:false});
   if(taskError)throw taskError;
   const myTasks=(tasks||[]).filter(t=>(!t.assigned_to||t.assigned_to===user.id)&&(!t.assigned_role||t.assigned_role===activeRole));
@@ -221,7 +221,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   if(!myTasks.length)addEmpty($("competitionStudentTasks"),"No tasks have been assigned to your role yet.");
   for(const task of myTasks){
    const card=el("article","competition-task-card");
-   card.append(el("b","",task.title),el("p","",task.description),el("small","",statusLabel(task.status)+(task.due_at?" · Due "+new Date(task.due_at).toLocaleString():"")));
+   card.append(el("b","",task.title),el("p","",task.description),el("small","",statusLabel(task.status)+(task.due_round?" · Due round "+task.due_round:"")+(task.due_at?" · Due "+new Date(task.due_at).toLocaleString():"")+(task.due_round&&task.submitted_round>task.due_round?" · LATE":"")));
    if(task.review_note)card.append(el("p","competition-review-note",task.review_note));
    if(["pending","in_progress","rejected"].includes(task.status)&&activeCompetition.status==="active"){
     const form=el("form","competition-submit-form");
