@@ -62,3 +62,26 @@ Use this checklist on a real phone before using the platform with a full class. 
 ## Release decision
 
 Do not call the platform classroom-ready until the critical teacher/student/supplier/warehouse flows pass on a real phone. A green GitHub Actions run only confirms syntax validation and Cloudflare deployment.
+
+## 8. Automated backend checks (2026-11-14)
+
+The following checks were executed against the Supabase project using test identities and rolled-back transactions. They do not replace the real-phone checks above.
+
+- [x] Supplier can create its own supplier record and respond to its own purchase order.
+- [x] Manufacturer can create purchase orders but cannot receive them.
+- [x] Warehouse can receive an accepted linked-supplier purchase order but cannot create purchase orders or receive a pending linked-supplier order.
+- [x] Supplier cannot respond to another supplier's purchase order.
+- [x] Transport can create and update shipments but cannot create customer orders or change order status.
+- [x] Customer can create an order.
+- [x] Student cannot launch a scenario; teacher can launch one.
+- [x] Student cannot change their own operational role or platform role; teacher can assign an operational role.
+- [x] Student can read their own profile and membership, but not the teacher's profile or membership.
+- [x] QA records were rolled back; no test data was retained.
+
+## 9. Role-based navigation
+
+- [ ] Teacher sees Operations, Procurement, and Teacher Analytics.
+- [ ] Supplier, Manufacturer, and Warehouse see Procurement.
+- [ ] Customer, Retailer, and Transport see Orders & Shipments.
+- [ ] Student with no operational role does not see operational workspaces.
+- [ ] Confirm each menu item on both desktop and mobile after sign-in and after role changes.
