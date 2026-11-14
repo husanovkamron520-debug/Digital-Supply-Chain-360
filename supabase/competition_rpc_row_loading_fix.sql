@@ -61,7 +61,7 @@ declare
  v_team public.competition_teams%rowtype;
  v_supplier public.competition_suppliers%rowtype;
  v_clock public.competition_simulation_clock%rowtype;
- v_id uuid; v_po text; v_expected timestamptz; v_available timestamptz;
+ v_id uuid; v_po text; v_expected timestamptz; v_available timestamptz; v_final_virtual timestamptz;
 begin
  if (select auth.uid()) is null then raise exception 'Sign in is required'; end if;
  select * into v_team from public.competition_teams where id=p_team_id for update;
@@ -82,6 +82,10 @@ begin
  end if;
  v_expected:=v_clock.virtual_now+make_interval(days=>v_supplier.lead_time_days);
  v_available:=v_expected+make_interval(days=>greatest(0,round((100-v_supplier.reliability_score)/10.0)::integer));
+ v_final_virtual:=v_clock.virtual_now+make_interval(days=>greatest(0,v_clock.round_limit-v_clock.current_round)*7);
+ if v_clock.current_round>=v_clock.round_limit or v_available>v_final_virtual then
+  raise exception 'Supplier delivery would arrive after the competition closes (%)',v_final_virtual;
+ end if;
  v_po:='PO-'||upper(substr(replace(gen_random_uuid()::text,'-',''),1,10));
  insert into public.competition_purchase_orders(competition_id,team_id,classroom_id,supplier_id,po_number,sku,item_name,quantity,unit_cost,expected_at,available_at)
  values(v_team.competition_id,v_team.id,v_team.classroom_id,v_supplier.id,v_po,upper(trim(p_sku)),trim(p_item_name),p_quantity,v_supplier.unit_cost,v_expected,v_available)
@@ -93,6 +97,8 @@ begin
  return v_id;
 end; $function$
 ;
+revoke all on function public.competition_create_purchase_order(uuid,uuid,text,text,integer) from public,anon;
+grant execute on function public.competition_create_purchase_order(uuid,uuid,text,text,integer) to authenticated;
 
 CREATE OR REPLACE FUNCTION public.competition_deliver_shipment(p_shipment_id uuid)
  RETURNS jsonb
