@@ -264,3 +264,32 @@
 .procurement-accept-button{border:1px solid #28604e;background:#12352d;color:#75ddb1}
 .procurement-reject-button{border:1px solid #6a3c43;background:#321f29;color:#f0a7ad}
 .procurement-accept-button:disabled,.procurement-reject-button:disabled{opacity:.5}
+
+
+/* Mobile bottom navigation — keep every workspace reachable on phones. */
+.mobile-nav{display:none}
+@media(max-width:600px){
+  .main-content{padding-bottom:calc(82px + env(safe-area-inset-bottom))}
+  .mobile-nav{
+    position:fixed;left:0;right:0;bottom:0;z-index:15;
+    display:flex;align-items:stretch;gap:4px;
+    height:calc(64px + env(safe-area-inset-bottom));
+    padding:6px 7px calc(6px + env(safe-area-inset-bottom));
+    overflow-x:auto;overscroll-behavior-x:contain;
+    background:rgba(7,17,31,.97);
+    border-top:1px solid #26394c;
+    backdrop-filter:blur(14px);
+    scrollbar-width:none;
+  }
+  .mobile-nav::-webkit-scrollbar{display:none}
+  .mobile-nav .nav-link,
+  .mobile-nav .nav-link:not(.active){
+    display:flex!important;flex:0 0 auto;min-width:62px;
+    flex-direction:column;justify-content:center;gap:3px;
+    padding:5px 7px;border-radius:8px;
+    color:#91a1b5;font-size:8px;line-height:1.2;
+    white-space:nowrap;text-align:center;
+  }
+  .mobile-nav .nav-link.active{background:#14273a;color:#eaf5ff}
+  .mobile-nav .nav-icon{width:auto;font-size:16px;line-height:1}
+}
