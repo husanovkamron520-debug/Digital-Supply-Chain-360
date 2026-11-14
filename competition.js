@@ -272,8 +272,8 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   $("competitionPauseButton").textContent=activeCompetition.status==="paused"?"Resume competition":"Pause competition";
   $("competitionAutoSetupButton").disabled=!draft||teamRows.length>0;
   setHidden("competitionManualTeamForm",!draft||teamRows.length>=4);
-  if(!draft){$("competitionSetupNote").textContent="Team assignments are locked after the competition starts."; }
-  else $("competitionSetupNote").textContent="Start is enabled when every team has at least five students and all five core roles, every classroom student is assigned, and team sizes differ by no more than one. "+(readyToStart?"All setup checks passed.":"Complete the team setup checks shown on each team card.");
+  if(!draft){$("competitionSetupNote").textContent="Teams are locked after the competition starts."; }
+  else $("competitionSetupNote").textContent="Create teams and assign students. Each team needs at least 5 students and all 5 core roles before you can start.";
  }
 
  async function renderStudentCompetition(){
