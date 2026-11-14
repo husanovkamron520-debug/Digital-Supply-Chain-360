@@ -1054,3 +1054,98 @@ select team_id,competition_id,classroom_id,team_name,company_name,starting_capit
  jsonb_build_object('service',service_score,'cost',cost_score,'inventory',inventory_score,
   'lead_time',lead_time_score,'productivity',productivity_score,'decision_quality',decision_quality_score) as component_scores,current_round
 from weighted;
+
+
+-- ===== competition_view_and_trigger_privilege_hardening =====
+
+revoke all on public.competition_team_live_metrics from anon,authenticated;
+grant select on public.competition_team_live_metrics to authenticated;
+revoke all on function public.initialize_competition_team() from public,anon,authenticated;
+revoke all on function public.initialize_competition_rounds() from public,anon,authenticated;
+
+
+-- ===== competition_public_rankings =====
+
+create or replace view public.competition_public_leaderboard
+with (security_invoker=false)
+as
+select m.competition_id,m.team_id,m.team_name,m.company_name,m.total_score,m.score_coverage_pct,
+ m.service_score,m.cost_score,m.inventory_score,m.lead_time_score,m.productivity_score,
+ m.decision_quality_score,m.total_orders,m.delivered_orders,m.cash_balance,m.current_round
+from public.competition_team_live_metrics m
+join public.competitions c on c.id=m.competition_id
+where c.status in('active','completed') and public.is_class_member(c.classroom_id);
+
+create or replace view public.competition_individual_leaderboard
+with (security_invoker=false)
+as
+select d.competition_id,d.student_id,p.full_name,t.id as team_id,t.name as team_name,
+ count(*)::integer as decision_count,count(d.score)::integer as evaluated_decisions,
+ round(avg(d.score),2) as average_score,max(d.score) as best_decision_score
+from public.competition_decisions d
+join public.profiles p on p.id=d.student_id
+join public.competition_teams t on t.id=d.team_id
+join public.competitions c on c.id=d.competition_id
+where d.score is not null and c.status in('active','completed') and public.is_class_member(c.classroom_id)
+group by d.competition_id,d.student_id,p.full_name,t.id,t.name;
+
+revoke all on public.competition_public_leaderboard,public.competition_individual_leaderboard from anon,authenticated;
+grant select on public.competition_public_leaderboard,public.competition_individual_leaderboard to authenticated;
+
+
+-- ===== competition_public_leaderboard_paused_visibility =====
+
+create or replace view public.competition_public_leaderboard
+with (security_invoker=false)
+as
+select m.competition_id,m.team_id,m.team_name,m.company_name,m.total_score,m.score_coverage_pct,
+ m.service_score,m.cost_score,m.inventory_score,m.lead_time_score,m.productivity_score,
+ m.decision_quality_score,m.total_orders,m.delivered_orders,m.cash_balance,m.current_round
+from public.competition_team_live_metrics m
+join public.competitions c on c.id=m.competition_id
+where c.status in('active','paused','completed') and public.is_class_member(c.classroom_id);
+revoke all on public.competition_public_leaderboard from anon,authenticated;
+grant select on public.competition_public_leaderboard to authenticated;
+
+
+-- ===== competition_standard_role_task_pack =====
+
+create or replace function public.create_competition_standard_task_pack(p_competition_id uuid)
+returns integer language plpgsql security definer set search_path=''
+as $$
+declare v_classroom_id uuid; v_status text; v_team record; v_count integer:=0; v_now timestamptz:=now();
+begin
+ if (select auth.uid()) is null then raise exception 'Sign in is required'; end if;
+ select classroom_id,status into v_classroom_id,v_status from public.competitions where id=p_competition_id;
+ if not found then raise exception 'Competition not found'; end if;
+ if not public.is_class_teacher(v_classroom_id) then raise exception 'Only the teacher can create standard team tasks'; end if;
+ if v_status not in('draft','active') then raise exception 'Competition is not accepting tasks'; end if;
+ if exists(select 1 from public.competition_tasks where competition_id=p_competition_id) then raise exception 'Tasks already exist. Add custom tasks instead of duplicating the standard pack'; end if;
+ for v_team in select t.id,t.name,ct.name as company_name from public.competition_teams t
+  join public.company_templates ct on ct.id=t.company_template_id where t.competition_id=p_competition_id
+ loop
+  if not exists(select 1 from public.competition_team_members where competition_id=p_competition_id and team_id=v_team.id and operational_role='procurement')
+   or not exists(select 1 from public.competition_team_members where competition_id=p_competition_id and team_id=v_team.id and operational_role='supplier')
+   or not exists(select 1 from public.competition_team_members where competition_id=p_competition_id and team_id=v_team.id and operational_role='manufacturer')
+   or not exists(select 1 from public.competition_team_members where competition_id=p_competition_id and team_id=v_team.id and operational_role='warehouse')
+   or not exists(select 1 from public.competition_team_members where competition_id=p_competition_id and team_id=v_team.id and operational_role='transport') then
+   raise exception 'Each team must have Procurement, Supplier, Manufacturer, Warehouse and Transport roles before generating the task pack';
+  end if;
+  insert into public.competition_tasks(competition_id,team_id,classroom_id,assigned_role,title,description,priority,due_at,created_by)
+  values
+  (p_competition_id,v_team.id,v_classroom_id,'procurement','Source critical raw materials',
+   'Compare all supplier offers by unit cost, lead time and reliability. Select the best total-value option and place a purchase order for RM-001. Explain the trade-off between price, risk and continuity.', 'high',v_now+interval '1 day',(select auth.uid())),
+  (p_competition_id,v_team.id,v_classroom_id,'supplier','Negotiate supplier performance',
+   'Review the supplier portfolio. Negotiate lead time, unit cost and reliability for one supplier. Record why the revised terms improve total supply-chain performance rather than only reducing price.', 'high',v_now+interval '1 day',(select auth.uid())),
+  (p_competition_id,v_team.id,v_classroom_id,'manufacturer','Plan and execute production',
+   'Use available raw-material stock and production capacity to plan the right output for open customer orders. Complete a production run and explain how you avoided both shortages and excess production.', 'high',v_now+interval '2 days',(select auth.uid())),
+  (p_competition_id,v_team.id,v_classroom_id,'warehouse','Control receipts and inventory',
+   'Check purchase-order availability before receiving stock. Record receipts accurately and monitor reorder points for RM-001 and FG-001. Explain how your inventory policy balances service and carrying cost.', 'normal',v_now+interval '2 days',(select auth.uid())),
+  (p_competition_id,v_team.id,v_classroom_id,'transport','Fulfil customer deliveries',
+   'Prioritise open customer orders, dispatch only available finished goods, choose a suitable carrier and route, then confirm delivery when the simulated ETA is reached. Track on-time performance and transport cost.', 'high',v_now+interval '3 days',(select auth.uid()));
+  v_count:=v_count+5;
+ end loop;
+ return v_count;
+end; $$;
+revoke all on function public.create_competition_standard_task_pack(uuid) from public,anon;
+grant execute on function public.create_competition_standard_task_pack(uuid) to authenticated;
