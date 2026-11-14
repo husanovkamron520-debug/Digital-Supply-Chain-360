@@ -455,3 +455,5 @@
 .competition-case-note{display:block;margin-top:7px;color:var(--muted);font-size:10px;line-height:1.5}
 .competition-source-links{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 .competition-source-links a,.competition-record-list a{color:#72d8bb;font-size:10px;text-decoration:underline;overflow-wrap:anywhere}
+
+@media(max-width:600px){.competition-member-edit{grid-template-columns:1fr}.competition-member-edit button{width:100%}}
