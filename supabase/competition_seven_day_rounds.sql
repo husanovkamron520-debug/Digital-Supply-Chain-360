@@ -1,4 +1,4 @@
--- Four rounds now span 21 virtual days so the longest company baseline lead time can mature before final scoring.
+-- Five rounds now span 28 virtual days, leaving a final delivery and reconciliation window after the longest company baseline lead time.
 CREATE OR REPLACE FUNCTION public.competition_advance_round(p_competition_id uuid)
  RETURNS jsonb
  LANGUAGE plpgsql
