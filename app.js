@@ -188,5 +188,16 @@ document.querySelector("#scenarioBtn").addEventListener("click",runScenario);
 document.querySelector("#resetBtn").addEventListener("click",()=>{if(disrupted)runScenario();selectStage(0);setDigitalMode(false);});
 document.querySelector("#focusBtn").addEventListener("click",()=>document.body.classList.toggle("focus-mode"));
 document.querySelector("#clearEvents").addEventListener("click",()=>{document.querySelector("#eventList").innerHTML="";document.querySelector("#eventCount").textContent="00 EVENTS";});
+
+function syncNavigation(){
+  const activeHash=window.location.hash||"#overview";
+  document.querySelectorAll(".nav-link").forEach(link=>{
+    link.classList.toggle("active",link.getAttribute("href")===activeHash);
+  });
+}
+document.querySelectorAll(".nav-link").forEach(link=>link.addEventListener("click",syncNavigation));
+window.addEventListener("hashchange",syncNavigation);
+syncNavigation();
+
 setupScene();
 selectStage(0);
