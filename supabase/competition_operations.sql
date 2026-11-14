@@ -2321,3 +2321,416 @@ begin
 end; $$;
 revoke all on function public.competition_complete_production(uuid,integer) from public,anon;
 grant execute on function public.competition_complete_production(uuid,integer) to authenticated;
+
+
+-- ===== repair_competition_rpc_row_loading =====
+
+-- Repair competition RPCs that checked an uninitialised row variable
+-- before loading the requested team/order/shipment/task.
+create or replace function public.competition_create_purchase_order(
+ p_team_id uuid,p_supplier_id uuid,p_sku text,p_item_name text,p_quantity integer
+) returns uuid language plpgsql security definer set search_path=''
+as $$
+declare
+ v_team public.competition_teams%rowtype;
+ v_supplier public.competition_suppliers%rowtype;
+ v_clock public.competition_simulation_clock%rowtype;
+ v_id uuid; v_po text; v_expected timestamptz; v_available timestamptz;
+begin
+ if (select auth.uid()) is null then raise exception 'Sign in is required'; end if;
+ select * into v_team from public.competition_teams where id=p_team_id for update;
+ if not found then raise exception 'Team not found'; end if;
+ if not exists(select 1 from public.competitions where id=v_team.competition_id and status='active') then
+  raise exception 'Competition is not active';
+ end if;
+ if not public.is_competition_role(v_team.competition_id,v_team.id,array['procurement']) then
+  raise exception 'Only the assigned Procurement Manager can create purchase orders';
+ end if;
+ select * into v_clock from public.competition_simulation_clock where competition_id=v_team.competition_id;
+ if not found then raise exception 'Simulation clock not initialized'; end if;
+ select * into v_supplier from public.competition_suppliers where id=p_supplier_id and team_id=p_team_id and active;
+ if not found then raise exception 'Active supplier not found for this team'; end if;
+ if p_quantity is null or p_quantity not between 1 and 100000 then raise exception 'Quantity must be 1-100,000'; end if;
+ if char_length(trim(coalesce(p_sku,''))) not between 2 and 40 or char_length(trim(coalesce(p_item_name,''))) not between 2 and 120 then
+  raise exception 'Invalid SKU or item name';
+ end if;
+ v_expected:=v_clock.virtual_now+make_interval(days=>v_supplier.lead_time_days);
+ v_available:=v_expected+make_interval(days=>greatest(0,round((100-v_supplier.reliability_score)/10.0)::integer));
+ v_po:='PO-'||upper(substr(replace(gen_random_uuid()::text,'-',''),1,10));
+ insert into public.competition_purchase_orders(competition_id,team_id,classroom_id,supplier_id,po_number,sku,item_name,quantity,unit_cost,expected_at,available_at)
+ values(v_team.competition_id,v_team.id,v_team.classroom_id,v_supplier.id,v_po,upper(trim(p_sku)),trim(p_item_name),p_quantity,v_supplier.unit_cost,v_expected,v_available)
+ returning id into v_id;
+ insert into public.competition_operational_events(competition_id,team_id,classroom_id,actor_id,actor_role,event_type,description,metadata)
+ values(v_team.competition_id,v_team.id,v_team.classroom_id,(select auth.uid()),'procurement','purchase_order_placed','Purchase order '||v_po||' placed',
+ jsonb_build_object('supplier',v_supplier.name,'quantity',p_quantity,'unit_cost',v_supplier.unit_cost,'lead_time_days',v_supplier.lead_time_days,
+ 'reliability_score',v_supplier.reliability_score,'expected_at',v_expected,'available_at',v_available));
+ return v_id;
+end; $$;
+
+create or replace function public.competition_receive_purchase_order(p_purchase_order_id uuid,p_quantity integer)
+returns jsonb language plpgsql security definer set search_path=''
+as $$
+declare
+ v_po public.competition_purchase_orders%rowtype;
+ v_team public.competition_teams%rowtype;
+ v_clock public.competition_simulation_clock%rowtype;
+ v_new integer; v_stock integer; v_cost numeric;
+begin
+ if (select auth.uid()) is null then raise exception 'Sign in is required'; end if;
+ select * into v_po from public.competition_purchase_orders where id=p_purchase_order_id for update;
+ if not found then raise exception 'Purchase order not found'; end if;
+ if not exists(select 1 from public.competitions where id=v_po.competition_id and status='active') then
+  raise exception 'Competition is not active';
+ end if;
+ if not public.is_competition_role(v_po.competition_id,v_po.team_id,array['warehouse']) then
+  raise exception 'Only the assigned Warehouse Manager can receive stock';
+ end if;
+ if v_po.status in('cancelled','received') then raise exception 'Purchase order cannot be received'; end if;
+ select * into v_clock from public.competition_simulation_clock where competition_id=v_po.competition_id;
+ if not found then raise exception 'Simulation clock not initialized'; end if;
+ if v_clock.virtual_now<coalesce(v_po.available_at,v_po.expected_at) then
+  raise exception 'Supplier delivery is not available yet. Expected date: %, reliability-adjusted availability: %',v_po.expected_at,coalesce(v_po.available_at,v_po.expected_at);
+ end if;
+ if p_quantity is null or p_quantity<1 or v_po.received_quantity+p_quantity>v_po.quantity then raise exception 'Invalid receipt quantity'; end if;
+ v_cost:=p_quantity*v_po.unit_cost;
+ select * into v_team from public.competition_teams where id=v_po.team_id for update;
+ if not found then raise exception 'Team not found'; end if;
+ if v_team.cash_balance<v_cost then raise exception 'Insufficient company cash to pay for this receipt'; end if;
+ insert into public.competition_inventory(competition_id,team_id,classroom_id,sku,item_name,item_type,quantity,reorder_level,unit_cost)
+ values(v_po.competition_id,v_po.team_id,v_po.classroom_id,v_po.sku,v_po.item_name,'raw_material',p_quantity,0,v_po.unit_cost)
+ on conflict(team_id,sku) do update set
+  unit_cost=case when public.competition_inventory.quantity+excluded.quantity>0
+   then round((public.competition_inventory.quantity*public.competition_inventory.unit_cost+excluded.quantity*excluded.unit_cost)/
+    (public.competition_inventory.quantity+excluded.quantity),2) else excluded.unit_cost end,
+  quantity=public.competition_inventory.quantity+excluded.quantity,updated_at=now()
+ returning quantity into v_stock;
+ v_new:=v_po.received_quantity+p_quantity;
+ update public.competition_purchase_orders set received_quantity=v_new,status=case when v_new=quantity then 'received' else 'partially_received' end,
+  received_at=case when v_new=quantity then v_clock.virtual_now else received_at end where id=p_purchase_order_id;
+ update public.competition_teams set cash_balance=cash_balance-v_cost where id=v_po.team_id;
+ insert into public.competition_ledger(competition_id,team_id,classroom_id,actor_id,entry_type,amount,description,reference_id)
+ values(v_po.competition_id,v_po.team_id,v_po.classroom_id,(select auth.uid()),'purchase',-v_cost,'Received '||p_quantity||' units of '||v_po.sku,p_purchase_order_id);
+ insert into public.competition_operational_events(competition_id,team_id,classroom_id,actor_id,actor_role,event_type,description,metadata)
+ values(v_po.competition_id,v_po.team_id,v_po.classroom_id,(select auth.uid()),'warehouse','purchase_order_received','Received '||p_quantity||' units of '||v_po.sku,
+ jsonb_build_object('stock_after',v_stock,'cost',v_cost,'po_id',p_purchase_order_id,'virtual_received_at',v_clock.virtual_now));
+ return jsonb_build_object('received_quantity',v_new,'stock_quantity',v_stock,'cost',v_cost,'virtual_received_at',v_clock.virtual_now);
+end; $$;
+
+create or replace function public.competition_dispatch_shipment(
+ p_order_id uuid,p_quantity integer,p_origin text,p_destination text,p_carrier text,p_transport_cost numeric default 0
+) returns uuid language plpgsql security definer set search_path=''
+as $$
+declare
+ v_order public.competition_customer_orders%rowtype;
+ v_stock integer; v_shipped integer; v_id uuid; v_cash numeric;
+ v_clock public.competition_simulation_clock%rowtype;
+begin
+ if (select auth.uid()) is null then raise exception 'Sign in is required'; end if;
+ select * into v_order from public.competition_customer_orders where id=p_order_id for update;
+ if not found then raise exception 'Customer order not found'; end if;
+ if not exists(select 1 from public.competitions where id=v_order.competition_id and status='active') then
+  raise exception 'Competition is not active';
+ end if;
+ if not public.is_competition_role(v_order.competition_id,v_order.team_id,array['transport']) then
+  raise exception 'Only the assigned Transport Manager can dispatch shipments';
+ end if;
+ select * into v_clock from public.competition_simulation_clock where competition_id=v_order.competition_id;
+ if not found then raise exception 'Simulation clock not initialized'; end if;
+ if v_order.status in('cancelled','delivered') then raise exception 'This customer order cannot be shipped'; end if;
+ if p_quantity is null or p_quantity<1 or char_length(trim(coalesce(p_origin,'')))<2 or char_length(trim(coalesce(p_destination,'')))<2 or char_length(trim(coalesce(p_carrier,'')))<2 then
+  raise exception 'Invalid shipment details';
+ end if;
+ if p_transport_cost is null or p_transport_cost<0 or p_transport_cost>10000000 then raise exception 'Invalid transport cost'; end if;
+ select coalesce(sum(quantity),0) into v_shipped from public.competition_shipments where order_id=p_order_id and status<>'cancelled';
+ if v_shipped+p_quantity>v_order.quantity then raise exception 'Shipment quantity exceeds the outstanding customer order'; end if;
+ select quantity into v_stock from public.competition_inventory where team_id=v_order.team_id and sku=v_order.sku and item_type='finished_goods' for update;
+ if not found or v_stock<p_quantity then raise exception 'Insufficient finished-goods stock'; end if;
+ select cash_balance into v_cash from public.competition_teams where id=v_order.team_id for update;
+ if v_cash<p_transport_cost then raise exception 'Insufficient company cash for transport'; end if;
+ update public.competition_inventory set quantity=quantity-p_quantity,updated_at=now() where team_id=v_order.team_id and sku=v_order.sku;
+ insert into public.competition_shipments(competition_id,team_id,classroom_id,order_id,quantity,origin,destination,carrier,transport_cost,eta,dispatched_at)
+ values(v_order.competition_id,v_order.team_id,v_order.classroom_id,p_order_id,p_quantity,trim(p_origin),trim(p_destination),trim(p_carrier),p_transport_cost,v_clock.virtual_now+interval '2 days',v_clock.virtual_now)
+ returning id into v_id;
+ update public.competition_customer_orders set status='in_transit' where id=p_order_id and status<>'delivered';
+ update public.competition_teams set cash_balance=cash_balance-p_transport_cost where id=v_order.team_id;
+ insert into public.competition_ledger(competition_id,team_id,classroom_id,actor_id,entry_type,amount,description,reference_id)
+ values(v_order.competition_id,v_order.team_id,v_order.classroom_id,(select auth.uid()),'transport',-p_transport_cost,'Shipment transport cost',v_id);
+ insert into public.competition_operational_events(competition_id,team_id,classroom_id,actor_id,actor_role,event_type,description,metadata)
+ values(v_order.competition_id,v_order.team_id,v_order.classroom_id,(select auth.uid()),'transport','shipment_dispatched','Dispatched '||p_quantity||' units to '||p_destination,
+ jsonb_build_object('shipment_id',v_id,'order_id',p_order_id,'stock_after',v_stock-p_quantity,'transport_cost',p_transport_cost,'eta',v_clock.virtual_now+interval '2 days'));
+ return v_id;
+end; $$;
+
+create or replace function public.competition_deliver_shipment(p_shipment_id uuid)
+returns jsonb language plpgsql security definer set search_path=''
+as $$
+declare
+ v_ship public.competition_shipments%rowtype;
+ v_order public.competition_customer_orders%rowtype;
+ v_delivered integer; v_revenue numeric;
+ v_clock public.competition_simulation_clock%rowtype;
+begin
+ if (select auth.uid()) is null then raise exception 'Sign in is required'; end if;
+ select * into v_ship from public.competition_shipments where id=p_shipment_id for update;
+ if not found then raise exception 'Shipment not found'; end if;
+ if not exists(select 1 from public.competitions where id=v_ship.competition_id and status='active') then
+  raise exception 'Competition is not active';
+ end if;
+ if not public.is_competition_role(v_ship.competition_id,v_ship.team_id,array['transport']) then
+  raise exception 'Only the assigned Transport Manager can confirm delivery';
+ end if;
+ select * into v_clock from public.competition_simulation_clock where competition_id=v_ship.competition_id;
+ if not found then raise exception 'Simulation clock not initialized'; end if;
+ if v_ship.status='delivered' then raise exception 'Shipment is already delivered'; end if;
+ if v_ship.status='cancelled' then raise exception 'Cancelled shipment cannot be delivered'; end if;
+ if v_clock.virtual_now<v_ship.eta then raise exception 'Shipment is still in transit. Estimated arrival: %',v_ship.eta; end if;
+ select * into v_order from public.competition_customer_orders where id=v_ship.order_id for update;
+ if not found then raise exception 'Customer order not found'; end if;
+ update public.competition_shipments set status='delivered',delivered_at=v_clock.virtual_now where id=p_shipment_id;
+ select coalesce(sum(quantity),0) into v_delivered from public.competition_shipments where order_id=v_ship.order_id and status='delivered';
+ if v_delivered>=v_order.quantity then
+  update public.competition_customer_orders set status='delivered',delivered_at=v_clock.virtual_now where id=v_order.id;
+ else
+  update public.competition_customer_orders set status='partially_shipped' where id=v_order.id;
+ end if;
+ v_revenue:=v_ship.quantity*v_order.unit_price;
+ update public.competition_teams set cash_balance=cash_balance+v_revenue where id=v_ship.team_id;
+ insert into public.competition_ledger(competition_id,team_id,classroom_id,actor_id,entry_type,amount,description,reference_id)
+ values(v_ship.competition_id,v_ship.team_id,v_ship.classroom_id,(select auth.uid()),'revenue',v_revenue,'Customer delivery revenue',p_shipment_id);
+ insert into public.competition_operational_events(competition_id,team_id,classroom_id,actor_id,actor_role,event_type,description,metadata)
+ values(v_ship.competition_id,v_ship.team_id,v_ship.classroom_id,(select auth.uid()),'transport','shipment_delivered','Shipment delivered to '||v_ship.destination,
+ jsonb_build_object('shipment_id',p_shipment_id,'delivered_quantity',v_ship.quantity,'on_time',v_clock.virtual_now<=v_order.due_at,'revenue',v_revenue));
+ return jsonb_build_object('shipment_id',p_shipment_id,'delivered_quantity',v_ship.quantity,'on_time',v_clock.virtual_now<=v_order.due_at,'revenue',v_revenue,'virtual_delivered_at',v_clock.virtual_now);
+end; $$;
+
+create or replace function public.submit_competition_task(p_task_id uuid,p_submission jsonb)
+returns uuid language plpgsql security definer set search_path=''
+as $$
+declare
+ v_task public.competition_tasks%rowtype; v_role text;
+begin
+ if (select auth.uid()) is null then raise exception 'Sign in is required'; end if;
+ select * into v_task from public.competition_tasks where id=p_task_id for update;
+ if not found then raise exception 'Task not found'; end if;
+ if not exists(select 1 from public.competitions where id=v_task.competition_id and status='active') then
+  raise exception 'Competition is not active';
+ end if;
+ if v_task.status not in ('pending','in_progress','rejected') then raise exception 'Task cannot be submitted in its current state'; end if;
+ select operational_role into v_role from public.competition_team_members
+ where competition_id=v_task.competition_id and team_id=v_task.team_id and student_id=(select auth.uid());
+ if not found then raise exception 'You are not a member of this team'; end if;
+ if v_task.assigned_to is not null and v_task.assigned_to <> (select auth.uid()) then raise exception 'This task is assigned to another student'; end if;
+ if v_task.assigned_role is not null and v_task.assigned_role <> v_role then raise exception 'This task is assigned to another role'; end if;
+ if jsonb_typeof(p_submission) <> 'object' then raise exception 'Submission must be a JSON object'; end if;
+ if length(p_submission::text)>12000 then raise exception 'Submission is too large'; end if;
+ update public.competition_tasks set status='submitted',submission=p_submission,submitted_at=now(),
+  submitted_round=(select current_round from public.competition_simulation_clock where competition_id=v_task.competition_id)
+ where id=p_task_id;
+ return p_task_id;
+end; $$;
+
+-- Preserve the original least-privilege RPC grants.
+revoke all on function public.competition_create_purchase_order(uuid,uuid,text,text,integer) from public,anon;
+grant execute on function public.competition_create_purchase_order(uuid,uuid,text,text,integer) to authenticated;
+revoke all on function public.competition_receive_purchase_order(uuid,integer) from public,anon;
+grant execute on function public.competition_receive_purchase_order(uuid,integer) to authenticated;
+revoke all on function public.competition_dispatch_shipment(uuid,integer,text,text,text,numeric) from public,anon;
+grant execute on function public.competition_dispatch_shipment(uuid,integer,text,text,text,numeric) to authenticated;
+revoke all on function public.competition_deliver_shipment(uuid) from public,anon;
+grant execute on function public.competition_deliver_shipment(uuid) to authenticated;
+revoke all on function public.submit_competition_task(uuid,jsonb) from public,anon;
+grant execute on function public.submit_competition_task(uuid,jsonb) to authenticated;
+
+
+-- ===== make_competition_leaderboards_security_invoker =====
+alter view public.competition_public_leaderboard set (security_invoker = true);
+alter view public.competition_individual_leaderboard set (security_invoker = true);
+
+-- ===== repair_competition_inventory_order_supplier_rpcs =====
+
+-- Repair three additional competition RPCs with the same row-load ordering defect.
+create or replace function public.competition_adjust_inventory(p_team_id uuid,p_sku text,p_delta integer,p_reason text default 'Cycle count')
+returns integer language plpgsql security definer set search_path=''
+as $$
+declare v_team public.competition_teams%rowtype; v_qty integer;
+begin
+ if (select auth.uid()) is null then raise exception 'Sign in is required'; end if;
+ select * into v_team from public.competition_teams where id=p_team_id for update;
+ if not found then raise exception 'Team not found'; end if;
+ if not exists(select 1 from public.competitions where id=v_team.competition_id and status='active') then raise exception 'Competition is not active'; end if;
+ if not public.is_competition_role(v_team.competition_id,v_team.id,array['warehouse']) then raise exception 'Only the Warehouse Manager can adjust stock'; end if;
+ if p_delta is null or p_delta=0 then raise exception 'Stock adjustment cannot be zero'; end if;
+ update public.competition_inventory set quantity=quantity+p_delta,updated_at=now()
+ where team_id=p_team_id and sku=upper(trim(p_sku)) and quantity+p_delta>=0 returning quantity into v_qty;
+ if not found then raise exception 'SKU not found or adjustment would make stock negative'; end if;
+ insert into public.competition_operational_events(competition_id,team_id,classroom_id,actor_id,actor_role,event_type,description,metadata)
+ values(v_team.competition_id,v_team.id,v_team.classroom_id,(select auth.uid()),'warehouse','inventory_adjusted','Stock adjusted: '||p_sku,
+ jsonb_build_object('delta',p_delta,'quantity_after',v_qty,'reason',left(coalesce(p_reason,''),300)));
+ return v_qty;
+end; $$;
+
+create or replace function public.competition_create_customer_order(
+ p_team_id uuid,p_order_number text,p_sku text,p_item_name text,p_quantity integer,p_unit_price numeric,p_due_at timestamptz
+) returns uuid language plpgsql security definer set search_path=''
+as $$
+declare v_team public.competition_teams%rowtype; v_id uuid;
+begin
+ if (select auth.uid()) is null then raise exception 'Sign in is required'; end if;
+ select * into v_team from public.competition_teams where id=p_team_id for update;
+ if not found then raise exception 'Team not found'; end if;
+ if not exists(select 1 from public.competitions where id=v_team.competition_id and status='active') then raise exception 'Competition is not active'; end if;
+ if not public.is_competition_role(v_team.competition_id,v_team.id,array['retailer','customer','operations']) then
+  raise exception 'Only Customer/Retail Operations can create orders';
+ end if;
+ if char_length(trim(coalesce(p_order_number,''))) not between 3 and 40 or char_length(trim(coalesce(p_sku,''))) not between 2 and 40 then raise exception 'Invalid order number or SKU'; end if;
+ if char_length(trim(coalesce(p_item_name,''))) not between 2 and 120 or p_quantity is null or p_quantity not between 1 and 100000 then raise exception 'Invalid item or quantity'; end if;
+ if p_unit_price is null or p_unit_price<=0 or p_unit_price>1000000 or p_due_at is null or p_due_at<=now() then raise exception 'Invalid price or due date'; end if;
+ insert into public.competition_customer_orders(competition_id,team_id,classroom_id,order_number,sku,item_name,quantity,unit_price,due_at)
+ values(v_team.competition_id,v_team.id,v_team.classroom_id,upper(trim(p_order_number)),upper(trim(p_sku)),trim(p_item_name),p_quantity,p_unit_price,p_due_at)
+ returning id into v_id;
+ return v_id;
+exception when unique_violation then raise exception 'Order number already exists for this team';
+end; $$;
+
+create or replace function public.competition_update_supplier_terms(
+ p_supplier_id uuid,p_lead_time_days integer,p_unit_cost numeric,p_reliability_score numeric
+) returns boolean language plpgsql security definer set search_path=''
+as $$
+declare v_supplier public.competition_suppliers%rowtype;
+begin
+ if (select auth.uid()) is null then raise exception 'Sign in is required'; end if;
+ select * into v_supplier from public.competition_suppliers where id=p_supplier_id for update;
+ if not found then raise exception 'Supplier not found'; end if;
+ if not exists(select 1 from public.competitions where id=v_supplier.competition_id and status='active') then raise exception 'Competition is not active'; end if;
+ if not public.is_competition_role(v_supplier.competition_id,v_supplier.team_id,array['supplier','procurement']) then
+  raise exception 'Only Supplier Relations or Procurement can negotiate supplier terms';
+ end if;
+ if p_lead_time_days is null or p_lead_time_days not between 1 and 90 then raise exception 'Lead time must be 1-90 days'; end if;
+ if p_unit_cost is null or p_unit_cost<=0 or p_unit_cost>1000000 then raise exception 'Unit cost must be positive'; end if;
+ if p_reliability_score is null or p_reliability_score not between 0 and 100 then raise exception 'Reliability must be 0-100'; end if;
+ update public.competition_suppliers set lead_time_days=p_lead_time_days,unit_cost=p_unit_cost,reliability_score=p_reliability_score where id=p_supplier_id;
+ insert into public.competition_operational_events(competition_id,team_id,classroom_id,actor_id,actor_role,event_type,description,metadata)
+ values(v_supplier.competition_id,v_supplier.team_id,v_supplier.classroom_id,(select auth.uid()),'supplier','supplier_terms_updated',
+  'Supplier terms negotiated: '||v_supplier.name,jsonb_build_object('supplier_id',p_supplier_id,'lead_time_days',p_lead_time_days,'unit_cost',p_unit_cost,'reliability',p_reliability_score));
+ return true;
+end; $$;
+
+revoke all on function public.competition_adjust_inventory(uuid,text,integer,text) from public,anon;
+grant execute on function public.competition_adjust_inventory(uuid,text,integer,text) to authenticated;
+revoke all on function public.competition_create_customer_order(uuid,text,text,text,integer,numeric,timestamptz) from public,anon;
+grant execute on function public.competition_create_customer_order(uuid,text,text,text,integer,numeric,timestamptz) to authenticated;
+revoke all on function public.competition_update_supplier_terms(uuid,integer,numeric,numeric) from public,anon;
+grant execute on function public.competition_update_supplier_terms(uuid,integer,numeric,numeric) to authenticated;
+
+
+-- ===== fix_balanced_competition_team_array_assignment =====
+
+create or replace function public.create_balanced_competition_teams(p_competition_id uuid,p_team_count integer default 4)
+returns jsonb language plpgsql security definer set search_path=''
+as $$
+declare
+ v_classroom_id uuid; v_status text; v_student_count integer; v_created integer:=0;
+ v_member record; v_team_ids uuid[]:='{}'::uuid[]; v_team_names text[]:='{}'::text[];
+ v_template record; v_team_id uuid; v_team_no integer; v_role_no integer;
+ v_roles text[]:=array['procurement','supplier','manufacturer','warehouse','transport'];
+ v_idx integer:=0; v_student_assignments integer:=0;
+begin
+ if (select auth.uid()) is null then raise exception 'Sign in is required'; end if;
+ if p_team_count is null or p_team_count not between 2 and 4 then raise exception 'Choose between 2 and 4 teams'; end if;
+ select classroom_id,status into v_classroom_id,v_status from public.competitions where id=p_competition_id for update;
+ if not found then raise exception 'Competition not found'; end if;
+ if not public.is_class_teacher(v_classroom_id) then raise exception 'Only the classroom teacher can create teams'; end if;
+ if v_status<>'draft' then raise exception 'Competition must be in draft'; end if;
+ if exists(select 1 from public.competition_teams where competition_id=p_competition_id) then raise exception 'Teams already exist; use manual assignment instead'; end if;
+ select count(*) into v_student_count from public.classroom_members where classroom_id=v_classroom_id;
+ if v_student_count<p_team_count then raise exception 'Not enough students to create balanced teams'; end if;
+ for v_template in
+  select id,name from public.company_templates where active order by
+   case slug when 'lean-automotive' then 1 when 'omnichannel-retail' then 2 when 'flatpack-global' then 3 when 'beverage-fast-moving' then 4 else 5 end
+  limit p_team_count
+ loop
+  v_created:=v_created+1;
+  insert into public.competition_teams(competition_id,classroom_id,company_template_id,name)
+  values(p_competition_id,v_classroom_id,v_template.id,'Team '||v_created||' · '||v_template.name)
+  returning id into v_team_id;
+  v_team_ids:=array_append(v_team_ids,v_team_id);
+  v_team_names:=array_append(v_team_names,'Team '||v_created||' · '||v_template.name);
+ end loop;
+ if v_created<>p_team_count then raise exception 'Not enough active company templates'; end if;
+ for v_member in
+  select student_id,row_number() over(order by joined_at,student_id)::integer as rn
+  from public.classroom_members where classroom_id=v_classroom_id order by joined_at,student_id
+ loop
+  v_idx:=v_member.rn;
+  v_team_no:=((v_idx-1)%p_team_count)+1;
+  v_role_no:=(((v_idx-1)/p_team_count)%array_length(v_roles,1))+1;
+  insert into public.competition_team_members(competition_id,team_id,classroom_id,student_id,operational_role)
+  values(p_competition_id,v_team_ids[v_team_no],v_classroom_id,v_member.student_id,v_roles[v_role_no]);
+  v_student_assignments:=v_student_assignments+1;
+ end loop;
+ return jsonb_build_object('competition_id',p_competition_id,'team_count',v_created,'student_count',v_student_assignments,'team_names',to_jsonb(v_team_names));
+end; $$;
+revoke all on function public.create_balanced_competition_teams(uuid,integer) from public,anon;
+grant execute on function public.create_balanced_competition_teams(uuid,integer) to authenticated;
+
+
+-- ===== competition_safe_public_leaderboard_rpcs =====
+
+create or replace function public.get_competition_leaderboard(p_competition_id uuid)
+returns table(
+ team_name text,company_name text,total_score numeric,score_coverage_pct numeric,
+ service_score numeric,cost_score numeric,inventory_score numeric,lead_time_score numeric,
+ productivity_score numeric,decision_quality_score numeric,total_orders integer,delivered_orders integer,
+ cash_balance numeric,current_round integer
+)
+language plpgsql stable security definer set search_path=''
+as $$
+declare v_classroom_id uuid; v_status text;
+begin
+ if (select auth.uid()) is null then raise exception 'Sign in is required'; end if;
+ select classroom_id,status into v_classroom_id,v_status from public.competitions where id=p_competition_id;
+ if not found then raise exception 'Competition not found'; end if;
+ if not public.is_class_member(v_classroom_id) then raise exception 'You are not a member of this classroom'; end if;
+ if v_status not in('active','paused','completed') then raise exception 'Competition results are not public yet'; end if;
+ return query
+ select m.team_name,m.company_name,
+  case when v_status='completed' then coalesce(s.total_score,0) else m.total_score end,
+  case when v_status='completed' then coalesce((s.metrics->>'coverage_pct')::numeric,m.score_coverage_pct) else m.score_coverage_pct end,
+  m.service_score,m.cost_score,m.inventory_score,m.lead_time_score,m.productivity_score,m.decision_quality_score,
+  m.total_orders,m.delivered_orders,m.cash_balance,m.current_round
+ from public.competition_team_live_metrics m
+ left join public.competition_simulation_clock clk on clk.competition_id=m.competition_id
+ left join public.competition_score_snapshots s on s.competition_id=m.competition_id
+  and s.team_id=m.team_id and s.round_number=clk.round_limit
+ where m.competition_id=p_competition_id
+ order by case when v_status='completed' then coalesce(s.total_score,0) else m.total_score end desc nulls last,m.team_name;
+end; $$;
+
+create or replace function public.get_competition_individual_leaderboard(p_competition_id uuid)
+returns table(
+ full_name text,team_name text,decision_count integer,evaluated_decisions integer,
+ average_score numeric,best_decision_score numeric
+)
+language plpgsql stable security definer set search_path=''
+as $$
+declare v_classroom_id uuid; v_status text;
+begin
+ if (select auth.uid()) is null then raise exception 'Sign in is required'; end if;
+ select classroom_id,status into v_classroom_id,v_status from public.competitions where id=p_competition_id;
+ if not found then raise exception 'Competition not found'; end if;
+ if not public.is_class_member(v_classroom_id) then raise exception 'You are not a member of this classroom'; end if;
+ if v_status not in('active','paused','completed') then raise exception 'Competition results are not public yet'; end if;
+ return query
+ select p.full_name,t.name,count(*)::integer,count(d.score)::integer,round(avg(d.score),2),max(d.score)
+ from public.competition_decisions d
+ join public.profiles p on p.id=d.student_id
+ join public.competition_teams t on t.id=d.team_id
+ where d.competition_id=p_competition_id and d.score is not null
+ group by d.student_id,p.full_name,t.id,t.name
+ order by round(avg(d.score),2) desc,count(*) desc,p.full_name;
+end; $$;
+
+revoke all on function public.get_competition_leaderboard(uuid) from public,anon;
+grant execute on function public.get_competition_leaderboard(uuid) to authenticated;
+revoke all on function public.get_competition_individual_leaderboard(uuid) from public,anon;
+grant execute on function public.get_competition_individual_leaderboard(uuid) to authenticated;
