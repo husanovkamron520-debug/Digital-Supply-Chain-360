@@ -58,7 +58,7 @@ function setWorkspaceNavVisible(href, visible) {
 async function syncWorkspaceNavigation(user, profile) {
   const teacher = profile?.platform_role === "teacher";
   if (teacher) {
-    document.body.dataset.myWorkspaceTargets = JSON.stringify(["#teacherAnalytics", "#scenarioWorkspace"]);
+    document.body.dataset.myWorkspaceTargets = JSON.stringify(["#teacherAnalytics", "#inventoryWorkspace", "#operationsWorkspace", "#procurementWorkspace", "#scenarioWorkspace"]);
     document.body.dataset.myWorkspaceTarget = "#teacherAnalytics";
     setWorkspaceNavVisible("#operationsWorkspace", true);
     setWorkspaceNavVisible("#procurementWorkspace", true);
