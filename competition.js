@@ -289,17 +289,20 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   ]);
   for(const r of [metricResult,supplierResult,inventoryResult,poResult,orderResult,shipmentResult,clockResult,taskMetricResult,teamResult,productionResult])if(r.error)throw r.error;
   const canOperate=activeCompetition.status==="active";
-  for(const id of ["competitionSupplierTermsForm","competitionPurchaseOrderForm","competitionProductionForm","competitionCustomerOrderForm","competitionDecisionForm"]){const form=$(id);if(form)form.querySelectorAll("input,select,textarea,button").forEach(control=>control.disabled=!canOperate);}
+  const canPlan=canOperate&&clockResult.data.current_round<clockResult.data.round_limit;
+  for(const id of ["competitionSupplierTermsForm","competitionPurchaseOrderForm","competitionProductionForm","competitionCustomerOrderForm","competitionDecisionForm"]){const form=$(id);const enabled=id==="competitionDecisionForm"?canOperate:canPlan;if(form)form.querySelectorAll("input,select,textarea,button").forEach(control=>control.disabled=!enabled);}
   const producedThisRound=(productionResult.data||[]).filter(x=>x.production_round===clockResult.data.current_round).reduce((sum,x)=>sum+Number(x.produced_quantity),0);
   const remainingProductionCapacity=Math.max(0,Number(teamResult.data.production_capacity_units)-producedThisRound);
   $("competitionCustomerDue").min=localDateTimeValue(clockResult.data.virtual_now);
+  const finalSimulationDate=new Date(new Date(clockResult.data.virtual_now).getTime()+Math.max(0,clockResult.data.round_limit-clockResult.data.current_round)*7*86400000);
+  $("competitionCustomerDue").max=localDateTimeValue(finalSimulationDate);
   const marketPrice=Number(teamResult.data.company_templates?.operating_profile?.selling_price||0);
   if(marketPrice>0){$("competitionCustomerPrice").min=(marketPrice*.8).toFixed(2);$("competitionCustomerPrice").max=marketPrice.toFixed(2);$("competitionCustomerPrice").value=marketPrice.toFixed(2);}
   $("competitionProductionQuantity").max=String(Math.max(1,remainingProductionCapacity));
-  $("competitionProductionQuantity").disabled=remainingProductionCapacity===0||!canOperate;
+  $("competitionProductionQuantity").disabled=remainingProductionCapacity===0||!canPlan;
   $("competitionProductionCapacityNote").textContent="Round "+clockResult.data.current_round+": "+producedThisRound+" / "+teamResult.data.production_capacity_units+" units produced · "+remainingProductionCapacity+" remaining.";
   const productionSubmit=$("competitionProductionForm").querySelector("button");
-  if(productionSubmit)productionSubmit.disabled=remainingProductionCapacity===0||!canOperate;
+  if(productionSubmit)productionSubmit.disabled=remainingProductionCapacity===0||!canPlan;
   const m=metricResult.data,suppliers=supplierResult.data||[],inventory=inventoryResult.data||[],pos=poResult.data||[],orders=orderResult.data||[],shipments=shipmentResult.data||[];
   const metricCards=[
    ["Cash balance",Number(m.cash_balance).toLocaleString(undefined,{maximumFractionDigits:0})],
@@ -351,7 +354,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    const card=el("article","competition-task-card");card.append(el("b","",order.order_number+" · "+order.item_name),el("p","",order.quantity+" units · "+statusLabel(order.status)+" · Due "+new Date(order.due_at).toLocaleDateString()));
    const shipped=shipments.filter(s=>s.order_id===order.id&&s.status!=="cancelled").reduce((sum,s)=>sum+Number(s.quantity),0);
    card.append(el("small","",Math.max(0,order.quantity-shipped)+" units remaining to ship"));
-   if(activeRole==="transport"&&activeCompetition.status==="active"&&order.quantity>shipped){
+   if(activeRole==="transport"&&canPlan&&order.quantity>shipped){
     const form=el("form","competition-inline-form");
     const qty=el("input","");qty.type="number";qty.min="1";qty.max=String(order.quantity-shipped);qty.value=qty.max;qty.required=true;qty.setAttribute("aria-label","Quantity to dispatch");
     const origin=el("input","");origin.placeholder="Origin";origin.value="Company warehouse";origin.required=true;
@@ -370,6 +373,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   }
   $("competitionShipmentList").replaceChildren();
   if(!shipments.length)addEmpty($("competitionShipmentList"),"No shipments have been dispatched.");
+  if(canOperate&&!canPlan)$("competitionShipmentList").append(el("p","form-hint","Final round: new dispatches are closed. Confirm shipments that have reached their ETA."));
   for(const shipment of shipments){
    const card=el("article","competition-task-card");card.append(el("b","",shipment.destination+" · "+shipment.quantity+" units"),el("p","",shipment.carrier+" · "+statusLabel(shipment.status)+" · ETA "+new Date(shipment.eta).toLocaleString()));
    if(activeRole==="transport"&&["in_transit","delayed"].includes(shipment.status)&&activeCompetition.status==="active"){
@@ -380,7 +384,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    $("competitionShipmentList").append(card);
   }
   setHidden("competitionSupplierPanel",!["supplier","procurement"].includes(activeRole));
-  setHidden("competitionSupplierTermsForm",activeRole!=="supplier"||activeCompetition.status!=="active");
+  setHidden("competitionSupplierTermsForm",activeRole!=="supplier"||!canPlan);
   setHidden("competitionProcurementPanel",activeRole!=="procurement");
   setHidden("competitionWarehousePanel",activeRole!=="warehouse");
   setHidden("competitionManufacturerPanel",activeRole!=="manufacturer");
