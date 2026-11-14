@@ -203,18 +203,36 @@ setupScene();
 selectStage(0);
 
 
-// Dashboard view shortcuts: open the signed-in user's role workspace or the shared overview.
+// Dashboard scope switch: show only the signed-in user's workspace or the complete overview.
 const myWorkspaceBtn=document.querySelector("#myWorkspaceBtn");
 const overallOverviewBtn=document.querySelector("#overallOverviewBtn");
+const scopeStatus=document.querySelector("#scopeStatus");
+const mainContent=document.querySelector(".main-content");
 function setDashboardView(view){
   const personal=view==="personal";
+  const targetSelector=personal?(document.body.dataset.myWorkspaceTarget||"#scenarioWorkspace"):null;
+  const target=personal?document.querySelector(targetSelector):null;
+  if(personal&&!target){
+    if(scopeStatus)scopeStatus.textContent="Your role workspace is not available yet. Please wait for your classroom role to load.";
+    return;
+  }
+  [...(mainContent?.children||[])].forEach(section=>{
+    const keep=section.classList.contains("topbar")||section.classList.contains("dashboard-scope-bar")||section.id==="classroomWorkspace"||(personal&&section===target);
+    if(keep)section.removeAttribute("data-scope-hidden");
+    else if(personal)section.dataset.scopeHidden="true";
+    else section.removeAttribute("data-scope-hidden");
+  });
   myWorkspaceBtn?.classList.toggle("active",personal);
   overallOverviewBtn?.classList.toggle("active",!personal);
-  const target=personal?(document.body.dataset.myWorkspaceTarget||"#scenarioWorkspace"):"#overview";
-  const section=document.querySelector(target);
-  if(section){section.scrollIntoView({behavior:"smooth",block:"start"});}
+  myWorkspaceBtn?.setAttribute("aria-pressed",String(personal));
+  overallOverviewBtn?.setAttribute("aria-pressed",String(!personal));
+  if(scopeStatus)scopeStatus.textContent=personal
+    ?"Showing the workspace assigned to your classroom role."
+    :"Showing the complete supply-chain control tower and all available workspaces.";
   const crumb=document.querySelector(".crumb b");
-  if(crumb)crumb.textContent=personal?"My workspace":"Overall overview";
+  if(crumb)crumb.textContent=personal?"My workspace":"Global overview";
+  const destination=personal?target:document.querySelector("#overview");
+  destination?.scrollIntoView({behavior:"smooth",block:"start"});
 }
 myWorkspaceBtn?.addEventListener("click",()=>setDashboardView("personal"));
 overallOverviewBtn?.addEventListener("click",()=>setDashboardView("overall"));
