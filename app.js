@@ -201,3 +201,20 @@ syncNavigation();
 
 setupScene();
 selectStage(0);
+
+
+// Dashboard view shortcuts: open the signed-in user's role workspace or the shared overview.
+const myWorkspaceBtn=document.querySelector("#myWorkspaceBtn");
+const overallOverviewBtn=document.querySelector("#overallOverviewBtn");
+function setDashboardView(view){
+  const personal=view==="personal";
+  myWorkspaceBtn?.classList.toggle("active",personal);
+  overallOverviewBtn?.classList.toggle("active",!personal);
+  const target=personal?(document.body.dataset.myWorkspaceTarget||"#scenarioWorkspace"):"#overview";
+  const section=document.querySelector(target);
+  if(section){section.scrollIntoView({behavior:"smooth",block:"start"});}
+  const crumb=document.querySelector(".crumb b");
+  if(crumb)crumb.textContent=personal?"My workspace":"Overall overview";
+}
+myWorkspaceBtn?.addEventListener("click",()=>setDashboardView("personal"));
+overallOverviewBtn?.addEventListener("click",()=>setDashboardView("overall"));
