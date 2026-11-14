@@ -41,6 +41,45 @@ The Cloudflare Worker currently retains the technical name `digital-supply-chain
 ### Scenario Simulation Lab
 Teachers can launch Supplier Delay, Demand Spike, and Route Disruption scenarios. Students submit a decision and rationale; scores and feedback are calculated server-side. Scenario-tagged orders, shipments, and inventory are isolated from normal operational records.
 
+
+### SupplyChain14 Team Competition Engine
+
+A classroom competition module that turns each student team into an isolated, company-model supply chain. It is separate from the legacy demonstration control-tower KPIs.
+
+**Company cases**
+- Toyota — lean automotive sourcing and production.
+- Amazon — omnichannel fulfilment and inventory positioning.
+- IKEA — global flat-pack sourcing and longer replenishment lead times.
+- Coca-Cola — high-volume beverage production and distribution.
+
+These are educational simulations based on publicly known business models, not official company integrations or partnerships. Each model has different capacity, baseline lead time, product economics, starting inventory, supplier offers, and inventory holding-cost rates.
+
+**Teacher workflow**
+1. Create a competition for a classroom.
+2. Generate 2–4 balanced teams. The automatic four-team setup assigns all classroom students once and distributes five roles per team: Procurement, Supplier Relations, Manufacturer, Warehouse, and Transport.
+3. Generate the standard five-role task pack or create custom tasks.
+4. Start, pause/resume, and advance the competition through four rounds. Each round advances the simulation clock by three virtual days.
+5. Review submitted work and evaluate decision rationales.
+6. Calculate round scores and finalise the competition after the last round.
+
+**Student workflow**
+- Work only inside the assigned company team and role.
+- Compare supplier price, lead time, and reliability; place purchase orders.
+- Receive stock only when the simulated supplier availability date has elapsed.
+- Convert raw materials into finished goods within company production capacity.
+- Dispatch available finished goods, then confirm delivery after the simulated transport ETA.
+- Submit role tasks and explain operational decisions.
+
+**Live operational data**
+- Team-specific suppliers, inventory, purchase orders, customer orders, production runs, shipments, finance ledger, and event history.
+- Purchase, production, transport, revenue, and inventory carrying costs update team cash.
+- Supplier reliability adds a risk buffer to the availability date; round progression unlocks receipts and deliveries.
+- OTIF uses delivered quantities against on-time quantities, including orders already due but still undelivered.
+- Team score uses weighted service (25%), cost (20%), inventory health (15%), lead time (15%), productivity (10%), and evaluated decision quality (15%). Score coverage is shown; a live total is withheld until delivery, production, and evaluated decision evidence exists. Finalisation records zero for a team with insufficient evidence rather than inventing performance.
+- Individual rankings use teacher-evaluated decision scores. The public leaderboard exposes aggregate team and individual results, not other teams' operational records or decision rationales.
+
+Competition writes are performed through role-validated database RPCs. RLS isolates operational records by team; teachers can review the whole classroom. Direct client writes to competition tables are revoked.
+
 ### Teacher analytics
 Classroom-level order, shipment, inventory, scenario, and participation metrics. Scenario records are excluded from baseline operational KPIs.
 
@@ -56,8 +95,9 @@ Classroom-level order, shipment, inventory, scenario, and participation metrics.
 - `procurement.js` — suppliers and purchase orders.
 - `scenarios.js` — scenario launch, student decisions, and results.
 - `analytics.js` — teacher analytics.
+- `competition.js` — teacher/student competition setup, role tasks, operations, rankings, and round controls.
 - `supabase-config.js` — public Supabase URL and publishable key.
-- `supabase/` — baseline schema and incremental SQL changes.
+- `supabase/` — baseline schema and incremental SQL changes, including `competition_engine.sql` and `competition_operations.sql`.
 - `.github/workflows/deploy.yml` — syntax validation and Cloudflare deployment.
 - `wrangler.toml` — Cloudflare Worker/static-assets configuration.
 
@@ -76,9 +116,11 @@ Never commit Cloudflare tokens, Supabase service-role keys, or other secrets. Br
 
 ## Supabase setup and SQL
 
-The database includes profiles, classrooms, memberships, scenarios, orders, shipments, inventory, activity logs, suppliers, and purchase orders.
+The database includes profiles, classrooms, memberships, scenarios, orders, shipments, inventory, activity logs, suppliers, purchase orders, and the isolated team competition engine.
 
 - `supabase/schema.sql` is the baseline schema.
+- `supabase/competition_engine.sql` creates the competition foundation after the classroom/core schema.
+- `supabase/competition_operations.sql` contains the applied team operations, round clock, role workflows, live metrics, and leaderboard migrations in dependency order.
 - Other SQL files are incremental changes for modules, state transitions, indexes, RLS, grants, and security hardening.
 - For an existing project, apply only changes that have not already been applied, in their dependency order. Do not blindly rerun every file against a populated production database.
 
