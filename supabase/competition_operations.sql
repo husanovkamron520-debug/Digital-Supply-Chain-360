@@ -703,3 +703,196 @@ begin
  end loop;
  return jsonb_build_object('competition_id',p_competition_id,'team_count',v_created,'student_count',v_student_assignments,'team_names',to_jsonb(v_team_names));
 end; $$;
+
+
+-- ===== competition_virtual_clock_and_round_progression =====
+
+create table if not exists public.competition_simulation_clock(
+ competition_id uuid primary key references public.competitions(id) on delete cascade,
+ classroom_id uuid not null references public.classrooms(id) on delete cascade,
+ current_round integer not null default 1 check(current_round between 1 and 20),
+ round_limit integer not null default 4 check(round_limit between 1 and 20),
+ virtual_now timestamptz not null default now(),
+ updated_at timestamptz not null default now()
+);
+alter table public.competition_simulation_clock enable row level security;
+drop policy if exists competition_clock_read_class on public.competition_simulation_clock;
+create policy competition_clock_read_class on public.competition_simulation_clock for select to authenticated
+ using(public.is_class_member(classroom_id));
+revoke all on public.competition_simulation_clock from anon,authenticated;
+grant select on public.competition_simulation_clock to authenticated;
+
+create or replace function public.initialize_competition_rounds()
+returns trigger language plpgsql security definer set search_path=''
+as $$
+declare v_rounds integer;
+begin
+ if old.status='draft' and new.status='active' then
+  v_rounds:=greatest(1,least(20,coalesce((new.settings->>'round_count')::integer,4)));
+  insert into public.competition_simulation_clock(competition_id,classroom_id,current_round,round_limit,virtual_now)
+  values(new.id,new.classroom_id,1,v_rounds,now()) on conflict(competition_id) do nothing;
+  insert into public.competition_rounds(competition_id,round_number,title,status,brief)
+  select new.id,n,
+   case n when 1 then 'Round 1 · Source & plan' when 2 then 'Round 2 · Produce & replenish'
+    when 3 then 'Round 3 · Fulfil & deliver' when 4 then 'Round 4 · Optimise & recover'
+    else 'Round '||n||' · Continuous improvement' end,
+   case when n=1 then 'active' else 'locked' end,
+   jsonb_build_object('round',n,'virtual_days_advanced_after_round',2,
+    'focus',case n when 1 then 'Supplier selection, sourcing and inventory policy'
+     when 2 then 'Production planning and stock availability'
+     when 3 then 'Customer fulfilment and transport execution'
+     when 4 then 'Cost, service and risk optimisation' else 'Cross-functional performance' end)
+  from generate_series(1,v_rounds) n
+  on conflict(competition_id,round_number) do nothing;
+ end if;
+ return new;
+end; $$;
+drop trigger if exists competition_initialize_rounds on public.competitions;
+create trigger competition_initialize_rounds after update of status on public.competitions
+for each row execute function public.initialize_competition_rounds();
+
+create or replace function public.competition_advance_round(p_competition_id uuid)
+returns jsonb language plpgsql security definer set search_path=''
+as $$
+declare v_classroom_id uuid; v_status text; v_clock public.competition_simulation_clock%rowtype;
+begin
+ if (select auth.uid()) is null then raise exception 'Sign in is required'; end if;
+ select classroom_id,status into v_classroom_id,v_status from public.competitions where id=p_competition_id;
+ if not found then raise exception 'Competition not found'; end if;
+ if not public.is_class_teacher(v_classroom_id) then raise exception 'Only the teacher can advance the simulation'; end if;
+ if v_status<>'active' then raise exception 'Competition must be active to advance a round'; end if;
+ select * into v_clock from public.competition_simulation_clock where competition_id=p_competition_id for update;
+ if not found then raise exception 'Simulation clock has not been initialized'; end if;
+ if v_clock.current_round>=v_clock.round_limit then raise exception 'Final round reached. Review scores and complete the competition'; end if;
+ update public.competition_rounds set status='completed' where competition_id=p_competition_id and round_number=v_clock.current_round;
+ update public.competition_simulation_clock set current_round=current_round+1,virtual_now=virtual_now+interval '2 days',updated_at=now()
+ where competition_id=p_competition_id returning * into v_clock;
+ update public.competition_rounds set status='active',starts_at=now() where competition_id=p_competition_id and round_number=v_clock.current_round;
+ insert into public.competition_operational_events(competition_id,team_id,classroom_id,actor_id,actor_role,event_type,description,metadata)
+ select p_competition_id,t.id,t.classroom_id,(select auth.uid()),'teacher','round_advanced',
+  'Simulation advanced to round '||v_clock.current_round,
+  jsonb_build_object('round',v_clock.current_round,'virtual_now',v_clock.virtual_now)
+ from public.competition_teams t where t.competition_id=p_competition_id;
+ return jsonb_build_object('current_round',v_clock.current_round,'round_limit',v_clock.round_limit,'virtual_now',v_clock.virtual_now);
+end; $$;
+revoke all on function public.competition_advance_round(uuid) from public,anon;
+grant execute on function public.competition_advance_round(uuid) to authenticated;
+
+create or replace function public.competition_create_purchase_order(
+ p_team_id uuid,p_supplier_id uuid,p_sku text,p_item_name text,p_quantity integer
+) returns uuid language plpgsql security definer set search_path=''
+as $$
+declare v_team public.competition_teams%rowtype; v_supplier public.competition_suppliers%rowtype; v_clock public.competition_simulation_clock%rowtype; v_id uuid; v_po text;
+begin
+ if (select auth.uid()) is null then raise exception 'Sign in is required'; end if;
+ select * into v_team from public.competition_teams where id=p_team_id for update;
+ if not found then raise exception 'Team not found'; end if;
+ if not public.is_competition_role(v_team.competition_id,v_team.id,array['procurement']) then raise exception 'Only the assigned Procurement Manager can create purchase orders'; end if;
+ select * into v_clock from public.competition_simulation_clock where competition_id=v_team.competition_id;
+ if not found then raise exception 'Simulation clock not initialized'; end if;
+ select * into v_supplier from public.competition_suppliers where id=p_supplier_id and team_id=p_team_id and active;
+ if not found then raise exception 'Active supplier not found for this team'; end if;
+ if p_quantity is null or p_quantity not between 1 and 100000 then raise exception 'Quantity must be 1-100,000'; end if;
+ if char_length(trim(coalesce(p_sku,''))) not between 2 and 40 or char_length(trim(coalesce(p_item_name,''))) not between 2 and 120 then raise exception 'Invalid SKU or item name'; end if;
+ v_po:='PO-'||upper(substr(replace(gen_random_uuid()::text,'-',''),1,10));
+ insert into public.competition_purchase_orders(competition_id,team_id,classroom_id,supplier_id,po_number,sku,item_name,quantity,unit_cost,expected_at)
+ values(v_team.competition_id,v_team.id,v_team.classroom_id,v_supplier.id,v_po,upper(trim(p_sku)),trim(p_item_name),p_quantity,v_supplier.unit_cost,v_clock.virtual_now+make_interval(days=>v_supplier.lead_time_days))
+ returning id into v_id;
+ insert into public.competition_operational_events(competition_id,team_id,classroom_id,actor_id,actor_role,event_type,description,metadata)
+ values(v_team.competition_id,v_team.id,v_team.classroom_id,(select auth.uid()),'procurement','purchase_order_placed','Purchase order '||v_po||' placed',
+ jsonb_build_object('supplier',v_supplier.name,'quantity',p_quantity,'unit_cost',v_supplier.unit_cost,'lead_time_days',v_supplier.lead_time_days,'expected_at',v_clock.virtual_now+make_interval(days=>v_supplier.lead_time_days)));
+ return v_id;
+end; $$;
+
+create or replace function public.competition_receive_purchase_order(p_purchase_order_id uuid,p_quantity integer)
+returns jsonb language plpgsql security definer set search_path=''
+as $$
+declare v_po public.competition_purchase_orders%rowtype; v_team public.competition_teams%rowtype; v_clock public.competition_simulation_clock%rowtype; v_new integer; v_stock integer; v_cost numeric;
+begin
+ if (select auth.uid()) is null then raise exception 'Sign in is required'; end if;
+ select * into v_po from public.competition_purchase_orders where id=p_purchase_order_id for update;
+ if not found then raise exception 'Purchase order not found'; end if;
+ if not public.is_competition_role(v_po.competition_id,v_po.team_id,array['warehouse']) then raise exception 'Only the assigned Warehouse Manager can receive stock'; end if;
+ if v_po.status in('cancelled','received') then raise exception 'Purchase order cannot be received'; end if;
+ select * into v_clock from public.competition_simulation_clock where competition_id=v_po.competition_id;
+ if v_clock.virtual_now<v_po.expected_at then raise exception 'Supplier lead time has not elapsed. Expected arrival: %',v_po.expected_at; end if;
+ if p_quantity is null or p_quantity<1 or v_po.received_quantity+p_quantity>v_po.quantity then raise exception 'Invalid receipt quantity'; end if;
+ v_cost:=p_quantity*v_po.unit_cost;
+ select * into v_team from public.competition_teams where id=v_po.team_id for update;
+ if v_team.cash_balance<v_cost then raise exception 'Insufficient company cash to pay for this receipt'; end if;
+ insert into public.competition_inventory(competition_id,team_id,classroom_id,sku,item_name,item_type,quantity,reorder_level,unit_cost)
+ values(v_po.competition_id,v_po.team_id,v_po.classroom_id,v_po.sku,v_po.item_name,'raw_material',p_quantity,0,v_po.unit_cost)
+ on conflict(team_id,sku) do update set quantity=public.competition_inventory.quantity+excluded.quantity,updated_at=now()
+ returning quantity into v_stock;
+ v_new:=v_po.received_quantity+p_quantity;
+ update public.competition_purchase_orders set received_quantity=v_new,status=case when v_new=quantity then 'received' else 'partially_received' end,
+ received_at=case when v_new=quantity then v_clock.virtual_now else received_at end where id=p_purchase_order_id;
+ update public.competition_teams set cash_balance=cash_balance-v_cost where id=v_po.team_id;
+ insert into public.competition_ledger(competition_id,team_id,classroom_id,actor_id,entry_type,amount,description,reference_id)
+ values(v_po.competition_id,v_po.team_id,v_po.classroom_id,(select auth.uid()),'purchase',-v_cost,'Received '||p_quantity||' units of '||v_po.sku,p_purchase_order_id);
+ insert into public.competition_operational_events(competition_id,team_id,classroom_id,actor_id,actor_role,event_type,description,metadata)
+ values(v_po.competition_id,v_po.team_id,v_po.classroom_id,(select auth.uid()),'warehouse','purchase_order_received','Received '||p_quantity||' units of '||v_po.sku,
+ jsonb_build_object('stock_after',v_stock,'cost',v_cost,'po_id',p_purchase_order_id,'virtual_received_at',v_clock.virtual_now));
+ return jsonb_build_object('received_quantity',v_new,'stock_quantity',v_stock,'cost',v_cost,'virtual_received_at',v_clock.virtual_now);
+end; $$;
+
+create or replace function public.competition_dispatch_shipment(
+ p_order_id uuid,p_quantity integer,p_origin text,p_destination text,p_carrier text,p_transport_cost numeric default 0
+) returns uuid language plpgsql security definer set search_path=''
+as $$
+declare v_order public.competition_customer_orders%rowtype; v_stock integer; v_shipped integer; v_id uuid; v_cash numeric; v_clock public.competition_simulation_clock%rowtype;
+begin
+ if (select auth.uid()) is null then raise exception 'Sign in is required'; end if;
+ select * into v_order from public.competition_customer_orders where id=p_order_id for update;
+ if not found then raise exception 'Customer order not found'; end if;
+ if not public.is_competition_role(v_order.competition_id,v_order.team_id,array['transport']) then raise exception 'Only the assigned Transport Manager can dispatch shipments'; end if;
+ select * into v_clock from public.competition_simulation_clock where competition_id=v_order.competition_id;
+ if p_quantity is null or p_quantity<1 or char_length(trim(coalesce(p_origin,'')))<2 or char_length(trim(coalesce(p_destination,'')))<2 or char_length(trim(coalesce(p_carrier,'')))<2 then raise exception 'Invalid shipment details'; end if;
+ if p_transport_cost is null or p_transport_cost<0 or p_transport_cost>10000000 then raise exception 'Invalid transport cost'; end if;
+ select coalesce(sum(quantity),0) into v_shipped from public.competition_shipments where order_id=p_order_id and status<>'cancelled';
+ if v_shipped+p_quantity>v_order.quantity then raise exception 'Shipment quantity exceeds the outstanding customer order'; end if;
+ select quantity into v_stock from public.competition_inventory where team_id=v_order.team_id and sku=v_order.sku and item_type='finished_goods' for update;
+ if not found or v_stock<p_quantity then raise exception 'Insufficient finished-goods stock'; end if;
+ select cash_balance into v_cash from public.competition_teams where id=v_order.team_id for update;
+ if v_cash<p_transport_cost then raise exception 'Insufficient company cash for transport'; end if;
+ update public.competition_inventory set quantity=quantity-p_quantity,updated_at=now() where team_id=v_order.team_id and sku=v_order.sku;
+ insert into public.competition_shipments(competition_id,team_id,classroom_id,order_id,quantity,origin,destination,carrier,transport_cost,eta,dispatched_at)
+ values(v_order.competition_id,v_order.team_id,v_order.classroom_id,p_order_id,p_quantity,trim(p_origin),trim(p_destination),trim(p_carrier),p_transport_cost,v_clock.virtual_now+interval '2 days',v_clock.virtual_now)
+ returning id into v_id;
+ update public.competition_customer_orders set status='in_transit' where id=p_order_id and status<>'delivered';
+ update public.competition_teams set cash_balance=cash_balance-p_transport_cost where id=v_order.team_id;
+ insert into public.competition_ledger(competition_id,team_id,classroom_id,actor_id,entry_type,amount,description,reference_id)
+ values(v_order.competition_id,v_order.team_id,v_order.classroom_id,(select auth.uid()),'transport',-p_transport_cost,'Shipment transport cost',v_id);
+ insert into public.competition_operational_events(competition_id,team_id,classroom_id,actor_id,actor_role,event_type,description,metadata)
+ values(v_order.competition_id,v_order.team_id,v_order.classroom_id,(select auth.uid()),'transport','shipment_dispatched','Dispatched '||p_quantity||' units to '||p_destination,
+ jsonb_build_object('shipment_id',v_id,'order_id',p_order_id,'stock_after',v_stock-p_quantity,'transport_cost',p_transport_cost,'eta',v_clock.virtual_now+interval '2 days'));
+ return v_id;
+end; $$;
+
+create or replace function public.competition_deliver_shipment(p_shipment_id uuid)
+returns jsonb language plpgsql security definer set search_path=''
+as $$
+declare v_ship public.competition_shipments%rowtype; v_order public.competition_customer_orders%rowtype; v_delivered integer; v_revenue numeric; v_clock public.competition_simulation_clock%rowtype;
+begin
+ if (select auth.uid()) is null then raise exception 'Sign in is required'; end if;
+ select * into v_ship from public.competition_shipments where id=p_shipment_id for update;
+ if not found then raise exception 'Shipment not found'; end if;
+ if not public.is_competition_role(v_ship.competition_id,v_ship.team_id,array['transport']) then raise exception 'Only the assigned Transport Manager can confirm delivery'; end if;
+ select * into v_clock from public.competition_simulation_clock where competition_id=v_ship.competition_id;
+ if v_ship.status='delivered' then raise exception 'Shipment is already delivered'; end if;
+ if v_ship.status='cancelled' then raise exception 'Cancelled shipment cannot be delivered'; end if;
+ if v_clock.virtual_now<v_ship.eta then raise exception 'Shipment is still in transit. Estimated arrival: %',v_ship.eta; end if;
+ select * into v_order from public.competition_customer_orders where id=v_ship.order_id for update;
+ update public.competition_shipments set status='delivered',delivered_at=v_clock.virtual_now where id=p_shipment_id;
+ select coalesce(sum(quantity),0) into v_delivered from public.competition_shipments where order_id=v_ship.order_id and status='delivered';
+ if v_delivered>=v_order.quantity then update public.competition_customer_orders set status='delivered',delivered_at=v_clock.virtual_now where id=v_order.id;
+ else update public.competition_customer_orders set status='partially_shipped' where id=v_order.id; end if;
+ v_revenue:=v_ship.quantity*v_order.unit_price;
+ update public.competition_teams set cash_balance=cash_balance+v_revenue where id=v_ship.team_id;
+ insert into public.competition_ledger(competition_id,team_id,classroom_id,actor_id,entry_type,amount,description,reference_id)
+ values(v_ship.competition_id,v_ship.team_id,v_ship.classroom_id,(select auth.uid()),'revenue',v_revenue,'Customer delivery revenue',p_shipment_id);
+ insert into public.competition_operational_events(competition_id,team_id,classroom_id,actor_id,actor_role,event_type,description,metadata)
+ values(v_ship.competition_id,v_ship.team_id,v_ship.classroom_id,(select auth.uid()),'transport','shipment_delivered','Shipment delivered to '||v_ship.destination,
+ jsonb_build_object('shipment_id',p_shipment_id,'delivered_quantity',v_ship.quantity,'on_time',v_clock.virtual_now<=v_order.due_at,'revenue',v_revenue));
+ return jsonb_build_object('shipment_id',p_shipment_id,'delivered_quantity',v_ship.quantity,'on_time',v_clock.virtual_now<=v_order.due_at,'revenue',v_revenue,'virtual_delivered_at',v_clock.virtual_now);
+end; $$;
