@@ -26,6 +26,7 @@ Then apply the current competition refinements in this order:
 17. `competition_kpi_scoring.sql` — installs the normalized scorecard; requires the company target-cost values from step 4.
 18. `competition_foreign_key_indexes.sql` — adds missing foreign-key indexes only when no existing index covers the same leading columns.
 19. `competition_clock_serialization_guards.sql` — serializes receipts, deliveries, supplier changes, stock counts, task submissions, decision evaluation and round score snapshots against the simulation clock.
+20. `competition_member_reassignment.sql` — allows teachers to correct a student's team and operational role before the competition starts.
 
 ## Historical/intermediate patches
 
