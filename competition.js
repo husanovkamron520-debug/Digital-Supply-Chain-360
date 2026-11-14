@@ -176,7 +176,10 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   if(!metricRows?.length)addEmpty($("competitionLeaderboard"),"No team performance records yet.");
   for(const [index,m] of (metricRows||[]).entries()){
    const row=el("article","competition-score-row");
-   const left=el("div");const tm=taskMetricByTeam.get(m.team_id);left.append(el("b","",(index+1)+". "+m.team_name),el("small","",m.company_name+" · data coverage "+Number(m.score_coverage_pct||0).toFixed(0)+"% · Tasks "+(tm?tm.approved_tasks+"/"+tm.due_tasks+" approved":"not assigned")));
+   const left=el("div");const tm=taskMetricByTeam.get(m.team_id);
+    left.append(el("b","",(index+1)+". "+m.team_name),el("small","",m.company_name+" · data coverage "+Number(m.score_coverage_pct||0).toFixed(0)+"% · Tasks "+(tm?tm.approved_tasks+"/"+tm.due_tasks+" approved":"not assigned")));
+    const pct=value=>value===null||value===undefined?"—":Number(value).toFixed(1)+"%";
+    left.append(el("small","competition-kpi-breakdown","OTIF "+pct(m.service_score)+" · Cost "+pct(m.cost_score)+" · Inventory "+pct(m.inventory_score)+" · Lead time "+pct(m.lead_time_score)+" · Production plan "+pct(m.productivity_score)+" · Decisions "+pct(m.decision_quality_score)));
    row.append(left,el("strong","",m.total_score===null?"Awaiting data":Number(m.total_score).toFixed(1)+"/100"));
    $("competitionLeaderboard").append(row);
   }
@@ -292,6 +295,12 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    ["Production",Number(m.produced_units).toLocaleString()+" units"],
    ["Avg. lead time",m.avg_delivery_days===null?"—":Number(m.avg_delivery_days).toFixed(1)+" days"],
    ["Live score",m.total_score===null?"Awaiting data":Number(m.total_score).toFixed(1)+"/100"],
+   ["Cost efficiency",m.cost_score===null?"—":Number(m.cost_score).toFixed(1)+"%"],
+   ["Inventory balance",m.inventory_score===null?"—":Number(m.inventory_score).toFixed(1)+"%"],
+   ["Lead-time score",m.lead_time_score===null?"—":Number(m.lead_time_score).toFixed(1)+"%"],
+   ["Production plan",m.productivity_score===null?"—":Number(m.productivity_score).toFixed(1)+"%"],
+   ["Decision quality",m.decision_quality_score===null?"—":Number(m.decision_quality_score).toFixed(1)+"%"],
+   ["Score coverage",Number(m.score_coverage_pct||0).toFixed(0)+"%"],
    ["Task completion",taskMetricResult.data?.completion_pct===null||!taskMetricResult.data?"—":Number(taskMetricResult.data.completion_pct).toFixed(0)+"%"],
    ["Simulation round",clockResult.data.current_round+" / "+clockResult.data.round_limit],
    ["Simulation date",new Date(clockResult.data.virtual_now).toLocaleDateString()]
