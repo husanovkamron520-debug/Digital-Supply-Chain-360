@@ -261,7 +261,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    db.from("competition_purchase_orders").select("id,po_number,sku,item_name,quantity,received_quantity,unit_cost,status,expected_at,available_at").eq("team_id",teamId).order("created_at",{ascending:false}),
    db.from("competition_customer_orders").select("id,order_number,sku,item_name,quantity,unit_price,status,due_at,delivered_at").eq("team_id",teamId).order("created_at",{ascending:false}),
    db.from("competition_shipments").select("id,order_id,quantity,destination,carrier,status,transport_cost,eta,delivered_at").eq("team_id",teamId).order("dispatched_at",{ascending:false}),
-   db.from("competition_simulation_clock").select("current_round,round_limit,virtual_now").eq("competition_id",compId).single(),
+   db.from("competition_simulation_clock").select("current_round,round_limit,virtual_now").eq("competition_id",activeCompetition.id).single(),
    db.from("competition_task_performance").select("due_tasks,approved_tasks,completion_pct,awaiting_review,late_submissions").eq("team_id",teamId).maybeSingle(),
    db.from("competition_teams").select("production_capacity_units").eq("id",teamId).single()
   ]);
