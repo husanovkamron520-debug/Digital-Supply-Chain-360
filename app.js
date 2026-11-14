@@ -102,6 +102,16 @@ function setupScene() {
   renderer.domElement.addEventListener("wheel",e=>{camera.position.z=Math.max(7,Math.min(15,camera.position.z+e.deltaY*.008));},{passive:true});
   resizeScene();
   window.addEventListener("resize",resizeScene);
+  if("IntersectionObserver" in window){
+    const observer=new IntersectionObserver(entries=>{
+      sceneInView=Boolean(entries[0]?.isIntersecting);
+      if(sceneInView&&!document.hidden&&!animationFrame)animate();
+    },{threshold:0.05});
+    observer.observe(sceneHost);
+  }
+  document.addEventListener("visibilitychange",()=>{
+    if(!document.hidden&&sceneInView&&!animationFrame)animate();
+  });
   animate();
 }
 function onPointerDown(event){
@@ -115,10 +125,21 @@ function onPointerDown(event){
 }
 function resizeScene(){
   if(!renderer||!camera)return;
-  const w=sceneHost.clientWidth,h=sceneHost.clientHeight;
+  const w=Math.max(1,sceneHost.clientWidth),h=Math.max(1,sceneHost.clientHeight);
   camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h,false);
 }
+let sceneInView = true;
+let reduceSceneMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches || false;
 function animate(){
+  if(!renderer || document.hidden || !sceneInView || sceneHost?.closest("[data-scope-hidden]") || sceneHost?.closest("[hidden]")){
+    animationFrame=0;
+    return;
+  }
+  if(reduceSceneMotion){
+    renderer.render(scene,camera);
+    animationFrame=0;
+    return;
+  }
   animationFrame=requestAnimationFrame(animate);
   const t=clock.getElapsedTime();
   nodeMeshes.forEach(n=>{
