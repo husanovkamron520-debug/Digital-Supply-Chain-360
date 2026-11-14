@@ -127,8 +127,30 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
     const list=el("div","competition-member-list");
     for(const member of teamMembers){
      const line=el("div","competition-member-line");
-     line.append(el("span","",member.profiles?.full_name||"Student"),el("small","",statusLabel(member.operational_role)));
-     list.append(line);
+     const identity=el("div","competition-member-identity");
+     identity.append(el("span","",member.profiles?.full_name||"Student"),el("small","",statusLabel(member.operational_role)));
+     line.append(identity);
+     if(activeCompetition.status==="draft"){
+      const edit=el("button","secondary-button","Edit");edit.type="button";
+      const form=el("form","competition-member-edit");form.hidden=true;
+      const teamSelect=el("select","");teamSelect.setAttribute("aria-label","Assign team for "+(member.profiles?.full_name||"student"));
+      for(const target of teamRows)teamSelect.append(option(target.name,target.id));
+      teamSelect.value=team.id;
+      const roleSelect=el("select","");roleSelect.setAttribute("aria-label","Assign role for "+(member.profiles?.full_name||"student"));
+      for(const role of roles)roleSelect.append(option(statusLabel(role),role));
+      roleSelect.value=member.operational_role;
+      const save=el("button","secondary-button","Save assignment");save.type="submit";
+      form.append(teamSelect,roleSelect,save);
+      edit.addEventListener("click",()=>{form.hidden=!form.hidden;edit.textContent=form.hidden?"Edit":"Cancel";});
+      form.addEventListener("submit",async e=>{
+       e.preventDefault();save.disabled=true;
+       try{
+        const {error}=await db.rpc("update_competition_member_assignment",{p_membership_id:member.id,p_target_team_id:teamSelect.value,p_operational_role:roleSelect.value});
+        if(error)throw error;say("Student team and role updated.",true);await loadCompetition();
+       }catch(err){say(err.message);save.disabled=false;}
+      });
+      line.append(edit);list.append(line,form);
+     }else list.append(line);
     }
     card.append(readiness,list);
     if(activeCompetition.status==="draft"){
