@@ -403,6 +403,7 @@
 .competition-member-list{display:grid;gap:5px;margin:10px 0}
 .competition-member-line{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(130,160,190,.1);font-size:10px}
 .competition-member-line small,.competition-task-card>small,.competition-decision-card>small{color:#8fa6bc;font:9px var(--mono)}
+.competition-readiness{display:block;color:#8fa6bc;font-size:10px;line-height:1.5;margin:2px 0 7px;overflow-wrap:anywhere}
 .competition-inline-form,.competition-review{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin-top:10px}
 .competition-inline-form select,.competition-inline-form input,.competition-review input{flex:1 1 110px;width:auto}
 .competition-inline-form button,.competition-review button{flex:0 0 auto}
