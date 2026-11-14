@@ -141,7 +141,7 @@
           <div><label for="competitionClassSelect">Classroom</label><select id="competitionClassSelect"></select></div>
           <div><label for="competitionSelect">Competition</label><select id="competitionSelect"></select></div>
         </div>
-        <button class="secondary-button" id="competitionRefreshButton" type="button">Refresh competition data</button>
+        <button class="secondary-button" id="competitionRefreshButton" type="button" hidden>Refresh competition data</button>
         <div class="competition-current">
           <div><div class="section-kicker">SELECTED CHALLENGE</div><h3 id="competitionCurrentTitle">No competition selected</h3></div>
           <span class="competition-status" id="competitionCurrentStatus">—</span>
@@ -160,7 +160,7 @@
             <div class="competition-section-head"><h3>Company teams</h3><p id="competitionSetupNote">Create balanced teams and assign students.</p></div>
             <div class="competition-auto-setup" id="competitionAutoSetup">
               <label for="competitionTeamCount">Number of teams</label>
-              <select id="competitionTeamCount"><option value="4" selected>4 teams</option><option value="3">3 teams</option><option value="2">2 teams</option></select>
+              <select id="competitionTeamCount"><option value="2" selected>2 teams</option><option value="3">3 teams</option><option value="4">4 teams</option></select>
               <button class="primary-button" id="competitionAutoSetupButton" type="button">Create balanced teams & assign students</button>
             </div>
             <form class="competition-inline-form" id="competitionManualTeamForm" hidden>
@@ -171,36 +171,42 @@
             <div id="competitionTeams" class="competition-team-grid"><p class="empty-state">Create teams to begin.</p></div>
             <div class="competition-status-controls"><button class="primary-button" id="competitionStartButton" type="button" hidden>Start competition</button><button class="secondary-button" id="competitionPauseButton" type="button" hidden>Pause competition</button></div>
           </div>
-          <div class="competition-setup">
-            <h3>Assign team tasks</h3>
-            <button class="secondary-button" id="competitionTaskPackButton" type="button">Create standard 5-role task pack for every team</button>
-            <form class="competition-form" id="competitionTaskForm">
-              <label for="competitionTaskTeam">Team</label><select id="competitionTaskTeam" required></select>
-              <label for="competitionTaskRole">Responsible role</label><select id="competitionTaskRole" required></select>
-              <label for="competitionTaskTitle">Task title</label><input id="competitionTaskTitle" maxlength="140" minlength="3" required placeholder="e.g. Compare supplier quotations">
-              <label for="competitionTaskDescription">Instructions and expected evidence</label><textarea id="competitionTaskDescription" rows="3" maxlength="2000" placeholder="Describe the task, constraints and expected output"></textarea>
-              <div class="competition-toolbar">
-                <div><label for="competitionTaskPriority">Priority</label><select id="competitionTaskPriority"><option value="normal">Normal</option><option value="high">High</option><option value="critical">Critical</option><option value="low">Low</option></select></div>
-                <div><label for="competitionTaskDue">Due date</label><input id="competitionTaskDue" type="datetime-local"></div>
-              </div>
-              <button class="primary-button" id="competitionTaskButton" type="submit">＋ Assign task</button>
-            </form>
-            <div id="competitionTaskList" class="competition-record-list"><p class="empty-state">No tasks yet.</p></div>
-          </div>
-          <div class="competition-setup">
-            <div class="competition-section-head"><h3>Live team performance</h3><p>Calculated from this competition's saved operations, not sample dashboard figures.</p></div>
-            <div class="competition-round-controls"><span id="competitionRoundInfo">Round 1 / 5 · Virtual time</span><button class="secondary-button" id="competitionAdvanceRound" type="button">Advance to next round (+7 days)</button><button class="secondary-button" id="competitionCompleteButton" type="button" hidden>Complete competition & finalise results</button><button class="secondary-button" id="competitionCalculateScores" type="button">Calculate official round scores</button></div>
-            <div id="competitionLeaderboard" class="competition-record-list"><p class="empty-state">No operational scores yet.</p></div>
-          </div>
-          <div class="competition-setup">
-            <h3>Individual contribution ranking</h3>
-            <div id="competitionIndividualRanking" class="competition-record-list"><p class="empty-state">No evaluated contributions yet.</p></div>
-          </div>
-          <div class="competition-setup">
-            <h3>Student decisions & evaluation</h3>
-            <p class="form-hint">Evaluate each student's reasoning and evidence alongside the team's live operational KPIs, calculated from completed simulation actions.</p>
-            <div id="competitionDecisionList" class="competition-record-list"><p class="empty-state">No decisions yet.</p></div>
-          </div>
+          <details class="competition-advanced">
+            <summary>Team tasks and custom assignments</summary>
+                      <div class="competition-setup">
+                        <h3>Assign team tasks</h3>
+                        <button class="secondary-button" id="competitionTaskPackButton" type="button">Create standard 5-role task pack for every team</button>
+                        <form class="competition-form" id="competitionTaskForm">
+                          <label for="competitionTaskTeam">Team</label><select id="competitionTaskTeam" required></select>
+                          <label for="competitionTaskRole">Responsible role</label><select id="competitionTaskRole" required></select>
+                          <label for="competitionTaskTitle">Task title</label><input id="competitionTaskTitle" maxlength="140" minlength="3" required placeholder="e.g. Compare supplier quotations">
+                          <label for="competitionTaskDescription">Instructions and expected evidence</label><textarea id="competitionTaskDescription" rows="3" maxlength="2000" placeholder="Describe the task, constraints and expected output"></textarea>
+                          <div class="competition-toolbar">
+                            <div><label for="competitionTaskPriority">Priority</label><select id="competitionTaskPriority"><option value="normal">Normal</option><option value="high">High</option><option value="critical">Critical</option><option value="low">Low</option></select></div>
+                            <div><label for="competitionTaskDue">Due date</label><input id="competitionTaskDue" type="datetime-local"></div>
+                          </div>
+                          <button class="primary-button" id="competitionTaskButton" type="submit">＋ Assign task</button>
+                        </form>
+                        <div id="competitionTaskList" class="competition-record-list"><p class="empty-state">No tasks yet.</p></div>
+                      </div>
+          </details>
+          <details class="competition-advanced">
+            <summary>Results, scores and teacher review</summary>
+                      <div class="competition-setup">
+                        <div class="competition-section-head"><h3>Live team performance</h3><p>Calculated from this competition's saved operations, not sample dashboard figures.</p></div>
+                        <div class="competition-round-controls"><span id="competitionRoundInfo">Round 1 / 5 · Virtual time</span><button class="secondary-button" id="competitionAdvanceRound" type="button">Advance to next round (+7 days)</button><button class="secondary-button" id="competitionCompleteButton" type="button" hidden>Complete competition & finalise results</button><button class="secondary-button" id="competitionCalculateScores" type="button">Calculate official round scores</button></div>
+                        <div id="competitionLeaderboard" class="competition-record-list"><p class="empty-state">No operational scores yet.</p></div>
+                      </div>
+                      <div class="competition-setup">
+                        <h3>Individual contribution ranking</h3>
+                        <div id="competitionIndividualRanking" class="competition-record-list"><p class="empty-state">No evaluated contributions yet.</p></div>
+                      </div>
+                      <div class="competition-setup">
+                        <h3>Student decisions & evaluation</h3>
+                        <p class="form-hint">Evaluate each student's reasoning and evidence alongside the team's live operational KPIs, calculated from completed simulation actions.</p>
+                        <div id="competitionDecisionList" class="competition-record-list"><p class="empty-state">No decisions yet.</p></div>
+                      </div>
+          </details>
           </div>
         </div>
         <div id="competitionStudentPanel" hidden>
@@ -208,15 +214,18 @@
             <div><span>Your company team</span><strong id="competitionStudentTeam">—</strong></div>
             <div><span>Your assigned role</span><strong id="competitionStudentRole">—</strong></div>
           </div>
-          <div class="competition-setup" id="competitionCompanyCase">
-            <h3>Company case profile</h3>
-            <p id="competitionStudentCompanyNote" class="form-hint">Public company case study; simulation figures are synthetic.</p>
-            <div id="competitionStudentCompanySources" class="competition-record-list"></div>
-          </div>
-          <div class="competition-setup">
-            <h3>Your team's live operating metrics</h3>
-            <div id="competitionLiveMetrics" class="competition-metric-grid"><p class="empty-state">Loading company performance…</p></div>
-          </div>
+          <details class="competition-advanced">
+            <summary>Company information and detailed KPIs</summary>
+                      <div class="competition-setup" id="competitionCompanyCase">
+                        <h3>Company case profile</h3>
+                        <p id="competitionStudentCompanyNote" class="form-hint">Public company case study; simulation figures are synthetic.</p>
+                        <div id="competitionStudentCompanySources" class="competition-record-list"></div>
+                      </div>
+                      <div class="competition-setup">
+                        <h3>Your team's live operating metrics</h3>
+                        <div id="competitionLiveMetrics" class="competition-metric-grid"><p class="empty-state">Loading company performance…</p></div>
+                      </div>
+          </details>
           <div class="competition-setup" id="competitionSupplierPanel" hidden>
             <h3>Supplier management</h3>
             <div id="competitionSupplierList" class="competition-record-list"></div>
@@ -277,14 +286,17 @@
             <div id="competitionCustomerOrderList" class="competition-record-list"></div>
             <h3>Shipment tracking</h3><div id="competitionShipmentList" class="competition-record-list"></div>
           </div>
-          <div class="competition-setup">
-            <h3>Class leaderboard · all teams</h3>
-            <div id="competitionPublicLeaderboard" class="competition-record-list"><p class="empty-state">No verified results yet.</p></div>
-          </div>
-          <div class="competition-setup">
-            <h3>Top decision-makers</h3>
-            <div id="competitionPublicIndividualRanking" class="competition-record-list"><p class="empty-state">No evaluated decisions yet.</p></div>
-          </div>
+          <details class="competition-advanced">
+            <summary>Class rankings</summary>
+                      <div class="competition-setup">
+                        <h3>Class leaderboard · all teams</h3>
+                        <div id="competitionPublicLeaderboard" class="competition-record-list"><p class="empty-state">No verified results yet.</p></div>
+                      </div>
+                      <div class="competition-setup">
+                        <h3>Top decision-makers</h3>
+                        <div id="competitionPublicIndividualRanking" class="competition-record-list"><p class="empty-state">No evaluated decisions yet.</p></div>
+                      </div>
+          </details>
           <div class="competition-setup">
             <h3>Your assigned tasks</h3>
             <div id="competitionStudentTasks" class="competition-record-list"><p class="empty-state">No tasks assigned.</p></div>
@@ -298,7 +310,10 @@
             <label for="competitionDecisionRationale">Reasoning (minimum 20 characters)</label><textarea id="competitionDecisionRationale" rows="4" minlength="20" maxlength="2000" required placeholder="Explain your analysis, trade-offs, risks and expected result"></textarea>
             <button class="primary-button" id="competitionDecisionButton" type="submit">Submit decision</button>
           </form>
-          <div class="competition-setup"><h3>Your decision history</h3><div id="competitionStudentDecisionHistory" class="competition-record-list"><p class="empty-state">No decisions submitted yet.</p></div></div>
+          <details class="competition-advanced">
+            <summary>Your decision history</summary>
+                      <div class="competition-setup"><h3>Your decision history</h3><div id="competitionStudentDecisionHistory" class="competition-record-list"><p class="empty-state">No decisions submitted yet.</p></div></div>
+          </details>
         </div>
         <p class="competition-message" id="competitionMessage" role="status" aria-live="polite"></p>
       </section>
