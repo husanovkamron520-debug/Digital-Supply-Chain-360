@@ -347,3 +347,19 @@
   .stage{padding-inline:3px}
   .stage-number{margin-bottom:3px}
 }
+
+
+/* Teacher analytics: readable status distributions based only on saved records. */
+.analytics-chart-heading{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:22px 0 10px}
+.analytics-chart-heading b{font-size:12px;color:#dce8f4}
+.analytics-chart-heading span{font-size:10px;color:var(--muted)}
+.analytics-chart-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.analytics-breakdown{min-width:0;padding:14px;border:1px solid rgba(130,160,190,.16);border-radius:11px;background:rgba(17,38,57,.38)}
+.analytics-breakdown h3{margin:0 0 12px;font-size:11px;color:#dce8f4}
+.analytics-bar-row{display:grid;gap:6px;margin:10px 0}
+.analytics-bar-meta{display:flex;justify-content:space-between;gap:10px;font-size:10px;color:var(--muted)}
+.analytics-bar-meta b{color:#dce8f4;font-variant-numeric:tabular-nums}
+.analytics-bar-track{height:6px;overflow:hidden;border-radius:99px;background:#1a2c3e}
+.analytics-bar-track i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#368e9c,var(--cyan))}
+.analytics-chart-empty{margin:0;color:var(--muted);font-size:10px}
+@media(max-width:600px){.analytics-chart-grid{grid-template-columns:1fr}.analytics-chart-heading{align-items:flex-start;flex-direction:column;gap:4px}}
