@@ -58,8 +58,9 @@ function setWorkspaceNavVisible(href, visible) {
 async function syncWorkspaceNavigation(user, profile) {
   const teacher = profile?.platform_role === "teacher";
   if (teacher) {
-    document.body.dataset.myWorkspaceTargets = JSON.stringify(["#teacherAnalytics", "#inventoryWorkspace", "#operationsWorkspace", "#procurementWorkspace", "#scenarioWorkspace"]);
+    document.body.dataset.myWorkspaceTargets = JSON.stringify(["#competitionWorkspace", "#teacherAnalytics", "#inventoryWorkspace", "#operationsWorkspace", "#procurementWorkspace", "#scenarioWorkspace"]);
     document.body.dataset.myWorkspaceTarget = "#teacherAnalytics";
+    setWorkspaceNavVisible("#competitionWorkspace", true);
     setWorkspaceNavVisible("#operationsWorkspace", true);
     setWorkspaceNavVisible("#inventoryWorkspace", true);
     setWorkspaceNavVisible("#procurementWorkspace", true);
@@ -69,7 +70,7 @@ async function syncWorkspaceNavigation(user, profile) {
   const {data, error} = await supabase.from("classroom_members")
     .select("operational_role").eq("student_id", user.id);
   if (error) {
-    document.body.dataset.myWorkspaceTargets = JSON.stringify(["#scenarioWorkspace"]);
+    document.body.dataset.myWorkspaceTargets = JSON.stringify(["#competitionWorkspace", "#scenarioWorkspace"]);
     document.body.dataset.myWorkspaceTarget = "#scenarioWorkspace";
     setWorkspaceNavVisible("#operationsWorkspace", false);
     setWorkspaceNavVisible("#procurementWorkspace", false);
@@ -77,13 +78,14 @@ async function syncWorkspaceNavigation(user, profile) {
   }
 
   const roles = new Set((data || []).map(row => row.operational_role));
-  const targets = [];
+  const targets = ["#competitionWorkspace"];
   if (roles.has("warehouse")) targets.push("#inventoryWorkspace", "#procurementWorkspace");
   if (["supplier", "manufacturer"].some(role => roles.has(role))) {
     if (!targets.includes("#procurementWorkspace")) targets.push("#procurementWorkspace");
   }
   if (["customer", "retailer", "transport"].some(role => roles.has(role))) targets.push("#operationsWorkspace");
-  if (!targets.length) targets.push("#scenarioWorkspace");
+  if (targets.length === 1) targets.push("#scenarioWorkspace");
+  setWorkspaceNavVisible("#competitionWorkspace", true);
   document.body.dataset.myWorkspaceTargets = JSON.stringify(targets);
   document.body.dataset.myWorkspaceTarget = targets[0];
   setWorkspaceNavVisible("#operationsWorkspace",
