@@ -21,7 +21,7 @@ Then apply the current competition refinements in this order:
 12. `competition_customer_due_date_clock.sql` — validates due dates against virtual time and the competition's final date; closes order creation in the last round.
 13. `competition_customer_price_bounds.sql` — caps order prices to the company benchmark.
 14. `competition_supplier_negotiation_bounds.sql` — freezes supplier baselines and enforces bounded negotiation trade-offs.
-15. `competition_transport_cost_bounds.sql` — bounds freight spend, links spend tier to transit time and prevents shipments arriving after competition close.
+15. `competition_transport_cost_bounds.sql` — locks the simulation clock before dispatch, closes new dispatches in the final round, bounds freight spend and ETA.
 16. `competition_inventory_adjustment_bounds.sql` — limits cycle-count changes to 5% and requires a reason.
 17. `competition_kpi_scoring.sql` — installs the normalized scorecard; requires the company target-cost values from step 4.
 18. `competition_foreign_key_indexes.sql` — indexes competition foreign keys.
