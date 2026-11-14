@@ -254,7 +254,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
 
  async function loadTeamOperations(){
   const teamId=activeTeam;
-  const [metricResult,supplierResult,inventoryResult,poResult,orderResult,shipmentResult,clockResult,taskMetricResult]=await Promise.all([
+  const [metricResult,supplierResult,inventoryResult,poResult,orderResult,shipmentResult,clockResult,taskMetricResult,teamResult]=await Promise.all([
    db.from("competition_team_live_metrics").select("*").eq("team_id",teamId).single(),
    db.from("competition_suppliers").select("id,supplier_code,name,lead_time_days,unit_cost,reliability_score,active").eq("team_id",teamId).order("unit_cost"),
    db.from("competition_inventory").select("sku,item_name,item_type,quantity,reorder_level,unit_cost").eq("team_id",teamId).order("item_type"),
@@ -262,9 +262,11 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    db.from("competition_customer_orders").select("id,order_number,sku,item_name,quantity,unit_price,status,due_at,delivered_at").eq("team_id",teamId).order("created_at",{ascending:false}),
    db.from("competition_shipments").select("id,order_id,quantity,destination,carrier,status,transport_cost,eta,delivered_at").eq("team_id",teamId).order("dispatched_at",{ascending:false}),
    db.from("competition_simulation_clock").select("current_round,round_limit,virtual_now").eq("competition_id",compId).single(),
-   db.from("competition_task_performance").select("due_tasks,approved_tasks,completion_pct,awaiting_review,late_submissions").eq("team_id",teamId).maybeSingle()
+   db.from("competition_task_performance").select("due_tasks,approved_tasks,completion_pct,awaiting_review,late_submissions").eq("team_id",teamId).maybeSingle(),
+   db.from("competition_teams").select("production_capacity_units").eq("id",teamId).single()
   ]);
-  for(const r of [metricResult,supplierResult,inventoryResult,poResult,orderResult,shipmentResult,clockResult,taskMetricResult])if(r.error)throw r.error;
+  for(const r of [metricResult,supplierResult,inventoryResult,poResult,orderResult,shipmentResult,clockResult,taskMetricResult,teamResult])if(r.error)throw r.error;
+  $("competitionProductionQuantity").max=String(teamResult.data.production_capacity_units);
   const m=metricResult.data,suppliers=supplierResult.data||[],inventory=inventoryResult.data||[],pos=poResult.data||[],orders=orderResult.data||[],shipments=shipmentResult.data||[];
   const metricCards=[
    ["Cash balance",Number(m.cash_balance).toLocaleString(undefined,{maximumFractionDigits:0})],
@@ -293,10 +295,12 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   if(!outstandingPOs.length)addEmpty($("competitionPurchaseOrderList"),"No outstanding purchase orders.");
   for(const po of outstandingPOs){
    const card=el("article","competition-task-card");card.append(el("b","",po.po_number+" · "+po.item_name),el("p","",po.received_quantity+" / "+po.quantity+" received · Expected "+new Date(po.expected_at).toLocaleDateString()+" · "+Number(po.unit_cost).toFixed(2)+" / unit · Available "+new Date(po.available_at||po.expected_at).toLocaleDateString()));
-   if(activeCompetition.status==="active"&&activeRole==="warehouse"){const form=el("form","competition-inline-form"),qty=el("input","");qty.type="number";qty.min="1";qty.max=String(po.quantity-po.received_quantity);qty.value=qty.max;qty.required=true;
+   const supplierAvailable=new Date(clockResult.data.virtual_now)>=new Date(po.available_at||po.expected_at);
+   if(activeCompetition.status==="active"&&activeRole==="warehouse"&&supplierAvailable){const form=el("form","competition-inline-form"),qty=el("input","");qty.type="number";qty.min="1";qty.max=String(po.quantity-po.received_quantity);qty.value=qty.max;qty.required=true;
    const btn=el("button","secondary-button","Receive stock");btn.type="submit";form.append(qty,btn);
    form.addEventListener("submit",async e=>{e.preventDefault();btn.disabled=true;try{const {data,error}=await db.rpc("competition_receive_purchase_order",{p_purchase_order_id:po.id,p_quantity:Number(qty.value)});if(error)throw error;say("Received "+data.received_quantity+" units; stock and cash updated.",true);await loadTeamOperations();}catch(err){say(err.message);btn.disabled=false;}});
-   card.append(form);}$("competitionPurchaseOrderList").append(card);
+   card.append(form);}else if(activeCompetition.status==="active"&&activeRole==="warehouse"){card.append(el("small","", "Awaiting supplier availability · "+new Date(po.available_at||po.expected_at).toLocaleDateString()));}
+   $("competitionPurchaseOrderList").append(card);
   }
   $("competitionInventoryList").replaceChildren();
   if(!inventory.length)addEmpty($("competitionInventoryList"),"No inventory records.");
@@ -326,7 +330,9 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   for(const shipment of shipments){
    const card=el("article","competition-task-card");card.append(el("b","",shipment.destination+" · "+shipment.quantity+" units"),el("p","",shipment.carrier+" · "+statusLabel(shipment.status)+" · ETA "+new Date(shipment.eta).toLocaleString()));
    if(activeRole==="transport"&&["in_transit","delayed"].includes(shipment.status)&&activeCompetition.status==="active"){
-    const btn=el("button","secondary-button","Confirm delivery");btn.type="button";btn.addEventListener("click",async()=>{btn.disabled=true;try{const {data,error}=await db.rpc("competition_deliver_shipment",{p_shipment_id:shipment.id});if(error)throw error;say(data.on_time?"Delivered on time. Revenue recorded.":"Delivered late. Revenue recorded.",true);await loadTeamOperations();}catch(err){say(err.message);btn.disabled=false;}});card.append(btn);
+    if(new Date(clockResult.data.virtual_now)>=new Date(shipment.eta)){
+     const btn=el("button","secondary-button","Confirm delivery");btn.type="button";btn.addEventListener("click",async()=>{btn.disabled=true;try{const {data,error}=await db.rpc("competition_deliver_shipment",{p_shipment_id:shipment.id});if(error)throw error;say(data.on_time?"Delivered on time. Revenue recorded.":"Delivered late. Revenue recorded.",true);await loadTeamOperations();}catch(err){say(err.message);btn.disabled=false;}});card.append(btn);
+    }else{card.append(el("small","", "Shipment in transit · Delivery can be confirmed after "+new Date(shipment.eta).toLocaleDateString()));}
    }
    $("competitionShipmentList").append(card);
   }
