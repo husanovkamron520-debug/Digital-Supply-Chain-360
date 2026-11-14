@@ -58,6 +58,7 @@ function setWorkspaceNavVisible(href, visible) {
 async function syncWorkspaceNavigation(user, profile) {
   const teacher = profile?.platform_role === "teacher";
   if (teacher) {
+    document.body.dataset.myWorkspaceTargets = JSON.stringify(["#teacherAnalytics", "#scenarioWorkspace"]);
     document.body.dataset.myWorkspaceTarget = "#teacherAnalytics";
     setWorkspaceNavVisible("#operationsWorkspace", true);
     setWorkspaceNavVisible("#procurementWorkspace", true);
@@ -67,17 +68,23 @@ async function syncWorkspaceNavigation(user, profile) {
   const {data, error} = await supabase.from("classroom_members")
     .select("operational_role").eq("student_id", user.id);
   if (error) {
+    document.body.dataset.myWorkspaceTargets = JSON.stringify(["#scenarioWorkspace"]);
+    document.body.dataset.myWorkspaceTarget = "#scenarioWorkspace";
     setWorkspaceNavVisible("#operationsWorkspace", false);
     setWorkspaceNavVisible("#procurementWorkspace", false);
     return;
   }
 
   const roles = new Set((data || []).map(row => row.operational_role));
-  const target = roles.has("warehouse") ? "#inventoryWorkspace"
-    : ["supplier","manufacturer"].some(role => roles.has(role)) ? "#procurementWorkspace"
-    : ["customer","retailer","transport"].some(role => roles.has(role)) ? "#operationsWorkspace"
-    : "#scenarioWorkspace";
-  document.body.dataset.myWorkspaceTarget = target;
+  const targets = [];
+  if (roles.has("warehouse")) targets.push("#inventoryWorkspace", "#procurementWorkspace");
+  if (["supplier", "manufacturer"].some(role => roles.has(role))) {
+    if (!targets.includes("#procurementWorkspace")) targets.push("#procurementWorkspace");
+  }
+  if (["customer", "retailer", "transport"].some(role => roles.has(role))) targets.push("#operationsWorkspace");
+  if (!targets.length) targets.push("#scenarioWorkspace");
+  document.body.dataset.myWorkspaceTargets = JSON.stringify(targets);
+  document.body.dataset.myWorkspaceTarget = targets[0];
   setWorkspaceNavVisible("#operationsWorkspace",
     ["customer", "retailer", "transport"].some(role => roles.has(role)));
   setWorkspaceNavVisible("#procurementWorkspace",
