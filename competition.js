@@ -284,7 +284,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    db.from("competition_shipments").select("id,order_id,quantity,destination,carrier,status,transport_cost,eta,delivered_at").eq("team_id",teamId).order("dispatched_at",{ascending:false}),
    db.from("competition_simulation_clock").select("current_round,round_limit,virtual_now").eq("competition_id",activeCompetition.id).single(),
    db.from("competition_task_performance").select("due_tasks,approved_tasks,completion_pct,awaiting_review,late_submissions").eq("team_id",teamId).maybeSingle(),
-   db.from("competition_teams").select("production_capacity_units").eq("id",teamId).single(),
+   db.from("competition_teams").select("production_capacity_units,company_templates(operating_profile)").eq("id",teamId).single(),
    db.from("competition_production_runs").select("production_round,produced_quantity").eq("team_id",teamId).eq("status","completed")
   ]);
   for(const r of [metricResult,supplierResult,inventoryResult,poResult,orderResult,shipmentResult,clockResult,taskMetricResult,teamResult,productionResult])if(r.error)throw r.error;
@@ -293,6 +293,8 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   const producedThisRound=(productionResult.data||[]).filter(x=>x.production_round===clockResult.data.current_round).reduce((sum,x)=>sum+Number(x.produced_quantity),0);
   const remainingProductionCapacity=Math.max(0,Number(teamResult.data.production_capacity_units)-producedThisRound);
   $("competitionCustomerDue").min=localDateTimeValue(clockResult.data.virtual_now);
+  const marketPrice=Number(teamResult.data.company_templates?.operating_profile?.selling_price||0);
+  if(marketPrice>0){$("competitionCustomerPrice").min=(marketPrice*.8).toFixed(2);$("competitionCustomerPrice").max=marketPrice.toFixed(2);$("competitionCustomerPrice").value=marketPrice.toFixed(2);}
   $("competitionProductionQuantity").max=String(Math.max(1,remainingProductionCapacity));
   $("competitionProductionQuantity").disabled=remainingProductionCapacity===0||!canOperate;
   $("competitionProductionCapacityNote").textContent="Round "+clockResult.data.current_round+": "+producedThisRound+" / "+teamResult.data.production_capacity_units+" units produced · "+remainingProductionCapacity+" remaining.";
