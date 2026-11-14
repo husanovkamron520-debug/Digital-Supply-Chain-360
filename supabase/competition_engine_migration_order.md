@@ -15,15 +15,16 @@ Then apply the current competition refinements in this order:
 6. `competition_balanced_teams_fix.sql` — fixes UUID collection and requires at least five students per balanced team.
 7. `competition_core_role_start_guard.sql` — requires all five operational roles before a competition starts.
 8. `company_specific_task_pack.sql` — generates company-specific role tasks.
-9. `competition_seven_day_rounds.sql` — makes four rounds cover 21 virtual days.
-10. `competition_production_round_capacity.sql` — enforces aggregate production capacity per round.
-11. `competition_customer_due_date_clock.sql` — validates due dates against virtual simulation time.
-12. `competition_customer_price_bounds.sql` — caps order prices to the company benchmark.
-13. `competition_supplier_negotiation_bounds.sql` — freezes supplier baselines and enforces bounded negotiation trade-offs.
-14. `competition_transport_cost_bounds.sql` — bounds freight spend and links spend tier to transit time.
-15. `competition_inventory_adjustment_bounds.sql` — limits cycle-count changes to 5% and requires a reason.
-16. `competition_kpi_scoring.sql` — installs the normalized scorecard; requires the company target-cost values from step 4.
-17. `competition_foreign_key_indexes.sql` — indexes competition foreign keys.
+9. `competition_seven_day_rounds.sql` — sets seven virtual days per round.
+10. `competition_five_round_schedule.sql` — makes five rounds cover 28 virtual days with a final delivery window.
+11. `competition_production_round_capacity.sql` — enforces aggregate production capacity per round.
+12. `competition_customer_due_date_clock.sql` — validates due dates against virtual simulation time.
+13. `competition_customer_price_bounds.sql` — caps order prices to the company benchmark.
+14. `competition_supplier_negotiation_bounds.sql` — freezes supplier baselines and enforces bounded negotiation trade-offs.
+15. `competition_transport_cost_bounds.sql` — bounds freight spend and links spend tier to transit time.
+16. `competition_inventory_adjustment_bounds.sql` — limits cycle-count changes to 5% and requires a reason.
+17. `competition_kpi_scoring.sql` — installs the normalized scorecard; requires the company target-cost values from step 4.
+18. `competition_foreign_key_indexes.sql` — indexes competition foreign keys.
 
 ## Historical/intermediate patches
 
