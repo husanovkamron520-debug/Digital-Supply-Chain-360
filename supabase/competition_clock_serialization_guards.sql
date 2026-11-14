@@ -292,3 +292,43 @@ begin
 end; $function$;
 revoke all on function public.evaluate_competition_decision(uuid,numeric,text) from public,anon;
 grant execute on function public.evaluate_competition_decision(uuid,numeric,text) to authenticated;
+
+CREATE OR REPLACE FUNCTION public.calculate_competition_scores(p_competition_id uuid, p_round_number integer DEFAULT 1)
+ RETURNS integer
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare
+ v_classroom_id uuid; v_saved integer:=0; r record;
+ v_clock public.competition_simulation_clock%rowtype;
+begin
+ if (select auth.uid()) is null then raise exception 'Sign in is required'; end if;
+ if p_round_number is null or p_round_number not between 1 and 20 then raise exception 'Round number must be 1-20'; end if;
+ select classroom_id into v_classroom_id from public.competitions where id=p_competition_id;
+ if not found then raise exception 'Competition not found'; end if;
+ if not public.is_class_teacher(v_classroom_id) then raise exception 'Only the classroom teacher can calculate official scores'; end if;
+ select * into v_clock from public.competition_simulation_clock where competition_id=p_competition_id for update;
+ if not found then raise exception 'Simulation clock not initialized'; end if;
+ if p_round_number<>v_clock.current_round then
+  raise exception 'Requested round % is no longer current; current round is %',p_round_number,v_clock.current_round;
+ end if;
+ for r in select * from public.competition_team_live_metrics where competition_id=p_competition_id and total_score is not null
+ loop
+  insert into public.competition_score_snapshots(competition_id,team_id,round_number,metrics,component_scores,total_score)
+  values(p_competition_id,r.team_id,p_round_number,
+   jsonb_build_object('orders',r.total_orders,'delivered_orders',r.delivered_orders,'delivered_units',r.delivered_units,
+    'on_time_units',r.on_time_units,'average_delivery_days',r.avg_delivery_days,'inventory_units',r.inventory_units,
+    'low_stock_skus',r.low_stock_skus,'produced_units',r.produced_units,'production_runs',r.production_runs,
+    'revenue',r.revenue,'operating_cost',r.operating_cost,'evaluated_decisions',r.evaluated_decisions,
+    'coverage_pct',r.score_coverage_pct),
+   r.component_scores,r.total_score)
+  on conflict(competition_id,team_id,round_number) do update set metrics=excluded.metrics,
+   component_scores=excluded.component_scores,total_score=excluded.total_score,calculated_at=now();
+  v_saved:=v_saved+1;
+ end loop;
+ return v_saved;
+end; $function$
+;
+revoke all on function public.calculate_competition_scores(uuid,integer) from public,anon;
+grant execute on function public.calculate_competition_scores(uuid,integer) to authenticated;
