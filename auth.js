@@ -61,6 +61,7 @@ async function syncWorkspaceNavigation(user, profile) {
     document.body.dataset.myWorkspaceTargets = JSON.stringify(["#teacherAnalytics", "#inventoryWorkspace", "#operationsWorkspace", "#procurementWorkspace", "#scenarioWorkspace"]);
     document.body.dataset.myWorkspaceTarget = "#teacherAnalytics";
     setWorkspaceNavVisible("#operationsWorkspace", true);
+    setWorkspaceNavVisible("#inventoryWorkspace", true);
     setWorkspaceNavVisible("#procurementWorkspace", true);
     return;
   }
@@ -87,6 +88,7 @@ async function syncWorkspaceNavigation(user, profile) {
   document.body.dataset.myWorkspaceTarget = targets[0];
   setWorkspaceNavVisible("#operationsWorkspace",
     ["customer", "retailer", "transport"].some(role => roles.has(role)));
+  setWorkspaceNavVisible("#inventoryWorkspace", roles.has("warehouse"));
   setWorkspaceNavVisible("#procurementWorkspace",
     ["supplier", "manufacturer", "warehouse"].some(role => roles.has(role)));
 }
