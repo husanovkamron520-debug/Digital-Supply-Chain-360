@@ -164,11 +164,14 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   }
   const {data:metricRows,error:metricError}=await db.from("competition_team_live_metrics").select("*").eq("competition_id",activeCompetition.id).order("total_score",{ascending:false});
   if(metricError)throw metricError;
+  const {data:taskMetricRows,error:taskMetricError}=await db.from("competition_task_performance").select("team_id,due_tasks,approved_tasks,completion_pct,awaiting_review,late_submissions").eq("competition_id",activeCompetition.id);
+  if(taskMetricError)throw taskMetricError;
+  const taskMetricByTeam=new Map((taskMetricRows||[]).map(x=>[x.team_id,x]));
   $("competitionLeaderboard").replaceChildren();
   if(!metricRows?.length)addEmpty($("competitionLeaderboard"),"No team performance records yet.");
   for(const [index,m] of (metricRows||[]).entries()){
    const row=el("article","competition-score-row");
-   const left=el("div");left.append(el("b","",(index+1)+". "+m.team_name),el("small","",m.company_name+" · data coverage "+Number(m.score_coverage_pct||0).toFixed(0)+"%"));
+   const left=el("div");const tm=taskMetricByTeam.get(m.team_id);left.append(el("b","",(index+1)+". "+m.team_name),el("small","",m.company_name+" · data coverage "+Number(m.score_coverage_pct||0).toFixed(0)+"% · Tasks "+(tm?tm.approved_tasks+"/"+tm.due_tasks+" approved":"not assigned")));
    row.append(left,el("strong","",m.total_score===null?"Awaiting data":Number(m.total_score).toFixed(1)+"/100"));
    $("competitionLeaderboard").append(row);
   }
@@ -251,16 +254,17 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
 
  async function loadTeamOperations(){
   const teamId=activeTeam;
-  const [metricResult,supplierResult,inventoryResult,poResult,orderResult,shipmentResult,clockResult]=await Promise.all([
+  const [metricResult,supplierResult,inventoryResult,poResult,orderResult,shipmentResult,clockResult,taskMetricResult]=await Promise.all([
    db.from("competition_team_live_metrics").select("*").eq("team_id",teamId).single(),
    db.from("competition_suppliers").select("id,supplier_code,name,lead_time_days,unit_cost,reliability_score,active").eq("team_id",teamId).order("unit_cost"),
    db.from("competition_inventory").select("sku,item_name,item_type,quantity,reorder_level,unit_cost").eq("team_id",teamId).order("item_type"),
    db.from("competition_purchase_orders").select("id,po_number,sku,item_name,quantity,received_quantity,unit_cost,status,expected_at,available_at").eq("team_id",teamId).order("created_at",{ascending:false}),
    db.from("competition_customer_orders").select("id,order_number,sku,item_name,quantity,unit_price,status,due_at,delivered_at").eq("team_id",teamId).order("created_at",{ascending:false}),
    db.from("competition_shipments").select("id,order_id,quantity,destination,carrier,status,transport_cost,eta,delivered_at").eq("team_id",teamId).order("dispatched_at",{ascending:false}),
-   db.from("competition_simulation_clock").select("current_round,round_limit,virtual_now").eq("competition_id",compId).single()
+   db.from("competition_simulation_clock").select("current_round,round_limit,virtual_now").eq("competition_id",compId).single(),
+   db.from("competition_task_performance").select("due_tasks,approved_tasks,completion_pct,awaiting_review,late_submissions").eq("team_id",teamId).maybeSingle()
   ]);
-  for(const r of [metricResult,supplierResult,inventoryResult,poResult,orderResult,shipmentResult,clockResult])if(r.error)throw r.error;
+  for(const r of [metricResult,supplierResult,inventoryResult,poResult,orderResult,shipmentResult,clockResult,taskMetricResult])if(r.error)throw r.error;
   const m=metricResult.data,suppliers=supplierResult.data||[],inventory=inventoryResult.data||[],pos=poResult.data||[],orders=orderResult.data||[],shipments=shipmentResult.data||[];
   const metricCards=[
    ["Cash balance",Number(m.cash_balance).toLocaleString(undefined,{maximumFractionDigits:0})],
@@ -270,6 +274,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    ["Production",Number(m.produced_units).toLocaleString()+" units"],
    ["Avg. lead time",m.avg_delivery_days===null?"—":Number(m.avg_delivery_days).toFixed(1)+" days"],
    ["Live score",m.total_score===null?"Awaiting data":Number(m.total_score).toFixed(1)+"/100"],
+   ["Task completion",taskMetricResult.data?.completion_pct===null||!taskMetricResult.data?"—":Number(taskMetricResult.data.completion_pct).toFixed(0)+"%"],
    ["Simulation round",clockResult.data.current_round+" / "+clockResult.data.round_limit],
    ["Simulation date",new Date(clockResult.data.virtual_now).toLocaleDateString()]
   ];
