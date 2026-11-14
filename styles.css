@@ -340,3 +340,10 @@
   .stage-strip{grid-template-columns:repeat(5,minmax(0,1fr))}
   .stage{min-width:0}
 }
+
+/* Keep stage labels readable on the narrowest phones. */
+@media(max-width:380px){
+  .stage b,.stage small{white-space:normal;overflow-wrap:anywhere}
+  .stage{padding-inline:3px}
+  .stage-number{margin-bottom:3px}
+}
