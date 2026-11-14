@@ -1,5 +1,55 @@
 -- Competition RPC repairs: load target records before checking their state.
--- Also ensure leaderboard views run with the querying user's privileges and RLS.
+-- Leaderboard and operational metric views must obey the querying user's RLS.
+
+CREATE OR REPLACE FUNCTION public.competition_adjust_inventory(p_team_id uuid, p_sku text, p_delta integer, p_reason text DEFAULT 'Cycle count'::text)
+ RETURNS integer
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare v_team public.competition_teams%rowtype; v_qty integer;
+begin
+ if (select auth.uid()) is null then raise exception 'Sign in is required'; end if;
+ select * into v_team from public.competition_teams where id=p_team_id for update;
+ if not found then raise exception 'Team not found'; end if;
+ if not exists(select 1 from public.competitions where id=v_team.competition_id and status='active') then raise exception 'Competition is not active'; end if;
+ if not public.is_competition_role(v_team.competition_id,v_team.id,array['warehouse']) then raise exception 'Only the Warehouse Manager can adjust stock'; end if;
+ if p_delta is null or p_delta=0 then raise exception 'Stock adjustment cannot be zero'; end if;
+ update public.competition_inventory set quantity=quantity+p_delta,updated_at=now()
+ where team_id=p_team_id and sku=upper(trim(p_sku)) and quantity+p_delta>=0 returning quantity into v_qty;
+ if not found then raise exception 'SKU not found or adjustment would make stock negative'; end if;
+ insert into public.competition_operational_events(competition_id,team_id,classroom_id,actor_id,actor_role,event_type,description,metadata)
+ values(v_team.competition_id,v_team.id,v_team.classroom_id,(select auth.uid()),'warehouse','inventory_adjusted','Stock adjusted: '||p_sku,
+ jsonb_build_object('delta',p_delta,'quantity_after',v_qty,'reason',left(coalesce(p_reason,''),300)));
+ return v_qty;
+end; $function$
+;
+
+CREATE OR REPLACE FUNCTION public.competition_create_customer_order(p_team_id uuid, p_order_number text, p_sku text, p_item_name text, p_quantity integer, p_unit_price numeric, p_due_at timestamp with time zone)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare v_team public.competition_teams%rowtype; v_id uuid;
+begin
+ if (select auth.uid()) is null then raise exception 'Sign in is required'; end if;
+ select * into v_team from public.competition_teams where id=p_team_id for update;
+ if not found then raise exception 'Team not found'; end if;
+ if not exists(select 1 from public.competitions where id=v_team.competition_id and status='active') then raise exception 'Competition is not active'; end if;
+ if not public.is_competition_role(v_team.competition_id,v_team.id,array['retailer','customer','operations']) then
+  raise exception 'Only Customer/Retail Operations can create orders';
+ end if;
+ if char_length(trim(coalesce(p_order_number,''))) not between 3 and 40 or char_length(trim(coalesce(p_sku,''))) not between 2 and 40 then raise exception 'Invalid order number or SKU'; end if;
+ if char_length(trim(coalesce(p_item_name,''))) not between 2 and 120 or p_quantity is null or p_quantity not between 1 and 100000 then raise exception 'Invalid item or quantity'; end if;
+ if p_unit_price is null or p_unit_price<=0 or p_unit_price>1000000 or p_due_at is null or p_due_at<=now() then raise exception 'Invalid price or due date'; end if;
+ insert into public.competition_customer_orders(competition_id,team_id,classroom_id,order_number,sku,item_name,quantity,unit_price,due_at)
+ values(v_team.competition_id,v_team.id,v_team.classroom_id,upper(trim(p_order_number)),upper(trim(p_sku)),trim(p_item_name),p_quantity,p_unit_price,p_due_at)
+ returning id into v_id;
+ return v_id;
+exception when unique_violation then raise exception 'Order number already exists for this team';
+end; $function$
+;
 
 CREATE OR REPLACE FUNCTION public.competition_create_purchase_order(p_team_id uuid, p_supplier_id uuid, p_sku text, p_item_name text, p_quantity integer)
  RETURNS uuid
@@ -191,6 +241,32 @@ begin
 end; $function$
 ;
 
+CREATE OR REPLACE FUNCTION public.competition_update_supplier_terms(p_supplier_id uuid, p_lead_time_days integer, p_unit_cost numeric, p_reliability_score numeric)
+ RETURNS boolean
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare v_supplier public.competition_suppliers%rowtype;
+begin
+ if (select auth.uid()) is null then raise exception 'Sign in is required'; end if;
+ select * into v_supplier from public.competition_suppliers where id=p_supplier_id for update;
+ if not found then raise exception 'Supplier not found'; end if;
+ if not exists(select 1 from public.competitions where id=v_supplier.competition_id and status='active') then raise exception 'Competition is not active'; end if;
+ if not public.is_competition_role(v_supplier.competition_id,v_supplier.team_id,array['supplier','procurement']) then
+  raise exception 'Only Supplier Relations or Procurement can negotiate supplier terms';
+ end if;
+ if p_lead_time_days is null or p_lead_time_days not between 1 and 90 then raise exception 'Lead time must be 1-90 days'; end if;
+ if p_unit_cost is null or p_unit_cost<=0 or p_unit_cost>1000000 then raise exception 'Unit cost must be positive'; end if;
+ if p_reliability_score is null or p_reliability_score not between 0 and 100 then raise exception 'Reliability must be 0-100'; end if;
+ update public.competition_suppliers set lead_time_days=p_lead_time_days,unit_cost=p_unit_cost,reliability_score=p_reliability_score where id=p_supplier_id;
+ insert into public.competition_operational_events(competition_id,team_id,classroom_id,actor_id,actor_role,event_type,description,metadata)
+ values(v_supplier.competition_id,v_supplier.team_id,v_supplier.classroom_id,(select auth.uid()),'supplier','supplier_terms_updated',
+  'Supplier terms negotiated: '||v_supplier.name,jsonb_build_object('supplier_id',p_supplier_id,'lead_time_days',p_lead_time_days,'unit_cost',p_unit_cost,'reliability',p_reliability_score));
+ return true;
+end; $function$
+;
+
 CREATE OR REPLACE FUNCTION public.submit_competition_task(p_task_id uuid, p_submission jsonb)
  RETURNS uuid
  LANGUAGE plpgsql
@@ -226,6 +302,9 @@ revoke all on function public.competition_receive_purchase_order(uuid,integer) f
 revoke all on function public.competition_dispatch_shipment(uuid,integer,text,text,text,numeric) from public,anon; grant execute on function public.competition_dispatch_shipment(uuid,integer,text,text,text,numeric) to authenticated;
 revoke all on function public.competition_deliver_shipment(uuid) from public,anon; grant execute on function public.competition_deliver_shipment(uuid) to authenticated;
 revoke all on function public.submit_competition_task(uuid,jsonb) from public,anon; grant execute on function public.submit_competition_task(uuid,jsonb) to authenticated;
+revoke all on function public.competition_adjust_inventory(uuid,text,integer,text) from public,anon; grant execute on function public.competition_adjust_inventory(uuid,text,integer,text) to authenticated;
+revoke all on function public.competition_create_customer_order(uuid,text,text,text,integer,numeric,timestamptz) from public,anon; grant execute on function public.competition_create_customer_order(uuid,text,text,text,integer,numeric,timestamptz) to authenticated;
+revoke all on function public.competition_update_supplier_terms(uuid,integer,numeric,numeric) from public,anon; grant execute on function public.competition_update_supplier_terms(uuid,integer,numeric,numeric) to authenticated;
 
 alter view public.competition_public_leaderboard set (security_invoker = true);
 alter view public.competition_individual_leaderboard set (security_invoker = true);
