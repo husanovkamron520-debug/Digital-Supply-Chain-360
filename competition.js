@@ -187,6 +187,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   $("competitionRoundInfo").textContent=clock?"Round "+clock.current_round+" / "+clock.round_limit+" · Simulation date "+new Date(clock.virtual_now).toLocaleDateString():"Rounds begin when the competition starts.";
   setHidden("competitionAdvanceRound",activeCompetition.status!=="active");
   $("competitionAdvanceRound").disabled=!clock||clock.current_round>=clock.round_limit;
+  setHidden("competitionCompleteButton",activeCompetition.status!=="active"||!clock||clock.current_round<clock.round_limit);
   const draft=activeCompetition.status==="draft";
   setHidden("competitionAutoSetup",!draft||teamRows.length>0);
   setHidden("competitionManualTeamForm",!draft);
@@ -248,7 +249,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    db.from("competition_team_live_metrics").select("*").eq("team_id",teamId).single(),
    db.from("competition_suppliers").select("id,supplier_code,name,lead_time_days,unit_cost,reliability_score,active").eq("team_id",teamId).order("unit_cost"),
    db.from("competition_inventory").select("sku,item_name,item_type,quantity,reorder_level,unit_cost").eq("team_id",teamId).order("item_type"),
-   db.from("competition_purchase_orders").select("id,po_number,sku,item_name,quantity,received_quantity,unit_cost,status,expected_at").eq("team_id",teamId).order("created_at",{ascending:false}),
+   db.from("competition_purchase_orders").select("id,po_number,sku,item_name,quantity,received_quantity,unit_cost,status,expected_at,available_at").eq("team_id",teamId).order("created_at",{ascending:false}),
    db.from("competition_customer_orders").select("id,order_number,sku,item_name,quantity,unit_price,status,due_at,delivered_at").eq("team_id",teamId).order("created_at",{ascending:false}),
    db.from("competition_shipments").select("id,order_id,quantity,destination,carrier,status,transport_cost,eta,delivered_at").eq("team_id",teamId).order("dispatched_at",{ascending:false}),
    db.from("competition_simulation_clock").select("current_round,round_limit,virtual_now").eq("competition_id",compId).single()
@@ -280,7 +281,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   const outstandingPOs=pos.filter(p=>["placed","partially_received"].includes(p.status));
   if(!outstandingPOs.length)addEmpty($("competitionPurchaseOrderList"),"No outstanding purchase orders.");
   for(const po of outstandingPOs){
-   const card=el("article","competition-task-card");card.append(el("b","",po.po_number+" · "+po.item_name),el("p","",po.received_quantity+" / "+po.quantity+" received · Expected "+new Date(po.expected_at).toLocaleDateString()+" · "+Number(po.unit_cost).toFixed(2)+" / unit"));
+   const card=el("article","competition-task-card");card.append(el("b","",po.po_number+" · "+po.item_name),el("p","",po.received_quantity+" / "+po.quantity+" received · Expected "+new Date(po.expected_at).toLocaleDateString()+" · "+Number(po.unit_cost).toFixed(2)+" / unit · Available "+new Date(po.available_at||po.expected_at).toLocaleDateString()));
    const form=el("form","competition-inline-form"),qty=el("input","");qty.type="number";qty.min="1";qty.max=String(po.quantity-po.received_quantity);qty.value=qty.max;qty.required=true;
    const btn=el("button","secondary-button","Receive stock");btn.type="submit";form.append(qty,btn);
    form.addEventListener("submit",async e=>{e.preventDefault();btn.disabled=true;try{const {data,error}=await db.rpc("competition_receive_purchase_order",{p_purchase_order_id:po.id,p_quantity:Number(qty.value)});if(error)throw error;say("Received "+data.received_quantity+" units; stock and cash updated.",true);await loadTeamOperations();}catch(err){say(err.message);btn.disabled=false;}});
@@ -381,7 +382,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  });
  $("competitionPurchaseOrderForm").addEventListener("submit",async e=>{
   e.preventDefault();const btn=$("competitionPurchaseOrderForm").querySelector("button");btn.disabled=true;
-  try{const {error}=await db.rpc("competition_create_purchase_order",{p_team_id:activeTeam,p_supplier_id:$("competitionPOSupplier").value,p_sku:$("competitionPOSku").value.trim(),p_item_name:$("competitionPOItemName").value.trim(),p_quantity:Number($("competitionPOQuantity").value)});if(error)throw error;say("Purchase order placed. Expected arrival is calculated from supplier lead time.",true);await loadTeamOperations();}catch(err){say(err.message);}finally{btn.disabled=false;}
+  try{const {error}=await db.rpc("competition_create_purchase_order",{p_team_id:activeTeam,p_supplier_id:$("competitionPOSupplier").value,p_sku:$("competitionPOSku").value.trim(),p_item_name:$("competitionPOItemName").value.trim(),p_quantity:Number($("competitionPOQuantity").value)});if(error)throw error;say("Purchase order placed. Lead time and supplier reliability determine availability.",true);await loadTeamOperations();}catch(err){say(err.message);}finally{btn.disabled=false;}
  });
  $("competitionProductionForm").addEventListener("submit",async e=>{
   e.preventDefault();const btn=$("competitionProductionForm").querySelector("button");btn.disabled=true;
@@ -390,6 +391,10 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  $("competitionCustomerOrderForm").addEventListener("submit",async e=>{
   e.preventDefault();const btn=$("competitionCustomerOrderForm").querySelector("button");btn.disabled=true;
   try{const due=$("competitionCustomerDue").value;if(!due)throw new Error("Choose a due date");const {error}=await db.rpc("competition_create_customer_order",{p_team_id:activeTeam,p_order_number:$("competitionCustomerOrderNumber").value.trim(),p_sku:$("competitionCustomerSku").value.trim(),p_item_name:$("competitionCustomerItem").value.trim(),p_quantity:Number($("competitionCustomerQty").value),p_unit_price:Number($("competitionCustomerPrice").value),p_due_at:new Date(due).toISOString()});if(error)throw error;say("Customer order created.",true);$("competitionCustomerOrderForm").reset();await loadTeamOperations();}catch(err){say(err.message);}finally{btn.disabled=false;}
+ });
+ $("competitionCompleteButton").addEventListener("click",async()=>{
+  const btn=$("competitionCompleteButton");btn.disabled=true;
+  try{const {error}=await db.rpc("set_competition_status",{p_competition_id:activeCompetition.id,p_status:"completed"});if(error)throw error;say("Competition completed. Final results are locked.",true);await loadCompetition();}catch(err){say(err.message);btn.disabled=false;}
  });
  $("competitionAdvanceRound").addEventListener("click",async()=>{
   const btn=$("competitionAdvanceRound");btn.disabled=true;
