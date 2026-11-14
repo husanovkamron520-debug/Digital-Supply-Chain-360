@@ -289,7 +289,7 @@
       </section>
 
       <section class="welcome-row">
-        <div><div class="eyebrow"><span id="todayLabel">CLASSROOM WORKSPACE</span> <span class="eyebrow-line"></span> LIVE MODEL</div><h1>Supply chain <em>overview</em></h1><p class="subtitle">One connected view from raw material to final delivery.</p></div>
+        <div><div class="eyebrow"><span id="todayLabel">CLASSROOM WORKSPACE</span> <span class="eyebrow-line"></span> DEMO SIMULATION</div><h1>Supply chain <em>overview</em></h1><p class="subtitle">One connected view from raw material to final delivery.</p></div>
         <button class="primary-button" id="scenarioBtn"><span>＋</span> Run disruption scenario</button>
       </section>
 
@@ -303,7 +303,7 @@
       <section class="content-grid">
         <article class="panel network-panel" id="network">
           <div class="panel-heading"><div><div class="section-kicker">END-TO-END VISIBILITY</div><h2>Supply chain network</h2></div><div class="scene-controls"><button class="view-chip active" data-view="flow">Flow view</button><button class="view-chip" data-view="systems">Digital layer</button><button class="expand-button" id="focusBtn" title="Focus view">⛶</button></div></div>
-          <div class="scene-wrap"><div id="scene" aria-label="Interactive three-dimensional supply chain network"></div><div class="scene-overlay"><span class="scene-live"><i></i> LIVE MODEL</span><span class="scene-hint">DRAG TO ROTATE · SCROLL TO ZOOM</span></div><div class="scene-tooltip" id="sceneTooltip">Select a stage to inspect it</div></div>
+          <div class="scene-wrap"><div id="scene" aria-label="Interactive three-dimensional supply chain network"></div><div class="scene-overlay"><span class="scene-live"><i></i> INTERACTIVE DEMO</span><span class="scene-hint">DRAG TO ROTATE · SCROLL TO ZOOM</span></div><div class="scene-tooltip" id="sceneTooltip">Select a stage to inspect it</div></div>
           <div class="flow-legend"><span><i class="legend-dot goods"></i> Physical goods</span><span><i class="legend-line data"></i> Digital information</span><span><i class="legend-dot active-dot"></i> Active node</span></div>
           <div class="stage-strip" id="stageStrip">
             <button class="stage active" data-stage="0"><span class="stage-number">01</span><b>Supplier</b><small>Raw materials</small></button>
@@ -315,14 +315,14 @@
         </article>
 
         <article class="panel events-panel" id="operations">
-          <div class="panel-heading"><div><div class="section-kicker">OPERATIONAL PULSE</div><h2>Event stream</h2></div><span class="event-count" id="eventCount">04 EVENTS</span></div>
+          <div class="panel-heading"><div><div class="section-kicker">SAMPLE EVENT STREAM</div><h2>Event stream</h2></div><span class="event-count" id="eventCount">04 EVENTS</span></div>
           <div class="event-list" id="eventList">
             <div class="event"><span class="event-icon green">↗</span><div><b>Shipment departed</b><p>TRK-204 · Central warehouse</p><small>2 minutes ago</small></div><span class="event-status ok">ON TRACK</span></div>
             <div class="event"><span class="event-icon blue">▦</span><div><b>Inventory replenished</b><p>SKU-8821 · Warehouse 03</p><small>18 minutes ago</small></div><span class="event-status ok">COMPLETED</span></div>
             <div class="event"><span class="event-icon amber">⌁</span><div><b>Production target reached</b><p>Plant A · Shift 1</p><small>41 minutes ago</small></div><span class="event-status ok">COMPLETED</span></div>
             <div class="event"><span class="event-icon violet">✳</span><div><b>Demand forecast updated</b><p>AI planning engine</p><small>1 hour ago</small></div><span class="event-status info">INFO</span></div>
           </div>
-          <div class="event-footer"><span><i class="live-dot"></i> Monitoring 6 supply stages</span><button id="clearEvents">Clear view</button></div>
+          <div class="event-footer"><span><i class="live-dot"></i> 5 illustrative supply stages</span><button id="clearEvents">Clear view</button></div>
         </article>
       </section>
 
@@ -335,10 +335,10 @@
           <div class="process-item"><span class="process-icon">◎</span><div><b>Serve & learn</b><small>Customer experience · Returns · Feedback</small></div><span class="system-tag">CRM</span></div>
         </div></article>
         <article class="panel intelligence-panel"><div class="panel-heading"><div><div class="section-kicker">CONNECTED INTELLIGENCE</div><h2>Digital capabilities</h2></div><span class="spark">✳</span></div><div class="capability-grid">
-          <div class="capability"><span class="cap-icon iot">⌁</span><div><b>IoT sensors</b><small>Live asset signals</small></div><span class="cap-state"></span></div>
-          <div class="capability"><span class="cap-icon twin">◇</span><div><b>Digital twin</b><small>Virtual operations</small></div><span class="cap-state"></span></div>
-          <div class="capability"><span class="cap-icon ai">✳</span><div><b>AI analytics</b><small>Predictive insights</small></div><span class="cap-state"></span></div>
-          <div class="capability"><span class="cap-icon cloud">☁</span><div><b>Cloud platform</b><small>Unified data layer</small></div><span class="cap-state"></span></div>
+          <div class="capability"><span class="cap-icon iot">⌁</span><div><b>IoT sensors</b><small>Example asset signals</small></div><span class="cap-state"></span></div>
+          <div class="capability"><span class="cap-icon twin">◇</span><div><b>Digital twin</b><small>Conceptual operations</small></div><span class="cap-state"></span></div>
+          <div class="capability"><span class="cap-icon ai">✳</span><div><b>AI analytics</b><small>Illustrative insights</small></div><span class="cap-state"></span></div>
+          <div class="capability"><span class="cap-icon cloud">☁</span><div><b>Cloud platform</b><small>Unified demo layer</small></div><span class="cap-state"></span></div>
         </div><div class="insight-box"><span class="insight-mark">✦</span><div><b>Control tower insight</b><p id="insightText">Your network is balanced. All major flows are operating within expected parameters.</p></div></div></article>
       </section>
       <footer><span>SUPPLYCHAIN14 <b>·</b> DIGITAL SUPPLY CHAIN LAB</span><span>Educational simulation <b>·</b> Not connected to live operations</span></footer>
