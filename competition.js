@@ -239,6 +239,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    $("competitionStudentDecisionHistory").append(row);
   }
   await loadTeamOperations();
+  await loadPublicCompetitionResults();
   setHidden("competitionDecisionForm",activeCompetition.status!=="active");
  }
 
@@ -326,6 +327,33 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   setHidden("competitionManufacturerPanel",activeRole!=="manufacturer");
   setHidden("competitionCustomerPanel",!["customer","retailer","operations"].includes(activeRole));
   setHidden("competitionTransportPanel",activeRole!=="transport");
+ }
+
+
+ async function loadPublicCompetitionResults(){
+  const [teamsResult,peopleResult]=await Promise.all([
+   db.from("competition_public_leaderboard").select("*").eq("competition_id",activeCompetition.id),
+   db.from("competition_individual_leaderboard").select("*").eq("competition_id",activeCompetition.id)
+  ]);
+  if(teamsResult.error)throw teamsResult.error;if(peopleResult.error)throw peopleResult.error;
+  const teams=(teamsResult.data||[]).sort((a,b)=>(b.total_score??-1)-(a.total_score??-1));
+  $("competitionPublicLeaderboard").replaceChildren();
+  if(!teams.length)addEmpty($("competitionPublicLeaderboard"),"No team results are available yet.");
+  for(const [i,t] of teams.entries()){
+   const row=el("article","competition-score-row");
+   const left=el("div");left.append(el("b","",(i+1)+". "+t.team_name),el("small","",t.company_name+" · coverage "+Number(t.score_coverage_pct||0).toFixed(0)+"% · OTIF "+(t.service_score===null?"—":Number(t.service_score).toFixed(1)+"%")));
+   row.append(left,el("strong","",t.total_score===null?"In progress":Number(t.total_score).toFixed(1)+"/100"));
+   $("competitionPublicLeaderboard").append(row);
+  }
+  const people=(peopleResult.data||[]).sort((a,b)=>Number(b.average_score)-Number(a.average_score));
+  $("competitionPublicIndividualRanking").replaceChildren();
+  if(!people.length)addEmpty($("competitionPublicIndividualRanking"),"Individual rankings appear after teacher evaluation.");
+  for(const [i,p] of people.entries()){
+   const row=el("article","competition-score-row");
+   row.append(el("b","",(i+1)+". "+(p.full_name||"Student")+" · "+p.team_name+" · "+p.evaluated_decisions+" evaluated decisions"),
+    el("strong","",Number(p.average_score).toFixed(1)+"/100"));
+   $("competitionPublicIndividualRanking").append(row);
+  }
  }
 
  async function initialize(session){
