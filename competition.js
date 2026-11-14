@@ -197,6 +197,8 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   setHidden("competitionTaskPackButton",!["draft","active"].includes(activeCompetition.status)||!teamRows.length||taskRows.length>0);
   setHidden("competitionStartButton",!draft||teamRows.length<2);
   $("competitionStartButton").textContent="Start competition";
+  setHidden("competitionPauseButton",!["active","paused"].includes(activeCompetition.status));
+  $("competitionPauseButton").textContent=activeCompetition.status==="paused"?"Resume competition":"Pause competition";
   $("competitionAutoSetupButton").disabled=!draft||teamRows.length>0;
   if(!draft){$("competitionSetupNote").textContent="Team assignments are locked after the competition starts."; }
   else $("competitionSetupNote").textContent="Create up to four company teams, assign each student to one team and role, then start the competition.";
@@ -221,7 +223,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    const card=el("article","competition-task-card");
    card.append(el("b","",task.title),el("p","",task.description),el("small","",statusLabel(task.status)+(task.due_at?" · Due "+new Date(task.due_at).toLocaleString():"")));
    if(task.review_note)card.append(el("p","competition-review-note",task.review_note));
-   if(task.status==="pending"||task.status==="in_progress"||task.status==="rejected"){
+   if(["pending","in_progress","rejected"].includes(task.status)&&activeCompetition.status==="active"){
     const form=el("form","competition-submit-form");
     const answer=el("textarea","");answer.rows=3;answer.maxLength=10000;answer.placeholder="Describe your work, calculations and evidence…";answer.required=true;
     const btn=el("button","primary-button","Submit task");btn.type="submit";
@@ -286,10 +288,10 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   if(!outstandingPOs.length)addEmpty($("competitionPurchaseOrderList"),"No outstanding purchase orders.");
   for(const po of outstandingPOs){
    const card=el("article","competition-task-card");card.append(el("b","",po.po_number+" · "+po.item_name),el("p","",po.received_quantity+" / "+po.quantity+" received · Expected "+new Date(po.expected_at).toLocaleDateString()+" · "+Number(po.unit_cost).toFixed(2)+" / unit · Available "+new Date(po.available_at||po.expected_at).toLocaleDateString()));
-   const form=el("form","competition-inline-form"),qty=el("input","");qty.type="number";qty.min="1";qty.max=String(po.quantity-po.received_quantity);qty.value=qty.max;qty.required=true;
+   if(activeCompetition.status==="active"&&activeRole==="warehouse"){const form=el("form","competition-inline-form"),qty=el("input","");qty.type="number";qty.min="1";qty.max=String(po.quantity-po.received_quantity);qty.value=qty.max;qty.required=true;
    const btn=el("button","secondary-button","Receive stock");btn.type="submit";form.append(qty,btn);
    form.addEventListener("submit",async e=>{e.preventDefault();btn.disabled=true;try{const {data,error}=await db.rpc("competition_receive_purchase_order",{p_purchase_order_id:po.id,p_quantity:Number(qty.value)});if(error)throw error;say("Received "+data.received_quantity+" units; stock and cash updated.",true);await loadTeamOperations();}catch(err){say(err.message);btn.disabled=false;}});
-   card.append(form);$("competitionPurchaseOrderList").append(card);
+   card.append(form);}$("competitionPurchaseOrderList").append(card);
   }
   $("competitionInventoryList").replaceChildren();
   if(!inventory.length)addEmpty($("competitionInventoryList"),"No inventory records.");
@@ -324,7 +326,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    $("competitionShipmentList").append(card);
   }
   setHidden("competitionSupplierPanel",!["supplier","procurement"].includes(activeRole));
-  setHidden("competitionSupplierTermsForm",activeRole!=="supplier");
+  setHidden("competitionSupplierTermsForm",activeRole!=="supplier"||activeCompetition.status!=="active");
   setHidden("competitionProcurementPanel",activeRole!=="procurement");
   setHidden("competitionWarehousePanel",activeRole!=="warehouse");
   setHidden("competitionManufacturerPanel",activeRole!=="manufacturer");
@@ -401,6 +403,11 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   try{const {error}=await db.rpc("create_competition_task",{p_competition_id:activeCompetition.id,p_team_id:$("competitionTaskTeam").value,p_title:$("competitionTaskTitle").value.trim(),p_description:$("competitionTaskDescription").value.trim(),p_assigned_to:null,p_assigned_role:$("competitionTaskRole").value,p_priority:$("competitionTaskPriority").value,p_due_at:$("competitionTaskDue").value?new Date($("competitionTaskDue").value).toISOString():null});if(error)throw error;
    $("competitionTaskForm").reset();say("Task assigned to the selected team role.",true);await loadCompetition();
   }catch(err){say(err.message);}finally{btn.disabled=false;}
+ });
+ $("competitionPauseButton").addEventListener("click",async()=>{
+  const btn=$("competitionPauseButton");btn.disabled=true;
+  const next=activeCompetition.status==="paused"?"active":"paused";
+  try{const {error}=await db.rpc("set_competition_status",{p_competition_id:activeCompetition.id,p_status:next});if(error)throw error;say(next==="paused"?"Competition paused. Operational actions are locked.":"Competition resumed.",true);await loadCompetition();}catch(err){say(err.message);btn.disabled=false;}
  });
  $("competitionStartButton").addEventListener("click",async()=>{
   const btn=$("competitionStartButton");btn.disabled=true;
