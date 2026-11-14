@@ -186,6 +186,15 @@
             <div id="competitionTaskList" class="competition-record-list"><p class="empty-state">No tasks yet.</p></div>
           </div>
           <div class="competition-setup">
+            <div class="competition-section-head"><h3>Live team performance</h3><p>Calculated from this competition's saved operations, not sample dashboard figures.</p></div>
+            <button class="secondary-button" id="competitionCalculateScores" type="button">Calculate official round scores</button>
+            <div id="competitionLeaderboard" class="competition-record-list"><p class="empty-state">No operational scores yet.</p></div>
+          </div>
+          <div class="competition-setup">
+            <h3>Individual contribution ranking</h3>
+            <div id="competitionIndividualRanking" class="competition-record-list"><p class="empty-state">No evaluated contributions yet.</p></div>
+          </div>
+          <div class="competition-setup">
             <h3>Student decisions & evaluation</h3>
             <p class="form-hint">Evaluate reasoning and evidence. Operational performance scoring will be connected to the live simulation engine in the next phase.</p>
             <div id="competitionDecisionList" class="competition-record-list"><p class="empty-state">No decisions yet.</p></div>
@@ -196,6 +205,67 @@
           <div class="competition-student-summary">
             <div><span>Your company team</span><strong id="competitionStudentTeam">—</strong></div>
             <div><span>Your assigned role</span><strong id="competitionStudentRole">—</strong></div>
+          </div>
+          <div class="competition-setup">
+            <h3>Your team's live operating metrics</h3>
+            <div id="competitionLiveMetrics" class="competition-metric-grid"><p class="empty-state">Loading company performance…</p></div>
+          </div>
+          <div class="competition-setup" id="competitionSupplierPanel" hidden>
+            <h3>Supplier management</h3>
+            <div id="competitionSupplierList" class="competition-record-list"></div>
+            <form class="competition-form" id="competitionSupplierTermsForm">
+              <label for="competitionTermsSupplier">Supplier</label><select id="competitionTermsSupplier" required></select>
+              <div class="competition-toolbar">
+                <div><label for="competitionTermsLeadTime">Lead time (days)</label><input id="competitionTermsLeadTime" type="number" min="1" max="90" required></div>
+                <div><label for="competitionTermsUnitCost">Unit cost</label><input id="competitionTermsUnitCost" type="number" min="0.01" step="0.01" required></div>
+              </div>
+              <label for="competitionTermsReliability">Reliability score (0–100)</label><input id="competitionTermsReliability" type="number" min="0" max="100" step="1" required>
+              <button class="primary-button" type="submit">Update supplier terms</button>
+            </form>
+          </div>
+          <div class="competition-setup" id="competitionProcurementPanel" hidden>
+            <h3>Procurement · create purchase order</h3>
+            <form class="competition-form" id="competitionPurchaseOrderForm">
+              <label for="competitionPOSupplier">Supplier</label><select id="competitionPOSupplier" required></select>
+              <div class="competition-toolbar">
+                <div><label for="competitionPOSku">SKU</label><input id="competitionPOSku" value="RM-001" maxlength="40" required></div>
+                <div><label for="competitionPOQuantity">Quantity</label><input id="competitionPOQuantity" type="number" min="1" max="100000" value="100" required></div>
+              </div>
+              <label for="competitionPOItemName">Item name</label><input id="competitionPOItemName" value="Core raw material" maxlength="120" required>
+              <button class="primary-button" type="submit">Place purchase order</button>
+            </form>
+          </div>
+          <div class="competition-setup" id="competitionWarehousePanel" hidden>
+            <h3>Warehouse · purchase receipts</h3>
+            <div id="competitionPurchaseOrderList" class="competition-record-list"></div>
+            <h3>Inventory register</h3><div id="competitionInventoryList" class="competition-record-list"></div>
+          </div>
+          <div class="competition-setup" id="competitionManufacturerPanel" hidden>
+            <h3>Production management</h3>
+            <p class="form-hint">Production consumes one RM-001 raw-material unit and adds one FG-001 finished unit. Conversion cost is charged to company cash.</p>
+            <form class="competition-form" id="competitionProductionForm">
+              <label for="competitionProductionQuantity">Production quantity</label><input id="competitionProductionQuantity" type="number" min="1" max="2000" value="100" required>
+              <button class="primary-button" type="submit">Complete production run</button>
+            </form>
+          </div>
+          <div class="competition-setup" id="competitionCustomerPanel" hidden>
+            <h3>Customer orders</h3>
+            <form class="competition-form" id="competitionCustomerOrderForm">
+              <label for="competitionCustomerOrderNumber">Order number</label><input id="competitionCustomerOrderNumber" minlength="3" maxlength="40" required placeholder="CUST-004">
+              <div class="competition-toolbar">
+                <div><label for="competitionCustomerSku">SKU</label><input id="competitionCustomerSku" value="FG-001" required></div>
+                <div><label for="competitionCustomerQty">Quantity</label><input id="competitionCustomerQty" type="number" min="1" max="100000" value="100" required></div>
+              </div>
+              <label for="competitionCustomerItem">Product name</label><input id="competitionCustomerItem" value="Finished product" required>
+              <label for="competitionCustomerPrice">Unit price</label><input id="competitionCustomerPrice" type="number" min="0.01" step="0.01" value="42" required>
+              <label for="competitionCustomerDue">Due date</label><input id="competitionCustomerDue" type="datetime-local" required>
+              <button class="primary-button" type="submit">Create customer order</button>
+            </form>
+          </div>
+          <div class="competition-setup" id="competitionTransportPanel" hidden>
+            <h3>Transport · open customer orders</h3>
+            <div id="competitionCustomerOrderList" class="competition-record-list"></div>
+            <h3>Shipment tracking</h3><div id="competitionShipmentList" class="competition-record-list"></div>
           </div>
           <div class="competition-setup">
             <h3>Your assigned tasks</h3>
