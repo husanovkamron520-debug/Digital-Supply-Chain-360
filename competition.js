@@ -24,7 +24,8 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    if(error)throw error;classrooms=(data||[]).map(x=>x.classrooms).filter(Boolean);
   }
   $("competitionClassSelect").replaceChildren(...classrooms.map(c=>option(c.name,c.id)));
-  if(!classrooms.length){activeClassId=null;addEmpty($("competitionList"),"Create or join a classroom first.");return;}
+  if(!classrooms.length){activeClassId=null;setHidden("competitionCreateForm",true);setHidden("competitionManager",true);addEmpty($("competitionList"),"Create or join a classroom first.");return;}
+  setHidden("competitionCreateForm",isTeacher);
   activeClassId=classrooms[0].id;$("competitionClassSelect").value=activeClassId;
   await loadCompetitions();
  }
@@ -438,6 +439,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    $("competitionDecisionForm").reset();say("Your decision was recorded.",true);await loadCompetition();
   }catch(err){say(err.message);}finally{btn.disabled=false;}
  });
+ window.addEventListener("classroom-updated",async()=>{try{await loadClassrooms();say("Classroom list refreshed.",true);}catch(err){say(err.message);}});
  db.auth.getSession().then(({data})=>initialize(data.session));
  db.auth.onAuthStateChange((_event,session)=>{if(session)setTimeout(()=>initialize(session),0);else{root.hidden=true;user=null;activeCompetition=null;}});
 }
