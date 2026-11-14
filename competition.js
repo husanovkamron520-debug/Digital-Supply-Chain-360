@@ -194,6 +194,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   setHidden("competitionAutoSetup",!draft||teamRows.length>0);
   setHidden("competitionManualTeamForm",!draft);
   setHidden("competitionTaskForm",!["draft","active"].includes(activeCompetition.status)||!teamRows.length);
+  setHidden("competitionTaskPackButton",!["draft","active"].includes(activeCompetition.status)||!teamRows.length||taskRows.length>0);
   setHidden("competitionStartButton",!draft||teamRows.length<2);
   $("competitionStartButton").textContent="Start competition";
   $("competitionAutoSetupButton").disabled=!draft||teamRows.length>0;
@@ -390,6 +391,10 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   try{const {error}=await db.rpc("create_competition_team",{p_competition_id:activeCompetition.id,p_team_name:$("competitionManualTeamName").value.trim(),p_company_template_id:$("competitionTemplateSelect").value});if(error)throw error;
    $("competitionManualTeamName").value="";say("Team created. Assign its students below.",true);await loadCompetition();
   }catch(err){say(err.message);}finally{btn.disabled=false;}
+ });
+ $("competitionTaskPackButton").addEventListener("click",async()=>{
+  const btn=$("competitionTaskPackButton");btn.disabled=true;
+  try{const {data,error}=await db.rpc("create_competition_standard_task_pack",{p_competition_id:activeCompetition.id});if(error)throw error;say(data+" role-specific tasks created across all teams.",true);await loadCompetition();}catch(err){say(err.message);btn.disabled=false;}
  });
  $("competitionTaskForm").addEventListener("submit",async e=>{
   e.preventDefault();const btn=$("competitionTaskButton");btn.disabled=true;
