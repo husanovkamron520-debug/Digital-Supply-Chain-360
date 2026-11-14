@@ -361,7 +361,8 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
     const transportRate=Number(teamResult.data.company_templates?.operating_profile?.transport_cost_per_unit||0);
     const updateTransportCostBounds=()=>{const quantity=Number(qty.value);cost.min=(quantity*transportRate*.8).toFixed(2);cost.max=(quantity*transportRate*1.5).toFixed(2);cost.value=(quantity*transportRate).toFixed(2);cost.title="Allowed "+cost.min+"–"+cost.max+". Economy ≤90% takes 3 days; standard takes 2; express ≥125% takes 1 day.";};
     updateTransportCostBounds();qty.addEventListener("input",updateTransportCostBounds);
-    const btn=el("button","secondary-button","Dispatch");btn.type="submit";form.append(qty,origin,dest,carrier,cost,btn);
+    const costHint=el("small","","Economy ≤90%: 3 days · Standard: 2 days · Express ≥125%: 1 day");
+    const btn=el("button","secondary-button","Dispatch");btn.type="submit";form.append(qty,origin,dest,carrier,cost,costHint,btn);
     form.addEventListener("submit",async e=>{e.preventDefault();btn.disabled=true;try{const {error}=await db.rpc("competition_dispatch_shipment",{p_order_id:order.id,p_quantity:Number(qty.value),p_origin:origin.value.trim(),p_destination:dest.value.trim(),p_carrier:carrier.value.trim(),p_transport_cost:Number(cost.value)});if(error)throw error;say("Shipment dispatched. Inventory and cash were updated.",true);await loadTeamOperations();}catch(err){say(err.message);btn.disabled=false;}});
     card.append(form);
    }
