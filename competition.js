@@ -261,7 +261,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
 
  async function loadTeamOperations(){
   const teamId=activeTeam;
-  const [metricResult,supplierResult,inventoryResult,poResult,orderResult,shipmentResult,clockResult,taskMetricResult,teamResult]=await Promise.all([
+  const [metricResult,supplierResult,inventoryResult,poResult,orderResult,shipmentResult,clockResult,taskMetricResult,teamResult,productionResult]=await Promise.all([
    db.from("competition_team_live_metrics").select("*").eq("team_id",teamId).single(),
    db.from("competition_suppliers").select("id,supplier_code,name,lead_time_days,unit_cost,reliability_score,active").eq("team_id",teamId).order("unit_cost"),
    db.from("competition_inventory").select("sku,item_name,item_type,quantity,reorder_level,unit_cost").eq("team_id",teamId).order("item_type"),
@@ -270,10 +270,17 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    db.from("competition_shipments").select("id,order_id,quantity,destination,carrier,status,transport_cost,eta,delivered_at").eq("team_id",teamId).order("dispatched_at",{ascending:false}),
    db.from("competition_simulation_clock").select("current_round,round_limit,virtual_now").eq("competition_id",activeCompetition.id).single(),
    db.from("competition_task_performance").select("due_tasks,approved_tasks,completion_pct,awaiting_review,late_submissions").eq("team_id",teamId).maybeSingle(),
-   db.from("competition_teams").select("production_capacity_units").eq("id",teamId).single()
+   db.from("competition_teams").select("production_capacity_units").eq("id",teamId).single(),
+   db.from("competition_production_runs").select("production_round,produced_quantity").eq("team_id",teamId).eq("status","completed")
   ]);
-  for(const r of [metricResult,supplierResult,inventoryResult,poResult,orderResult,shipmentResult,clockResult,taskMetricResult,teamResult])if(r.error)throw r.error;
-  $("competitionProductionQuantity").max=String(teamResult.data.production_capacity_units);
+  for(const r of [metricResult,supplierResult,inventoryResult,poResult,orderResult,shipmentResult,clockResult,taskMetricResult,teamResult,productionResult])if(r.error)throw r.error;
+  const producedThisRound=(productionResult.data||[]).filter(x=>x.production_round===clockResult.data.current_round).reduce((sum,x)=>sum+Number(x.produced_quantity),0);
+  const remainingProductionCapacity=Math.max(0,Number(teamResult.data.production_capacity_units)-producedThisRound);
+  $("competitionProductionQuantity").max=String(Math.max(1,remainingProductionCapacity));
+  $("competitionProductionQuantity").disabled=remainingProductionCapacity===0||activeCompetition.status!=="active";
+  $("competitionProductionCapacityNote").textContent="Round "+clockResult.data.current_round+": "+producedThisRound+" / "+teamResult.data.production_capacity_units+" units produced · "+remainingProductionCapacity+" remaining.";
+  const productionSubmit=$("competitionProductionForm").querySelector("button");
+  if(productionSubmit)productionSubmit.disabled=remainingProductionCapacity===0||activeCompetition.status!=="active";
   const m=metricResult.data,suppliers=supplierResult.data||[],inventory=inventoryResult.data||[],pos=poResult.data||[],orders=orderResult.data||[],shipments=shipmentResult.data||[];
   const metricCards=[
    ["Cash balance",Number(m.cash_balance).toLocaleString(undefined,{maximumFractionDigits:0})],
