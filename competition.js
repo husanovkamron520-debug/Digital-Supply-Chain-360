@@ -348,8 +348,8 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
 
  async function loadPublicCompetitionResults(){
   const [teamsResult,peopleResult]=await Promise.all([
-   db.from("competition_public_leaderboard").select("*").eq("competition_id",activeCompetition.id),
-   db.from("competition_individual_leaderboard").select("*").eq("competition_id",activeCompetition.id)
+   db.rpc("get_competition_leaderboard",{p_competition_id:activeCompetition.id}),
+   db.rpc("get_competition_individual_leaderboard",{p_competition_id:activeCompetition.id})
   ]);
   if(teamsResult.error)throw teamsResult.error;if(peopleResult.error)throw peopleResult.error;
   const teams=(teamsResult.data||[]).sort((a,b)=>(b.total_score??-1)-(a.total_score??-1));
