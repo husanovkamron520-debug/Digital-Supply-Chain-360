@@ -1,4 +1,4 @@
--- Current authoritative competition RPC snapshot.
+-- Enforce aggregate production capacity per round and close production during the final delivery round.
 alter table public.competition_production_runs add column if not exists production_round integer not null default 1;
 alter table public.competition_production_runs drop constraint if exists competition_production_runs_round_check;
 alter table public.competition_production_runs add constraint competition_production_runs_round_check check(production_round between 1 and 20);
