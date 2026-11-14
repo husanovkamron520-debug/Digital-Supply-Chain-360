@@ -25,6 +25,7 @@ Then apply the current competition refinements in this order:
 16. `competition_inventory_adjustment_bounds.sql` — limits cycle-count changes to 5% and requires a reason.
 17. `competition_kpi_scoring.sql` — installs the normalized scorecard; requires the company target-cost values from step 4.
 18. `competition_foreign_key_indexes.sql` — adds missing foreign-key indexes only when no existing index covers the same leading columns.
+19. `competition_clock_serialization_guards.sql` — serializes receipts, deliveries, supplier changes, stock counts, task submissions and decision evaluation against the simulation clock and final scoring.
 
 ## Historical/intermediate patches
 
