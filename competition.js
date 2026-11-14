@@ -13,6 +13,16 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  function say(message,success=false){$("competitionMessage").textContent=message;$("competitionMessage").classList.toggle("success",success);}
  function statusLabel(value){return (value||"").replaceAll("_"," ").toUpperCase();}
  function localDateTimeValue(value){const d=new Date(value);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);}
+ function applySupplierNegotiationBounds(s){
+  const baseLead=Number(s.base_lead_time_days),baseCost=Number(s.base_unit_cost),baseReliability=Number(s.base_reliability_score);
+  const minLead=Math.max(1,Math.floor(baseLead*.7)),maxLead=Math.min(90,Math.ceil(baseLead*1.5));
+  const minCost=(baseCost*.8).toFixed(2),maxCost=(baseCost*1.25).toFixed(2);
+  const minReliability=Math.max(50,baseReliability-10),maxReliability=Math.min(99,baseReliability+5);
+  $("competitionTermsLeadTime").min=String(minLead);$("competitionTermsLeadTime").max=String(maxLead);
+  $("competitionTermsUnitCost").min=minCost;$("competitionTermsUnitCost").max=maxCost;
+  $("competitionTermsReliability").min=String(minReliability);$("competitionTermsReliability").max=String(maxReliability);
+  $("competitionSupplierNegotiationNote").textContent="Allowed range: "+minLead+"–"+maxLead+" days · "+minCost+"–"+maxCost+" cost · "+minReliability+"–"+maxReliability+" reliability. Improving all three terms at once is not allowed.";
+ }
  function addEmpty(host,message){host.replaceChildren(el("p","empty-state",message));}
  function setHidden(id,value){$(id).hidden=value;}
 
@@ -267,7 +277,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   const teamId=activeTeam;
   const [metricResult,supplierResult,inventoryResult,poResult,orderResult,shipmentResult,clockResult,taskMetricResult,teamResult,productionResult]=await Promise.all([
    db.from("competition_team_live_metrics").select("*").eq("team_id",teamId).single(),
-   db.from("competition_suppliers").select("id,supplier_code,name,lead_time_days,unit_cost,reliability_score,active").eq("team_id",teamId).order("unit_cost"),
+   db.from("competition_suppliers").select("id,supplier_code,name,lead_time_days,unit_cost,reliability_score,base_lead_time_days,base_unit_cost,base_reliability_score,active").eq("team_id",teamId).order("unit_cost"),
    db.from("competition_inventory").select("sku,item_name,item_type,quantity,reorder_level,unit_cost").eq("team_id",teamId).order("item_type"),
    db.from("competition_purchase_orders").select("id,po_number,sku,item_name,quantity,received_quantity,unit_cost,status,expected_at,available_at").eq("team_id",teamId).order("created_at",{ascending:false}),
    db.from("competition_customer_orders").select("id,order_number,sku,item_name,quantity,unit_price,status,due_at,delivered_at").eq("team_id",teamId).order("created_at",{ascending:false}),
@@ -316,7 +326,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    $(id).replaceChildren(...suppliers.filter(s=>s.active).map(s=>option(s.name+" · "+s.lead_time_days+"d · "+Number(s.unit_cost).toFixed(2),s.id)));
   }
   const selectedSupplier=suppliers.find(s=>s.id===$("competitionTermsSupplier").value)||suppliers[0];
-  if(selectedSupplier){$("competitionTermsSupplier").value=selectedSupplier.id;$("competitionTermsLeadTime").value=selectedSupplier.lead_time_days;$("competitionTermsUnitCost").value=selectedSupplier.unit_cost;$("competitionTermsReliability").value=selectedSupplier.reliability_score;}
+  if(selectedSupplier){$("competitionTermsSupplier").value=selectedSupplier.id;$("competitionTermsLeadTime").value=selectedSupplier.lead_time_days;$("competitionTermsUnitCost").value=selectedSupplier.unit_cost;$("competitionTermsReliability").value=selectedSupplier.reliability_score;applySupplierNegotiationBounds(selectedSupplier);}
   $("competitionPurchaseOrderList").replaceChildren();
   const outstandingPOs=pos.filter(p=>["placed","partially_received"].includes(p.status));
   if(!outstandingPOs.length)addEmpty($("competitionPurchaseOrderList"),"No outstanding purchase orders.");
@@ -453,8 +463,8 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  });
 
  $("competitionTermsSupplier").addEventListener("change",async()=>{
-  const {data,error}=await db.from("competition_suppliers").select("lead_time_days,unit_cost,reliability_score").eq("id",$("competitionTermsSupplier").value).single();
-  if(!error&&data){$("competitionTermsLeadTime").value=data.lead_time_days;$("competitionTermsUnitCost").value=data.unit_cost;$("competitionTermsReliability").value=data.reliability_score;}
+  const {data,error}=await db.from("competition_suppliers").select("lead_time_days,unit_cost,reliability_score,base_lead_time_days,base_unit_cost,base_reliability_score").eq("id",$("competitionTermsSupplier").value).single();
+  if(!error&&data){$("competitionTermsLeadTime").value=data.lead_time_days;$("competitionTermsUnitCost").value=data.unit_cost;$("competitionTermsReliability").value=data.reliability_score;applySupplierNegotiationBounds(data);}
  });
  $("competitionSupplierTermsForm").addEventListener("submit",async e=>{
   e.preventDefault();const btn=$("competitionSupplierTermsForm").querySelector("button");btn.disabled=true;
