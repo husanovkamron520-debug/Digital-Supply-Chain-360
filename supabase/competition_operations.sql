@@ -975,3 +975,82 @@ select team_id,competition_id,classroom_id,team_name,company_name,starting_capit
  jsonb_build_object('service',service_score,'cost',cost_score,'inventory',inventory_score,
   'lead_time',lead_time_score,'productivity',productivity_score,'decision_quality',decision_quality_score) as component_scores
 from weighted;
+
+
+-- ===== competition_round_normalized_productivity =====
+
+create or replace view public.competition_team_live_metrics
+with (security_invoker=true)
+as
+with order_metrics as (
+ select team_id,count(*)::integer as total_orders,count(*) filter(where status='delivered')::integer as delivered_orders,
+  coalesce(sum(quantity) filter(where status='delivered'),0)::numeric as delivered_units,
+  coalesce(sum(quantity) filter(where status='delivered' and delivered_at<=due_at),0)::numeric as on_time_units,
+  avg(extract(epoch from (delivered_at-created_at))/86400.0) filter(where status='delivered') as avg_delivery_days
+ from public.competition_customer_orders group by team_id
+), inventory_metrics as (
+ select team_id,count(*)::integer as sku_count,count(*) filter(where quantity>reorder_level)::integer as healthy_skus,
+  coalesce(sum(quantity),0)::numeric as inventory_units,coalesce(sum(quantity*unit_cost),0)::numeric as inventory_value,
+  count(*) filter(where quantity<=reorder_level)::integer as low_stock_skus
+ from public.competition_inventory group by team_id
+), production_metrics as (
+ select team_id,coalesce(sum(produced_quantity),0)::numeric as produced_units,count(*)::integer as production_runs
+ from public.competition_production_runs where status='completed' group by team_id
+), finance_metrics as (
+ select team_id,coalesce(sum(amount) filter(where entry_type='revenue'),0)::numeric as revenue,
+  coalesce(-sum(amount) filter(where entry_type in('purchase','production','transport')),0)::numeric as operating_cost
+ from public.competition_ledger group by team_id
+), decision_metrics as (
+ select team_id,avg(score)::numeric as decision_quality,count(*)::integer as decision_count,
+  count(*) filter(where score is not null)::integer as evaluated_decisions
+ from public.competition_decisions group by team_id
+), raw as (
+ select t.id as team_id,t.competition_id,t.classroom_id,t.name as team_name,t.starting_capital,t.cash_balance,coalesce(clk.current_round,1) as current_round,
+  t.production_capacity_units,ct.name as company_name,ct.scoring_weights,
+  coalesce(o.total_orders,0) as total_orders,coalesce(o.delivered_orders,0) as delivered_orders,
+  coalesce(o.delivered_units,0) as delivered_units,coalesce(o.on_time_units,0) as on_time_units,o.avg_delivery_days,
+  coalesce(i.sku_count,0) as sku_count,coalesce(i.healthy_skus,0) as healthy_skus,coalesce(i.inventory_units,0) as inventory_units,
+  coalesce(i.inventory_value,0) as inventory_value,coalesce(i.low_stock_skus,0) as low_stock_skus,
+  coalesce(p.produced_units,0) as produced_units,coalesce(p.production_runs,0) as production_runs,
+  coalesce(f.revenue,0) as revenue,coalesce(f.operating_cost,0) as operating_cost,
+  coalesce(d.decision_count,0) as decision_count,coalesce(d.evaluated_decisions,0) as evaluated_decisions,
+  d.decision_quality,coalesce((ct.operating_profile->>'baseline_lead_time_days')::numeric,7) as baseline_lead_time_days
+ from public.competition_teams t join public.company_templates ct on ct.id=t.company_template_id
+ left join order_metrics o on o.team_id=t.id left join inventory_metrics i on i.team_id=t.id
+ left join production_metrics p on p.team_id=t.id left join finance_metrics f on f.team_id=t.id
+ left join decision_metrics d on d.team_id=t.id left join public.competition_simulation_clock clk on clk.competition_id=t.competition_id
+), scored as (
+ select r.*,
+  case when delivered_units>0 then round(100*on_time_units/delivered_units,2) end as service_score,
+  case when starting_capital>0 then greatest(0,least(100,round(50+50*(cash_balance-starting_capital)/starting_capital,2))) end as cost_score,
+  case when sku_count>0 then round(100.0*healthy_skus/sku_count,2) end as inventory_score,
+  case when avg_delivery_days>0 then least(100,round(100*baseline_lead_time_days/avg_delivery_days,2)) end as lead_time_score,
+  case when production_runs>0 and production_capacity_units>0 then least(100,round(100*produced_units/(production_capacity_units*greatest(1,current_round)),2)) end as productivity_score,
+  round(decision_quality,2) as decision_quality_score
+ from raw r
+), weighted as (
+ select s.*,
+  (case when service_score is not null then coalesce((scoring_weights->>'service')::numeric,25) else 0 end+
+   case when cost_score is not null then coalesce((scoring_weights->>'cost')::numeric,20) else 0 end+
+   case when inventory_score is not null then coalesce((scoring_weights->>'inventory')::numeric,15) else 0 end+
+   case when lead_time_score is not null then coalesce((scoring_weights->>'lead_time')::numeric,15) else 0 end+
+   case when productivity_score is not null then coalesce((scoring_weights->>'productivity')::numeric,10) else 0 end+
+   case when decision_quality_score is not null then coalesce((scoring_weights->>'decision_quality')::numeric,15) else 0 end) as available_weight,
+  (coalesce(service_score,0)*coalesce((scoring_weights->>'service')::numeric,25)+
+   coalesce(cost_score,0)*coalesce((scoring_weights->>'cost')::numeric,20)+
+   coalesce(inventory_score,0)*coalesce((scoring_weights->>'inventory')::numeric,15)+
+   coalesce(lead_time_score,0)*coalesce((scoring_weights->>'lead_time')::numeric,15)+
+   coalesce(productivity_score,0)*coalesce((scoring_weights->>'productivity')::numeric,10)+
+   coalesce(decision_quality_score,0)*coalesce((scoring_weights->>'decision_quality')::numeric,15)) as weighted_sum
+ from scored s
+)
+select team_id,competition_id,classroom_id,team_name,company_name,starting_capital,cash_balance,total_orders,delivered_orders,
+ delivered_units,on_time_units,avg_delivery_days,sku_count,healthy_skus,inventory_units,inventory_value,low_stock_skus,
+ produced_units,production_runs,revenue,operating_cost,decision_count,evaluated_decisions,decision_quality,
+ service_score,cost_score,inventory_score,lead_time_score,productivity_score,decision_quality_score,
+ round(available_weight,2) as score_coverage_pct,
+ case when delivered_orders>0 and production_runs>0 and evaluated_decisions>0 and available_weight>0
+  then round(weighted_sum/available_weight,2) end as total_score,
+ jsonb_build_object('service',service_score,'cost',cost_score,'inventory',inventory_score,
+  'lead_time',lead_time_score,'productivity',productivity_score,'decision_quality',decision_quality_score) as component_scores,current_round
+from weighted;
