@@ -212,8 +212,10 @@ function setDashboardView(view){
   const personal=view==="personal";
   const targetSelector=personal?(document.body.dataset.myWorkspaceTarget||"#scenarioWorkspace"):null;
   const target=personal?document.querySelector(targetSelector):null;
-  if(personal&&!target){
-    if(scopeStatus)scopeStatus.textContent="Your role workspace is not available yet. Please wait for your classroom role to load.";
+  if(personal&&(!target||target.hidden)){
+    if(scopeStatus)scopeStatus.textContent=target
+      ?"Your role workspace is still loading. Try again in a moment."
+      :"Your role workspace is not available yet. Please wait for your classroom role to load.";
     return;
   }
   [...(mainContent?.children||[])].forEach(section=>{
