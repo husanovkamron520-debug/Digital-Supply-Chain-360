@@ -6,6 +6,7 @@ if (root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith
   const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const picker = document.querySelector("#analyticsClassSelect");
   const grid = document.querySelector("#analyticsMetrics");
+  const charts = document.querySelector("#analyticsCharts");
   const note = document.querySelector("#analyticsNote");
   let activeClassId = null;
 
@@ -22,10 +23,46 @@ if (root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith
     return card;
   };
 
+  const breakdown = (titleText, items) => {
+    const panel = document.createElement("article");
+    panel.className = "analytics-breakdown";
+    const heading = document.createElement("h3");
+    heading.textContent = titleText;
+    panel.append(heading);
+    const total = items.reduce((sum, item) => sum + item.value, 0);
+    if (!total) {
+      const empty = document.createElement("p");
+      empty.className = "analytics-chart-empty";
+      empty.textContent = "No records yet";
+      panel.append(empty);
+      return panel;
+    }
+    for (const item of items.filter(entry => entry.value > 0)) {
+      const row = document.createElement("div");
+      row.className = "analytics-bar-row";
+      const meta = document.createElement("div");
+      meta.className = "analytics-bar-meta";
+      const label = document.createElement("span");
+      label.textContent = item.label;
+      const count = document.createElement("b");
+      count.textContent = String(item.value);
+      meta.append(label, count);
+      const track = document.createElement("div");
+      track.className = "analytics-bar-track";
+      const fill = document.createElement("i");
+      fill.style.width = (item.value / total * 100).toFixed(1) + "%";
+      track.append(fill);
+      row.append(meta, track);
+      panel.append(row);
+    }
+    return panel;
+  };
+
   async function refresh() {
     if (!activeClassId) return;
     note.textContent = "Refreshing classroom data…";
     grid.replaceChildren();
+    charts?.replaceChildren();
     const [orders, shipments, inventory, decisions, members] = await Promise.all([
       db.from("orders").select("id,status", { count: "exact" }).eq("classroom_id", activeClassId).is("scenario_id", null),
       db.from("shipments").select("id,status", { count: "exact" }).eq("classroom_id", activeClassId).is("scenario_id", null),
@@ -55,6 +92,31 @@ if (root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith
       metric("Inventory units", units.toLocaleString(), stockRows.length + " SKUs · " + lowStock + " at/below reorder level"),
       metric("Scenario average", average === null ? "—" : average + "/100", scoreRows.length + " student decisions"),
       metric("Student participation", participating + " / " + studentCount, participationRate + "% of enrolled students submitted at least one decision")
+    );
+
+    const countByStatus = (rows, status) => rows.filter(row => row.status === status).length;
+    const orderStatuses = [
+      ["created","Created"],["approved","Approved"],["in_production","In production"],
+      ["ready","Ready"],["in_transit","In transit"],["delivered","Delivered"],
+      ["delayed","Delayed"],["cancelled","Cancelled"]
+    ].map(([key,label]) => ({label,value:countByStatus(orderRows,key)}));
+    const shipmentStatuses = [
+      ["planned","Planned"],["dispatched","Dispatched"],["in_transit","In transit"],
+      ["delayed","Delayed"],["delivered","Delivered"]
+    ].map(([key,label]) => ({label,value:countByStatus(shipmentRows,key)}));
+    const scoreBands = [
+      {label:"Below 60",value:scoreRows.filter(row=>Number(row.score)<60).length},
+      {label:"60–79",value:scoreRows.filter(row=>Number(row.score)>=60&&Number(row.score)<80).length},
+      {label:"80–100",value:scoreRows.filter(row=>Number(row.score)>=80&&Number(row.score)<=100).length}
+    ];
+    charts?.append(
+      breakdown("Order status",orderStatuses),
+      breakdown("Shipment status",shipmentStatuses),
+      breakdown("Inventory health",[
+        {label:"Healthy stock",value:Math.max(0,stockRows.length-lowStock)},
+        {label:"At / below reorder",value:lowStock}
+      ]),
+      breakdown("Scenario score bands",scoreBands)
     );
     note.textContent = "Live classroom records · refreshed " + new Date().toLocaleTimeString();
   }
