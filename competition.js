@@ -195,14 +195,14 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   }
   const individuals=new Map();
   for(const d of decisionRows){
-   if(!individuals.has(d.student_id))individuals.set(d.student_id,{name:d.profiles?.full_name||"Student",scores:[],count:0});
-   const item=individuals.get(d.student_id);item.count++;if(d.score!==null)item.scores.push(Number(d.score));
+   if(!individuals.has(d.student_id))individuals.set(d.student_id,{name:d.profiles?.full_name||"Student",scores:[],submittedCount:0});
+   const item=individuals.get(d.student_id);item.submittedCount++;if(d.score!==null)item.scores.push(Number(d.score));
   }
   $("competitionIndividualRanking").replaceChildren();
-  const ranked=[...individuals.values()].filter(x=>x.scores.length).map(x=>({...x,average:x.scores.reduce((a,b)=>a+b,0)/x.scores.length})).sort((a,b)=>b.average-a.average);
+  const ranked=[...individuals.values()].filter(x=>x.scores.length).map(x=>({...x,average:x.scores.reduce((a,b)=>a+b,0)/x.scores.length})).sort((a,b)=>b.average-a.average||b.scores.length-a.scores.length);
   if(!ranked.length)addEmpty($("competitionIndividualRanking"),"Individual ranking appears after decisions have been evaluated.");
   for(const [index,p] of ranked.entries()){
-   const row=el("article","competition-score-row");row.append(el("b","",(index+1)+". "+p.name+" · "+p.count+" decisions"),el("strong","",p.average.toFixed(1)+"/100"));
+   const row=el("article","competition-score-row");row.append(el("b","",(index+1)+". "+p.name+" · "+p.scores.length+" evaluated / "+p.submittedCount+" submitted"),el("strong","",p.average.toFixed(1)+"/100"));
    $("competitionIndividualRanking").append(row);
   }
   const {data:clock,error:clockError}=await db.from("competition_simulation_clock").select("current_round,round_limit,virtual_now").eq("competition_id",activeCompetition.id).maybeSingle();
