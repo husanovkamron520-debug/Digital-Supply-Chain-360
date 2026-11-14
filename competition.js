@@ -278,14 +278,16 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    db.from("competition_production_runs").select("production_round,produced_quantity").eq("team_id",teamId).eq("status","completed")
   ]);
   for(const r of [metricResult,supplierResult,inventoryResult,poResult,orderResult,shipmentResult,clockResult,taskMetricResult,teamResult,productionResult])if(r.error)throw r.error;
+  const canOperate=activeCompetition.status==="active";
+  for(const id of ["competitionSupplierTermsForm","competitionPurchaseOrderForm","competitionProductionForm","competitionCustomerOrderForm","competitionDecisionForm"]){const form=$(id);if(form)form.querySelectorAll("input,select,textarea,button").forEach(control=>control.disabled=!canOperate);}
   const producedThisRound=(productionResult.data||[]).filter(x=>x.production_round===clockResult.data.current_round).reduce((sum,x)=>sum+Number(x.produced_quantity),0);
   const remainingProductionCapacity=Math.max(0,Number(teamResult.data.production_capacity_units)-producedThisRound);
   $("competitionCustomerDue").min=localDateTimeValue(clockResult.data.virtual_now);
   $("competitionProductionQuantity").max=String(Math.max(1,remainingProductionCapacity));
-  $("competitionProductionQuantity").disabled=remainingProductionCapacity===0||activeCompetition.status!=="active";
+  $("competitionProductionQuantity").disabled=remainingProductionCapacity===0||!canOperate;
   $("competitionProductionCapacityNote").textContent="Round "+clockResult.data.current_round+": "+producedThisRound+" / "+teamResult.data.production_capacity_units+" units produced · "+remainingProductionCapacity+" remaining.";
   const productionSubmit=$("competitionProductionForm").querySelector("button");
-  if(productionSubmit)productionSubmit.disabled=remainingProductionCapacity===0||activeCompetition.status!=="active";
+  if(productionSubmit)productionSubmit.disabled=remainingProductionCapacity===0||!canOperate;
   const m=metricResult.data,suppliers=supplierResult.data||[],inventory=inventoryResult.data||[],pos=poResult.data||[],orders=orderResult.data||[],shipments=shipmentResult.data||[];
   const metricCards=[
    ["Cash balance",Number(m.cash_balance).toLocaleString(undefined,{maximumFractionDigits:0})],
