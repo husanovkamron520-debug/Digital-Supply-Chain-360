@@ -1,58 +1,99 @@
 # SupplyChain14
 
-A mobile-first, interactive supply-chain learning and simulation platform. The project is being developed in two layers:
+A mobile-first, interactive supply-chain learning and simulation platform for university classrooms.
 
-- **Control tower:** interactive 3D supply-chain network and simulated operational KPIs.
-- **Classroom platform:** teacher/student accounts, class join codes, operational roles, scenarios and saved activity.
+SupplyChain14 combines a simulated end-to-end control tower with classroom workflows. It is an educational environment: operational quantities, transactions, and dashboard KPIs are simulated and are not connected to real company systems.
 
-All supply-chain figures and transactions are simulated for classroom learning. The platform is not connected to live company systems.
+## Live environment
 
-## Current project structure
+- **Website:** https://digital-supply-chain-360.husanovkamron520.workers.dev/
+- **Hosting:** Cloudflare Workers Static Assets
+- **Backend:** Supabase Auth + PostgreSQL + Row Level Security
+- **Deployment:** GitHub Actions on every push to `main`
 
-- `index.html`, `styles.css`, `app.js` — 3D control-tower interface.
-- `operations.js` — classroom-scoped order management and shipment tracking.
-- `scenarios.js` — teacher-launched disruption exercises, student decisions, and scoring.
-- `procurement.js` — supplier register, purchase orders, partial receipts, and inventory updates.
-- `inventory.js` — warehouse stock control and movement history.
-- `auth.js` — Supabase sign-up, sign-in, session handling and role display.
-- `supabase-config.js` — public Supabase URL/key configuration template.
-- `supabase/schema.sql` — database schema, role model, class join function and Row Level Security policies.
+The Cloudflare Worker currently retains the technical name `digital-supply-chain-360`; the product brand shown in the interface is SupplyChain14.
 
-## Platform architecture
+## Current modules
 
-- **Cloudflare Workers Static Assets** — static frontend hosting, deployed automatically from GitHub Actions.
-- **Supabase Auth** — sign-up and sign-in.
-- **Supabase PostgreSQL** — profiles, classrooms, memberships, scenarios, orders, inventory, shipments and activity history.
-- **Row Level Security (RLS)** — database-side access control.
+### Control tower
+- Interactive 3D supply-chain network and process explorer.
+- Simulated KPIs and demonstration activity stream.
+- Educational-simulation disclaimer; dashboard figures are not live operational data.
 
-The frontend will use only the Supabase project URL and the public anon/publishable key. Never put a Supabase `service_role` key in browser code or commit it to GitHub.
+### Classroom and roles
+- Teacher and student accounts, classroom creation, and join codes.
+- Teacher assignment of Supplier, Manufacturer, Warehouse, Transport, Customer, and Retailer roles.
+- Classroom-scoped records and role checks enforced by database functions and RLS.
 
-## Database setup
+### Operations and inventory
+- Supply orders, shipment planning, and validated status transitions.
+- Teacher-only order status changes; Transport role can manage shipment statuses.
+- SKU/item register, opening quantities, reorder levels, receive/issue movements, and activity history.
 
-1. Create a Supabase project.
-2. Open **SQL Editor → New query**.
-3. Copy and run the complete contents of `supabase/schema.sql`.
-4. In **Authentication → Users**, create or invite the first account that will act as the teacher.
-5. Promote that account from the SQL Editor, replacing the email with the teacher's actual login email:
+### Procurement and supplier workflow
+- Supplier register and purchase orders.
+- Manufacturer role can create purchase orders.
+- Linked supplier accounts can accept/reject only their own purchase orders.
+- Warehouse role can receive accepted orders into inventory.
+- Partial receipts update received quantity and stock; rejected linked-supplier orders cannot be received.
+- Teachers retain classroom oversight and procurement control.
 
-   ```sql
-   update public.profiles
-   set platform_role = 'teacher'
-   where id = (
-     select id from auth.users
-     where email = 'teacher@example.com'
-   );
-   ```
+### Scenario Simulation Lab
+Teachers can launch Supplier Delay, Demand Spike, and Route Disruption scenarios. Students submit a decision and rationale; scores and feedback are calculated server-side. Scenario-tagged orders, shipments, and inventory are isolated from normal operational records.
 
-6. Copy the **Project URL** and **anon/public or publishable key** from Project Settings → API. Never copy the service-role/secret key into the browser or GitHub.
-7. Replace the two placeholder values in `supabase-config.js` with the Project URL and public key.
-8. In Authentication → URL Configuration, add your deployed website URL to the allowed Site URL / Redirect URLs after hosting is set up.
+### Teacher analytics
+Classroom-level order, shipment, inventory, scenario, and participation metrics. Scenario records are excluded from baseline operational KPIs.
 
-New sign-ups receive the `student` role automatically. Students join a classroom through the `join_classroom(code)` database function; they cannot create their own teacher role or forge membership rows.
+## Repository structure
 
-## Run locally
+- `index.html` — app shell and workspace markup.
+- `styles.css` — responsive interface styling.
+- `app.js` — control tower and main interface behavior.
+- `auth.js` — Supabase authentication and session handling.
+- `classroom.js` — classroom creation/joining and role assignment.
+- `inventory.js` — inventory workspace.
+- `operations.js` — orders and shipments.
+- `procurement.js` — suppliers and purchase orders.
+- `scenarios.js` — scenario launch, student decisions, and results.
+- `analytics.js` — teacher analytics.
+- `supabase-config.js` — public Supabase URL and publishable key.
+- `supabase/` — baseline schema and incremental SQL changes.
+- `.github/workflows/deploy.yml` — syntax validation and Cloudflare deployment.
+- `wrangler.toml` — Cloudflare Worker/static-assets configuration.
 
-Because the app uses JavaScript modules, serve the folder through a local web server:
+## Deployment
+
+A push to `main` runs `.github/workflows/deploy.yml`:
+1. Checks JavaScript syntax.
+2. Copies HTML, CSS, and JavaScript files into `dist/`.
+3. Deploys static assets to Cloudflare Workers.
+
+Required GitHub Actions configuration:
+- Secret: `CLOUDFLARE_API_TOKEN`
+- Repository variable: `CLOUDFLARE_ACCOUNT_ID`
+
+Never commit Cloudflare tokens, Supabase service-role keys, or other secrets. Browser code may contain only the Supabase project URL and public publishable/anon key.
+
+## Supabase setup and SQL
+
+The database includes profiles, classrooms, memberships, scenarios, orders, shipments, inventory, activity logs, suppliers, and purchase orders.
+
+- `supabase/schema.sql` is the baseline schema.
+- Other SQL files are incremental changes for modules, state transitions, indexes, RLS, grants, and security hardening.
+- For an existing project, apply only changes that have not already been applied, in their dependency order. Do not blindly rerun every file against a populated production database.
+
+After setup:
+1. Configure the project URL and public publishable key in `supabase-config.js`.
+2. Add the deployed website URL to Supabase Authentication URL configuration.
+3. Create the first teacher account and assign its platform role through a trusted administrative process.
+4. Keep RLS enabled on every exposed table.
+5. Enable leaked-password protection in Supabase Authentication → Password Security.
+
+Privileged database functions must validate the signed-in user, classroom membership, and operational role before changing data. Do not weaken RLS or expose direct client-side write permissions to bypass RPC validation.
+
+## Local development
+
+Serve the project folder with a local web server (ES modules require HTTP):
 
 ```bash
 python -m http.server 8000
@@ -60,35 +101,19 @@ python -m http.server 8000
 
 Then open http://localhost:8000.
 
-## Deploy frontend
+## Release and classroom QA
 
-Cloudflare Pages can connect directly to this GitHub repository:
+Before calling a release classroom-ready, test on an actual phone:
+- Teacher sign-up/login, classroom creation, join code, and role assignment.
+- Student join and role-specific navigation/actions.
+- Supplier visibility and responses restricted to its own purchase orders.
+- Manufacturer PO creation and Warehouse receipt of accepted orders.
+- Inventory receipt/issue, order/shipment transitions, and activity history.
+- Scenario launch, student decisions, completion, and isolation from baseline data.
+- Teacher analytics, refresh, sign-out/sign-in, empty/error states, and narrow-screen layout.
 
-1. Create a Pages project and connect this repository.
-2. Framework preset: **None**.
-3. Build command: leave empty.
-4. Build output directory: `/` (repository root).
-5. Add the Supabase frontend configuration as public environment variables only if/when the app build is configured to read them.
+A successful GitHub deployment confirms syntax validation and deployment, not full manual browser QA. See `docs/CLASSROOM_QA_CHECKLIST.md` for the detailed test plan.
 
-The frontend now contains the Supabase authentication screen. It becomes usable only after `supabase/schema.sql` is applied and `supabase-config.js` contains the correct Project URL and public key. Classroom management, inventory, order creation, shipment planning, role-checked status updates, and activity history are connected to Supabase. Advanced multi-round simulation and expanded teacher analytics remain planned modules.
+## Important limitation
 
-## Learning note
-
-This is an educational simulation. It is intended for classroom exercises and must not be used for real operational or financial decisions.
-
-
-## SupplyChain14 operations
-
-- Teachers can create and manage classroom orders and update order statuses.
-- Students assigned **Customer** or **Retailer** can create orders.
-- Students assigned **Transport** can plan shipments and update shipment statuses.
-- Warehouse Managers use the inventory workspace to receive and issue stock, and can receive purchase orders directly into inventory.
-- Supplier-role students maintain supplier records; Manufacturer-role students create purchase orders; teachers retain full classroom control.
-- Operational mutations are validated by database functions and written to `activity_logs`.
-- Teachers can launch supplier-delay, demand-spike, and route-disruption exercises; students submit one decision per scenario and receive a database-calculated score and feedback.
-- Scenario scoring weights are kept in server-side functions, not exposed in browser-visible scenario configuration; decisions are unique per student and scenario.
-- The dashboard KPI figures and 3D control-tower demo events remain simulated; they are not live company data.
-
-## Deploy automation
-
-Every push to `main` triggers `.github/workflows/deploy.yml`. The workflow copies static HTML, CSS, and JavaScript files into `dist/` and deploys them to the Cloudflare Worker configured by `wrangler.toml`. Keep `CLOUDFLARE_API_TOKEN` as a GitHub Actions secret and `CLOUDFLARE_ACCOUNT_ID` as a repository variable. Never commit API tokens or database secret keys.
+SupplyChain14 is for learning and classroom simulation only. The control-tower dashboard still contains demonstration KPIs and events; it is not a live supply-chain monitoring system and must not be used for real operational or financial decisions.
