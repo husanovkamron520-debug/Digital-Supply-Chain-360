@@ -53,9 +53,10 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    .eq("classroom_id",activeClassId).order("created_at",{ascending:false});
   if(error)throw error;
   let rows=data||[];
+  const classroomCompetitions=rows;
   if(!isTeacher){
    const eligible=[];
-   for(const comp of rows.filter(c=>["active","paused"].includes(c.status))){
+   for(const comp of classroomCompetitions.filter(c=>["active","paused"].includes(c.status))){
     const {data:membership,error:memberError}=await db.from("competition_team_members").select("id,team_id,operational_role")
      .eq("competition_id",comp.id).eq("student_id",user.id).maybeSingle();
     if(memberError)throw memberError;
@@ -65,9 +66,16 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   }
   $("competitionSelect").replaceChildren(...rows.map(c=>option(c.title+" · "+statusLabel(c.status),c.id)));
   if(!rows.length){
-   activeCompetition=null;setHidden("competitionWorkspaceEmpty",false);setHidden("competitionManager",true);setHidden("competitionList",false);
+   activeCompetition=null;
+   const emptyOption=option(isTeacher?"No competitions yet":"No assigned competition yet","");
+   emptyOption.disabled=true;$("competitionSelect").append(emptyOption);$("competitionSelect").value="";
+   setHidden("competitionWorkspaceEmpty",false);setHidden("competitionManager",true);setHidden("competitionList",false);
    setHidden("competitionStudentPanel",true);setHidden("competitionTeacherPanel",!isTeacher);
-   addEmpty($("competitionList"),isTeacher?"No competition yet. Create one to begin.":"No active competition has been assigned to you yet.");
+   const draftCount=classroomCompetitions.filter(c=>c.status==="draft").length;
+   const studentMessage=draftCount
+    ?draftCount+" draft competition(s) exist in this classroom, but your teacher has not assigned you to a team and started one yet. Ask your teacher to finish team setup and start the competition."
+    :"No active competition has been assigned to you yet. Your teacher must create teams, assign you to a team, and start the competition.";
+   addEmpty($("competitionList"),isTeacher?"No competition yet. Create one to begin.":studentMessage);
    setHidden("competitionTeacherPanel",!isTeacher);setHidden("competitionStudentPanel",isTeacher);
    return;
   }
