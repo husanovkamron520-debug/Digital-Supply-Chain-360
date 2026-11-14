@@ -1,4 +1,4 @@
--- Prevent artificial revenue, invalid due dates and new orders after the final round.
+-- Current authoritative function snapshot; apply after the base competition RPCs.
 CREATE OR REPLACE FUNCTION public.competition_create_customer_order(p_team_id uuid, p_order_number text, p_sku text, p_item_name text, p_quantity integer, p_unit_price numeric, p_due_at timestamp with time zone)
  RETURNS uuid
  LANGUAGE plpgsql
@@ -43,5 +43,3 @@ begin
 exception when unique_violation then raise exception 'Order number already exists for this team';
 end; $function$
 ;
-revoke all on function public.competition_create_customer_order(uuid,text,text,text,integer,numeric,timestamptz) from public,anon;
-grant execute on function public.competition_create_customer_order(uuid,text,text,text,integer,numeric,timestamptz) to authenticated;
