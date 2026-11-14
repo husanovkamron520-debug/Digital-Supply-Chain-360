@@ -476,7 +476,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  });
  $("competitionAdvanceRound").addEventListener("click",async()=>{
   const btn=$("competitionAdvanceRound");btn.disabled=true;
-  try{const {data,error}=await db.rpc("competition_advance_round",{p_competition_id:activeCompetition.id});if(error)throw error;say("Advanced to round "+data.current_round+". Simulation time moved forward three days.",true);await loadCompetition();}catch(err){say(err.message);btn.disabled=false;}
+  try{const {data,error}=await db.rpc("competition_advance_round",{p_competition_id:activeCompetition.id});if(error)throw error;say("Advanced to round "+data.current_round+". Simulation time moved forward seven days.",true);await loadCompetition();}catch(err){say(err.message);btn.disabled=false;}
  });
  $("competitionCalculateScores").addEventListener("click",async()=>{
   const btn=$("competitionCalculateScores");btn.disabled=true;
