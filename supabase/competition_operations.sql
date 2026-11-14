@@ -2261,3 +2261,21 @@ create or replace view public.competition_team_live_metrics with (security_invok
     due_units
    FROM weighted;;
 grant select on public.competition_team_live_metrics to authenticated;
+
+-- ===== competition_individual_leaderboard_privacy =====
+
+drop view public.competition_individual_leaderboard;
+create view public.competition_individual_leaderboard
+with (security_invoker=false)
+as
+select d.competition_id,p.full_name,t.name as team_name,
+ count(*)::integer as decision_count,count(d.score)::integer as evaluated_decisions,
+ round(avg(d.score),2) as average_score,max(d.score) as best_decision_score
+from public.competition_decisions d
+join public.profiles p on p.id=d.student_id
+join public.competition_teams t on t.id=d.team_id
+join public.competitions c on c.id=d.competition_id
+where d.score is not null and c.status in('active','paused','completed') and public.is_class_member(c.classroom_id)
+group by d.competition_id,d.student_id,p.full_name,t.id,t.name;
+revoke all on public.competition_individual_leaderboard from anon,authenticated;
+grant select on public.competition_individual_leaderboard to authenticated;
