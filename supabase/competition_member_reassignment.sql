@@ -31,7 +31,7 @@ begin
  if not found or v_member.competition_id<>v_competition_id then
   raise exception 'Team member assignment changed; refresh and try again';
  end if;
- if p_operational_role not in ('procurement','supplier','manufacturer','warehouse','transport','retailer','customer','operations','finance','analyst') then
+ if p_operational_role is null or p_operational_role not in ('procurement','supplier','manufacturer','warehouse','transport','retailer','customer','operations','finance','analyst') then
   raise exception 'Unsupported operational role';
  end if;
  if not exists(
