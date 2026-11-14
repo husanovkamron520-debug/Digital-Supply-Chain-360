@@ -53,7 +53,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   }
   $("competitionSelect").replaceChildren(...rows.map(c=>option(c.title+" · "+statusLabel(c.status),c.id)));
   if(!rows.length){
-   activeCompetition=null;setHidden("competitionWorkspaceEmpty",false);
+   activeCompetition=null;setHidden("competitionWorkspaceEmpty",false);setHidden("competitionManager",true);
    addEmpty($("competitionList"),isTeacher?"No competition yet. Create one to begin.":"No active competition has been assigned to you yet.");
    setHidden("competitionTeacherPanel",!isTeacher);setHidden("competitionStudentPanel",isTeacher);
    return;
@@ -68,6 +68,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   const {data:comp,error}=await db.from("competitions").select("id,title,status,settings,starts_at,completed_at")
    .eq("id",activeCompetition.id).single();
   if(error)throw error;activeCompetition={...activeCompetition,...comp};
+  setHidden("competitionManager",false);
   $("competitionCurrentTitle").textContent=comp.title;
   $("competitionCurrentStatus").textContent=statusLabel(comp.status);
   setHidden("competitionTeacherPanel",!isTeacher);setHidden("competitionStudentPanel",isTeacher);
@@ -162,10 +163,10 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   const draft=activeCompetition.status==="draft";
   setHidden("competitionAutoSetup",!draft||teamRows.length>0);
   setHidden("competitionManualTeamForm",!draft);
-  setHidden("competitionTaskForm",!["draft","active"].includes(activeCompetition.status));
+  setHidden("competitionTaskForm",!["draft","active"].includes(activeCompetition.status)||!teamRows.length);
   setHidden("competitionStartButton",!draft||teamRows.length<2);
   $("competitionStartButton").textContent="Start competition";
-  $("competitionAutoSetup").disabled=!draft||teamRows.length>0;
+  $("competitionAutoSetupButton").disabled=!draft||teamRows.length>0;
   if(!draft){$("competitionSetupNote").textContent="Team assignments are locked after the competition starts."; }
   else $("competitionSetupNote").textContent="Create up to four company teams, assign each student to one team and role, then start the competition.";
  }
@@ -233,8 +234,8 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    $("competitionTitle").value="";say("Competition created. Configure teams next.",true);await loadCompetitions();$("competitionSelect").value=data;activeCompetition={id:data};await loadCompetition();
   }catch(err){say(err.message);}finally{btn.disabled=false;}
  });
- $("competitionAutoSetup").addEventListener("click",async()=>{
-  const btn=$("competitionAutoSetup");btn.disabled=true;
+ $("competitionAutoSetupButton").addEventListener("click",async()=>{
+  const btn=$("competitionAutoSetupButton");btn.disabled=true;
   try{const {data,error}=await db.rpc("create_balanced_competition_teams",{p_competition_id:activeCompetition.id,p_team_count:Number($("competitionTeamCount").value)});if(error)throw error;
    say(data.team_count+" balanced teams created and "+data.student_count+" students assigned.",true);await loadCompetition();
   }catch(err){say(err.message);btn.disabled=false;}
