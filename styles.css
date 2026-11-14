@@ -457,3 +457,16 @@
 .competition-source-links a,.competition-record-list a{color:#72d8bb;font-size:10px;text-decoration:underline;overflow-wrap:anywhere}
 
 @media(max-width:600px){.competition-member-edit{grid-template-columns:1fr}.competition-member-edit button{width:100%}}
+
+/* Competition workspace: progressive disclosure and compact mobile layout */
+.competition-advanced{margin:12px 0;border:1px solid #24394d;border-radius:9px;background:#0b1928;overflow:hidden}
+.competition-advanced>summary{list-style:none;cursor:pointer;padding:13px 15px;color:#c9d8e7;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:space-between}
+.competition-advanced>summary::-webkit-details-marker{display:none}
+.competition-advanced>summary::after{content:"＋";color:var(--cyan);font-size:15px}
+.competition-advanced[open]>summary::after{content:"−"}
+.competition-advanced[open]>summary{border-bottom:1px solid var(--line)}
+.competition-advanced>.competition-setup{margin:0;border:0;border-radius:0;padding:14px;background:transparent}
+.competition-advanced>.competition-setup+.competition-setup{border-top:1px solid var(--line)}
+.competition-workspace>.competition-advanced{margin-top:10px}
+.competition-workspace .competition-access-note{margin-bottom:9px}
+@media(max-width:600px){.competition-advanced>summary{padding:14px;font-size:12px}.competition-advanced>.competition-setup{padding:12px}.competition-round-controls{display:grid;gap:8px}.competition-round-controls button{width:100%}}
