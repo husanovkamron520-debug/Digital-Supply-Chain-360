@@ -21,6 +21,7 @@
   <script type="module" src="./scenarios.js"></script>
   <script type="module" src="./procurement.js"></script>
   <script type="module" src="./analytics.js"></script>
+  <script type="module" src="./competition.js"></script>
 </head>
 <body>
   <section class="auth-gate" id="authGate" aria-label="Account access">
@@ -64,6 +65,7 @@
         <a class="nav-link" href="#operationsWorkspace" hidden><span class="nav-icon">▤</span> Orders & shipments</a>
         <a class="nav-link" href="#inventoryWorkspace" hidden><span class="nav-icon">▦</span> Inventory</a>
         <a class="nav-link" href="#scenarioWorkspace"><span class="nav-icon">⚡</span> Scenario lab</a>
+        <a class="nav-link" id="competitionNavLink" href="#competitionWorkspace" hidden><span class="nav-icon">🏆</span> Team competition</a>
         <a class="nav-link" href="#procurementWorkspace" hidden><span class="nav-icon">⌂</span> Procurement</a>
         <a class="nav-link" id="analyticsNavLink" href="#teacherAnalytics" hidden><span class="nav-icon">▥</span> Analytics</a>
         <a class="nav-link" href="#intelligence"><span class="nav-icon">✳</span> Intelligence</a>
@@ -80,6 +82,7 @@
       <a class="nav-link mobile-nav-link" href="#operationsWorkspace" hidden><span class="nav-icon">▤</span><span>Orders</span></a>
       <a class="nav-link mobile-nav-link" href="#inventoryWorkspace" hidden><span class="nav-icon">▦</span><span>Inventory</span></a>
       <a class="nav-link mobile-nav-link" href="#scenarioWorkspace"><span class="nav-icon">⚡</span><span>Scenarios</span></a>
+      <a class="nav-link mobile-nav-link" id="mobileCompetitionNavLink" href="#competitionWorkspace" hidden><span class="nav-icon">🏆</span><span>Teams</span></a>
       <a class="nav-link mobile-nav-link" href="#procurementWorkspace" hidden><span class="nav-icon">⌂</span><span>Procurement</span></a>
       <a class="nav-link mobile-nav-link" id="mobileAnalyticsNavLink" href="#teacherAnalytics" hidden><span class="nav-icon">▥</span><span>Analytics</span></a>
       <a class="nav-link mobile-nav-link" href="#intelligence"><span class="nav-icon">✳</span><span>More</span></a>
@@ -127,6 +130,87 @@
           </div>
         </div>
         <p class="classroom-message" id="classroomMessage" role="status" aria-live="polite"></p>
+      </section>
+      <section class="panel competition-workspace" id="competitionWorkspace" hidden aria-live="polite">
+        <div class="panel-heading">
+          <div><div class="section-kicker">SUPPLYCHAIN14 · TEAM CHALLENGE</div><h2>Supply Chain Competition</h2></div>
+          <span class="muted-label">COMPETITION ENGINE</span>
+        </div>
+        <p class="competition-access-note" id="competitionAccessNote">Loading competition permissions…</p>
+        <div class="competition-toolbar">
+          <div><label for="competitionClassSelect">Classroom</label><select id="competitionClassSelect"></select></div>
+          <div><label for="competitionSelect">Competition</label><select id="competitionSelect"></select></div>
+        </div>
+        <div class="competition-current">
+          <div><div class="section-kicker">SELECTED CHALLENGE</div><h3 id="competitionCurrentTitle">No competition selected</h3></div>
+          <span class="competition-status" id="competitionCurrentStatus">—</span>
+        </div>
+        <div id="competitionList" class="competition-list" hidden></div>
+        <div id="competitionWorkspaceEmpty" hidden></div>
+        <div id="competitionTeacherPanel" hidden>
+          <form class="competition-form" id="competitionCreateForm">
+            <h3>Create a competition</h3>
+            <label for="competitionTitle">Competition name</label>
+            <input id="competitionTitle" maxlength="140" minlength="3" placeholder="e.g. LOG-324 Supply Chain Challenge" required>
+            <button class="primary-button" id="competitionCreateButton" type="submit">＋ Create competition</button>
+          </form>
+          <div class="competition-setup">
+            <div class="competition-section-head"><h3>Company teams</h3><p id="competitionSetupNote">Create balanced teams and assign students.</p></div>
+            <div class="competition-auto-setup" id="competitionAutoSetup">
+              <label for="competitionTeamCount">Number of teams</label>
+              <select id="competitionTeamCount"><option value="4" selected>4 teams</option><option value="3">3 teams</option><option value="2">2 teams</option></select>
+              <button class="primary-button" type="button">Create balanced teams & assign students</button>
+            </div>
+            <form class="competition-inline-form" id="competitionManualTeamForm" hidden>
+              <input id="competitionManualTeamName" maxlength="80" minlength="2" placeholder="Team name" required>
+              <select id="competitionTemplateSelect" required></select>
+              <button class="secondary-button" id="competitionManualTeamButton" type="submit">Add team</button>
+            </form>
+            <div id="competitionTeams" class="competition-team-grid"><p class="empty-state">Create teams to begin.</p></div>
+            <button class="primary-button" id="competitionStartButton" type="button" hidden>Start competition</button>
+          </div>
+          <div class="competition-setup">
+            <h3>Assign team tasks</h3>
+            <form class="competition-form" id="competitionTaskForm">
+              <label for="competitionTaskTeam">Team</label><select id="competitionTaskTeam" required></select>
+              <label for="competitionTaskRole">Responsible role</label><select id="competitionTaskRole" required></select>
+              <label for="competitionTaskTitle">Task title</label><input id="competitionTaskTitle" maxlength="140" minlength="3" required placeholder="e.g. Compare supplier quotations">
+              <label for="competitionTaskDescription">Instructions and expected evidence</label><textarea id="competitionTaskDescription" rows="3" maxlength="2000" placeholder="Describe the task, constraints and expected output"></textarea>
+              <div class="competition-toolbar">
+                <div><label for="competitionTaskPriority">Priority</label><select id="competitionTaskPriority"><option value="normal">Normal</option><option value="high">High</option><option value="critical">Critical</option><option value="low">Low</option></select></div>
+                <div><label for="competitionTaskDue">Due date</label><input id="competitionTaskDue" type="datetime-local"></div>
+              </div>
+              <button class="primary-button" id="competitionTaskButton" type="submit">＋ Assign task</button>
+            </form>
+            <div id="competitionTaskList" class="competition-record-list"><p class="empty-state">No tasks yet.</p></div>
+          </div>
+          <div class="competition-setup">
+            <h3>Student decisions & evaluation</h3>
+            <p class="form-hint">Evaluate reasoning and evidence. Operational performance scoring will be connected to the live simulation engine in the next phase.</p>
+            <div id="competitionDecisionList" class="competition-record-list"><p class="empty-state">No decisions yet.</p></div>
+          </div>
+        </div>
+        <div id="competitionStudentPanel" hidden>
+          <div class="competition-student-summary">
+            <div><span>Your company team</span><strong id="competitionStudentTeam">—</strong></div>
+            <div><span>Your assigned role</span><strong id="competitionStudentRole">—</strong></div>
+          </div>
+          <div class="competition-setup">
+            <h3>Your assigned tasks</h3>
+            <div id="competitionStudentTasks" class="competition-record-list"><p class="empty-state">No tasks assigned.</p></div>
+          </div>
+          <form class="competition-form" id="competitionDecisionForm">
+            <h3>Record an operational decision</h3>
+            <label for="competitionDecisionDomain">Supply-chain area</label>
+            <select id="competitionDecisionDomain"><option value="procurement">Procurement</option><option value="inventory">Inventory</option><option value="production">Production</option><option value="transport">Transport</option><option value="customer_service">Customer service</option><option value="finance">Finance</option><option value="risk">Risk management</option><option value="strategy">Strategy</option></select>
+            <label for="competitionDecisionType">Decision / situation</label><input id="competitionDecisionType" maxlength="80" minlength="2" required placeholder="e.g. Supplier selection">
+            <label for="competitionDecisionOption">Chosen action</label><input id="competitionDecisionOption" maxlength="120" minlength="1" required placeholder="e.g. Select supplier B">
+            <label for="competitionDecisionRationale">Reasoning (minimum 20 characters)</label><textarea id="competitionDecisionRationale" rows="4" minlength="20" maxlength="2000" required placeholder="Explain your analysis, trade-offs, risks and expected result"></textarea>
+            <button class="primary-button" id="competitionDecisionButton" type="submit">Submit decision</button>
+          </form>
+          <div class="competition-setup"><h3>Your decision history</h3><div id="competitionStudentDecisionHistory" class="competition-record-list"><p class="empty-state">No decisions submitted yet.</p></div></div>
+        </div>
+        <p class="competition-message" id="competitionMessage" role="status" aria-live="polite"></p>
       </section>
       <section class="panel inventory-workspace" id="inventoryWorkspace" hidden>
         <div class="panel-heading">
