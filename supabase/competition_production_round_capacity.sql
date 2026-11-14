@@ -1,4 +1,9 @@
--- Current authoritative function snapshot; apply after the base competition RPCs.
+-- Current authoritative competition RPC snapshot.
+alter table public.competition_production_runs add column if not exists production_round integer not null default 1;
+alter table public.competition_production_runs drop constraint if exists competition_production_runs_round_check;
+alter table public.competition_production_runs add constraint competition_production_runs_round_check check(production_round between 1 and 20);
+create index if not exists competition_production_team_round_idx on public.competition_production_runs(team_id,production_round) where status='completed';
+
 CREATE OR REPLACE FUNCTION public.competition_complete_production(p_team_id uuid, p_quantity integer)
  RETURNS jsonb
  LANGUAGE plpgsql
@@ -64,3 +69,5 @@ begin
   'finished_stock',v_fg,'raw_material_remaining',v_raw-p_quantity,'cost',v_cost);
 end; $function$
 ;
+revoke all on function public.competition_complete_production(uuid,integer) from public,anon;
+grant execute on function public.competition_complete_production(uuid,integer) to authenticated;
