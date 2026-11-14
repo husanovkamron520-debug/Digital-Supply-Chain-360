@@ -432,7 +432,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  $("competitionSelect").addEventListener("change",async()=>{activeCompetition={id:$("competitionSelect").value};try{await loadCompetition();say("");}catch(err){say(err.message);}});
  $("competitionCreateForm").addEventListener("submit",async e=>{
   e.preventDefault();const btn=$("competitionCreateButton");btn.disabled=true;
-  try{const {data,error}=await db.rpc("create_competition",{p_classroom_id:activeClassId,p_title:$("competitionTitle").value.trim(),p_settings:{round_count:4,round_duration_minutes:20,scoring_version:"v1"}});if(error)throw error;
+  try{const {data,error}=await db.rpc("create_competition",{p_classroom_id:activeClassId,p_title:$("competitionTitle").value.trim(),p_settings:{round_count:5,round_duration_minutes:20,scoring_version:"v1"}});if(error)throw error;
    $("competitionTitle").value="";say("Competition created. Configure teams next.",true);await loadCompetitions();$("competitionSelect").value=data;activeCompetition={id:data};await loadCompetition();
   }catch(err){say(err.message);}finally{btn.disabled=false;}
  });
