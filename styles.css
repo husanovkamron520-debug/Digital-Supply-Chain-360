@@ -367,6 +367,7 @@
 
 /* Competition engine — responsive teacher and student workspaces. */
 .competition-workspace{display:grid;gap:16px}
+.competition-workspace[hidden],.competition-workspace [hidden]{display:none!important}
 .competition-access-note{margin:-4px 0 0;color:var(--muted);font-size:11px;line-height:1.5}
 .competition-toolbar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .competition-toolbar>div{display:grid;gap:6px;min-width:0}
