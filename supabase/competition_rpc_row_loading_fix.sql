@@ -58,34 +58,28 @@ CREATE OR REPLACE FUNCTION public.competition_create_purchase_order(p_team_id uu
  SET search_path TO ''
 AS $function$
 declare
- v_team public.competition_teams%rowtype;
- v_supplier public.competition_suppliers%rowtype;
- v_clock public.competition_simulation_clock%rowtype;
- v_id uuid; v_po text; v_expected timestamptz; v_available timestamptz; v_final_virtual timestamptz;
+ v_team public.competition_teams%rowtype;v_supplier public.competition_suppliers%rowtype;v_clock public.competition_simulation_clock%rowtype;
+ v_competition_id uuid;v_id uuid;v_po text;v_expected timestamptz;v_available timestamptz;v_final_virtual timestamptz;
 begin
  if (select auth.uid()) is null then raise exception 'Sign in is required'; end if;
+ select competition_id into v_competition_id from public.competition_teams where id=p_team_id;
+ if not found then raise exception 'Team not found'; end if;
+ select * into v_clock from public.competition_simulation_clock where competition_id=v_competition_id for update;
+ if not found then raise exception 'Simulation clock not initialized'; end if;
  select * into v_team from public.competition_teams where id=p_team_id for update;
  if not found then raise exception 'Team not found'; end if;
- if not exists(select 1 from public.competitions where id=v_team.competition_id and status='active') then
-  raise exception 'Competition is not active';
- end if;
- if not public.is_competition_role(v_team.competition_id,v_team.id,array['procurement']) then
-  raise exception 'Only the assigned Procurement Manager can create purchase orders';
- end if;
- select * into v_clock from public.competition_simulation_clock where competition_id=v_team.competition_id;
- if not found then raise exception 'Simulation clock not initialized'; end if;
- select * into v_supplier from public.competition_suppliers where id=p_supplier_id and team_id=p_team_id and active;
+ if v_team.competition_id<>v_competition_id then raise exception 'Team competition changed; retry the action'; end if;
+ if not exists(select 1 from public.competitions where id=v_team.competition_id and status='active') then raise exception 'Competition is not active'; end if;
+ if not public.is_competition_role(v_team.competition_id,v_team.id,array['procurement']) then raise exception 'Only the assigned Procurement Manager can create purchase orders'; end if;
+ if v_clock.current_round>=v_clock.round_limit then raise exception 'New purchase orders are closed in the final round'; end if;
+ select * into v_supplier from public.competition_suppliers where id=p_supplier_id and team_id=p_team_id and active for update;
  if not found then raise exception 'Active supplier not found for this team'; end if;
  if p_quantity is null or p_quantity not between 1 and 100000 then raise exception 'Quantity must be 1-100,000'; end if;
- if char_length(trim(coalesce(p_sku,''))) not between 2 and 40 or char_length(trim(coalesce(p_item_name,''))) not between 2 and 120 then
-  raise exception 'Invalid SKU or item name';
- end if;
+ if char_length(trim(coalesce(p_sku,''))) not between 2 and 40 or char_length(trim(coalesce(p_item_name,''))) not between 2 and 120 then raise exception 'Invalid SKU or item name'; end if;
  v_expected:=v_clock.virtual_now+make_interval(days=>v_supplier.lead_time_days);
  v_available:=v_expected+make_interval(days=>greatest(0,round((100-v_supplier.reliability_score)/10.0)::integer));
  v_final_virtual:=v_clock.virtual_now+make_interval(days=>greatest(0,v_clock.round_limit-v_clock.current_round)*7);
- if v_clock.current_round>=v_clock.round_limit or v_available>v_final_virtual then
-  raise exception 'Supplier delivery would arrive after the competition closes (%)',v_final_virtual;
- end if;
+ if v_available>v_final_virtual then raise exception 'Supplier delivery would arrive after the competition closes (%)',v_final_virtual; end if;
  v_po:='PO-'||upper(substr(replace(gen_random_uuid()::text,'-',''),1,10));
  insert into public.competition_purchase_orders(competition_id,team_id,classroom_id,supplier_id,po_number,sku,item_name,quantity,unit_cost,expected_at,available_at)
  values(v_team.competition_id,v_team.id,v_team.classroom_id,v_supplier.id,v_po,upper(trim(p_sku)),trim(p_item_name),p_quantity,v_supplier.unit_cost,v_expected,v_available)
