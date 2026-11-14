@@ -1,4 +1,4 @@
--- Current authoritative competition RPC snapshot.
+-- Freight spend is bounded to the company benchmark and determines transit speed; dispatch is rejected if ETA exceeds competition close.
 CREATE OR REPLACE FUNCTION public.competition_dispatch_shipment(p_order_id uuid, p_quantity integer, p_origin text, p_destination text, p_carrier text, p_transport_cost numeric DEFAULT 0)
  RETURNS uuid
  LANGUAGE plpgsql
