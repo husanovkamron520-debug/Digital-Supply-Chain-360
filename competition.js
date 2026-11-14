@@ -208,7 +208,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   $("competitionPauseButton").textContent=activeCompetition.status==="paused"?"Resume competition":"Pause competition";
   $("competitionAutoSetupButton").disabled=!draft||teamRows.length>0;
   if(!draft){$("competitionSetupNote").textContent="Team assignments are locked after the competition starts."; }
-  else $("competitionSetupNote").textContent="Create up to four company teams, assign each student to one team and role, then start the competition.";
+  else $("competitionSetupNote").textContent="Create 2–4 balanced company teams. Every team needs five core roles: Procurement, Supplier, Manufacturer, Warehouse and Transport (minimum five students per team).";
  }
 
  async function renderStudentCompetition(){
