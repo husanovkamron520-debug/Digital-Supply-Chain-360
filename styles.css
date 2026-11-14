@@ -297,3 +297,11 @@
 
 /* Respect role-driven hidden navigation links at every breakpoint. */
 .nav-link[hidden]{display:none!important}
+
+
+/* Clear, accessible dashboard scope switch */
+.workspace-switch{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.workspace-switch-button{border:1px solid var(--line);background:#101e2e;color:#a7b7c9;border-radius:7px;padding:10px 13px;font:700 10px var(--font);cursor:pointer;transition:background .18s,border-color .18s,color .18s}
+.workspace-switch-button:hover{border-color:#3b6678;color:var(--text)}
+.workspace-switch-button.active{background:#173345;border-color:#53d5d0;color:#53d5d0}
+@media(max-width:700px){.welcome-row{align-items:flex-start;flex-direction:column;gap:14px}.workspace-switch{width:100%}.workspace-switch-button{flex:1}}
