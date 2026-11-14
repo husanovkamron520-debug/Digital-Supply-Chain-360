@@ -132,7 +132,7 @@ if (root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith
       const name=document.querySelector("#classroomName").value.trim();
       const {data,error}=await db.rpc("create_classroom",{p_name:name,p_join_code:makeCode()});
       if(error)throw error;
-      createForm.reset();say("Classroom created. Share its join code with students.",true);await refresh();
+      createForm.reset();say("Classroom created. Share its join code with students.",true);await refresh();window.dispatchEvent(new CustomEvent("classroom-updated"));
     }catch(error){say(error.message);}
     finally{button.disabled=false;}
   });
@@ -145,7 +145,7 @@ if (root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith
       const code=document.querySelector("#joinCode").value.trim().toUpperCase();
       const {error}=await db.rpc("join_classroom",{p_join_code:code});
       if(error)throw error;
-      joinForm.reset();say("You joined the classroom successfully.",true);await refresh();
+      joinForm.reset();say("You joined the classroom successfully.",true);await refresh();window.dispatchEvent(new CustomEvent("classroom-updated"));
     }catch(error){say(error.message);}
     finally{button.disabled=false;}
   });
