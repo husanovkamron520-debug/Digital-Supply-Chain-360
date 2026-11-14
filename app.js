@@ -210,16 +210,27 @@ const scopeStatus=document.querySelector("#scopeStatus");
 const mainContent=document.querySelector(".main-content");
 function setDashboardView(view){
   const personal=view==="personal";
-  const targetSelector=personal?(document.body.dataset.myWorkspaceTarget||"#scenarioWorkspace"):null;
-  const target=personal?document.querySelector(targetSelector):null;
-  if(personal&&(!target||target.hidden)){
-    if(scopeStatus)scopeStatus.textContent=target
-      ?"Your role workspace is still loading. Try again in a moment."
-      :"Your role workspace is not available yet. Please wait for your classroom role to load.";
-    return;
+  let targets=[];
+  if(personal){
+    try {
+      targets=JSON.parse(document.body.dataset.myWorkspaceTargets||"[]");
+    } catch {
+      targets=[];
+    }
+    if(!targets.length&&document.body.dataset.myWorkspaceTarget)targets=[document.body.dataset.myWorkspaceTarget];
+    targets=[...new Set(targets)].map(selector=>document.querySelector(selector)).filter(Boolean);
+    const available=targets.filter(section=>!section.hidden);
+    if(!available.length){
+      if(scopeStatus)scopeStatus.textContent=targets.length
+        ?"Your role workspaces are still loading. Try again in a moment."
+        :"Your role workspace is not available yet. Please wait for your classroom role to load.";
+      return;
+    }
+    targets=available;
   }
   [...(mainContent?.children||[])].forEach(section=>{
-    const keep=section.classList.contains("topbar")||section.classList.contains("dashboard-scope-bar")||section.id==="classroomWorkspace"||(personal&&section===target);
+    const keep=section.classList.contains("topbar")||section.classList.contains("dashboard-scope-bar")||
+      section.id==="classroomWorkspace"||(personal&&targets.includes(section));
     if(keep)section.removeAttribute("data-scope-hidden");
     else if(personal)section.dataset.scopeHidden="true";
     else section.removeAttribute("data-scope-hidden");
@@ -229,11 +240,11 @@ function setDashboardView(view){
   myWorkspaceBtn?.setAttribute("aria-pressed",String(personal));
   overallOverviewBtn?.setAttribute("aria-pressed",String(!personal));
   if(scopeStatus)scopeStatus.textContent=personal
-    ?"Showing the workspace assigned to your classroom role."
+    ?"Showing all workspaces assigned to your classroom roles."
     :"Showing the complete supply-chain control tower and all available workspaces.";
   const crumb=document.querySelector(".crumb b");
   if(crumb)crumb.textContent=personal?"My workspace":"Global overview";
-  const destination=personal?target:document.querySelector("#overview");
+  const destination=personal?targets[0]:document.querySelector("#overview");
   destination?.scrollIntoView({behavior:"smooth",block:"start"});
 }
 myWorkspaceBtn?.addEventListener("click",()=>setDashboardView("personal"));
