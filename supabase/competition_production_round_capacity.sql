@@ -1,9 +1,4 @@
--- Enforce the team's total production capacity across all runs in one round.
-alter table public.competition_production_runs add column if not exists production_round integer not null default 1;
-alter table public.competition_production_runs drop constraint if exists competition_production_runs_round_check;
-alter table public.competition_production_runs add constraint competition_production_runs_round_check check(production_round between 1 and 20);
-create index if not exists competition_production_team_round_idx on public.competition_production_runs(team_id,production_round) where status='completed';
-
+-- Current authoritative function snapshot; apply after the base competition RPCs.
 CREATE OR REPLACE FUNCTION public.competition_complete_production(p_team_id uuid, p_quantity integer)
  RETURNS jsonb
  LANGUAGE plpgsql
@@ -27,6 +22,7 @@ begin
  if not found then raise exception 'Team not found'; end if;
  if v_team.competition_id<>v_competition_id then raise exception 'Team competition changed; retry the action'; end if;
  if not exists(select 1 from public.competitions where id=v_team.competition_id and status='active') then raise exception 'Competition is not active'; end if;
+ if v_clock.current_round>=v_clock.round_limit then raise exception 'Production is closed in the final round; use available finished stock to complete deliveries'; end if;
  if not public.is_competition_role(v_team.competition_id,v_team.id,array['manufacturer']) then raise exception 'Only the assigned Production Manager can run production'; end if;
  if p_quantity is null or p_quantity not between 1 and v_team.production_capacity_units then raise exception 'Production quantity exceeds the per-round capacity'; end if;
  select coalesce(sum(produced_quantity),0) into v_round_total
@@ -68,5 +64,3 @@ begin
   'finished_stock',v_fg,'raw_material_remaining',v_raw-p_quantity,'cost',v_cost);
 end; $function$
 ;
-revoke all on function public.competition_complete_production(uuid,integer) from public,anon;
-grant execute on function public.competition_complete_production(uuid,integer) to authenticated;
