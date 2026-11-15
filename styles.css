@@ -494,3 +494,8 @@
 .competition-challenge-card small{color:#8299ae;font:9px var(--mono);line-height:1.5}
 .competition-challenge-card button{justify-self:start}
 @media(max-width:600px){.competition-challenge-head{flex-direction:column}.competition-challenge-card button{width:100%}}
+
+.competition-review{display:grid;grid-template-columns:minmax(90px,.35fr) minmax(0,1.65fr) auto auto;gap:8px;align-items:center;margin-top:10px}
+.competition-review input,.competition-review textarea{min-width:0;width:100%;background:#081523;color:#e5edf5;border:1px solid #2a4055;border-radius:6px;padding:9px;font:10px var(--font)}
+.competition-review textarea{resize:vertical}
+@media(max-width:700px){.competition-review{grid-template-columns:1fr 1fr}.competition-review textarea{grid-column:1/-1}.competition-review button{width:100%}}
