@@ -121,7 +121,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   const [{data:teams,error:teamError},{data:students,error:studentError},{data:tasks,error:taskError},{data:decisions,error:decisionError},{data:allMemberRows,error:memberError}]=await Promise.all([
    db.from("competition_teams").select("id,name,company_template_id,company_templates(name,industry,business_model,case_study_note,source_urls)").eq("competition_id",activeCompetition.id).order("created_at"),
    db.from("classroom_members").select("student_id,profiles(full_name)").eq("classroom_id",activeClassId).order("joined_at"),
-   db.from("competition_tasks").select("id,team_id,title,description,assigned_role,status,due_at,due_round,submitted_round,submission,review_note,score,feedback").eq("competition_id",activeCompetition.id).order("created_at",{ascending:false}),
+   db.from("competition_tasks").select("id,team_id,title,description,assigned_role,assigned_to,status,due_at,due_round,submitted_round,submission,review_note,score,feedback").eq("competition_id",activeCompetition.id).order("created_at",{ascending:false}),
    db.from("competition_decisions").select("id,team_id,student_id,domain,decision_type,selected_option,rationale,inputs,score,feedback,created_at,profiles(full_name)").eq("competition_id",activeCompetition.id).order("created_at",{ascending:false}),
    db.from("competition_team_members").select("team_id,student_id,operational_role,profiles(full_name)").eq("competition_id",activeCompetition.id)
   ]);
@@ -626,7 +626,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   try{
    const {data:profile,error}=await db.from("profiles").select("platform_role").eq("id",user.id).single();if(error)throw error;
    isTeacher=profile.platform_role==="teacher";root.hidden=false;
-   $("competitionAccessNote").textContent=isTeacher?"Teacher control · configure teams, assign work and review decisions.":"Your company workspace · complete assigned work and record operational decisions.";
+   $("competitionAccessNote").textContent=isTeacher?"Teacher control · configure teams, assign work and grade case submissions and decisions.":"Your company workspace · complete assigned work and record operational decisions.";
    setHidden("competitionTeacherPanel",!isTeacher);setHidden("competitionStudentPanel",isTeacher);
    if(isTeacher)await loadTemplates();
    await loadClassrooms();
