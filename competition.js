@@ -101,7 +101,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    db.from("competition_teams").select("id,name,company_template_id,company_templates(name,industry,business_model,case_study_note,source_urls)").eq("competition_id",activeCompetition.id).order("created_at"),
    db.from("classroom_members").select("student_id,profiles(full_name)").eq("classroom_id",activeClassId).order("joined_at"),
    db.from("competition_tasks").select("id,team_id,title,description,assigned_role,status,due_at,due_round,submitted_round,submission,review_note").eq("competition_id",activeCompetition.id).order("created_at",{ascending:false}),
-   db.from("competition_decisions").select("id,team_id,student_id,domain,decision_type,selected_option,rationale,score,feedback,created_at,profiles(full_name)").eq("competition_id",activeCompetition.id).order("created_at",{ascending:false})
+   db.from("competition_decisions").select("id,team_id,student_id,domain,decision_type,selected_option,rationale,inputs,score,feedback,created_at,profiles(full_name)").eq("competition_id",activeCompetition.id).order("created_at",{ascending:false})
   ]);
   for(const e of [teamError,studentError,taskError,decisionError])if(e)throw e;
   const teamRows=teams||[],studentRows=students||[],taskRows=tasks||[],decisionRows=decisions||[];
@@ -205,12 +205,15 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   if(!decisionRows.length)addEmpty($("competitionDecisionList"),"No decisions submitted yet.");
   for(const d of decisionRows){
    const card=el("article","competition-decision-card");
-   card.append(el("b","",d.profiles?.full_name||"Student"),el("p","",statusLabel(d.domain)+" · "+d.selected_option),el("p","",d.rationale));
+   card.append(el("b","",d.profiles?.full_name||"Student"),el("p","",statusLabel(d.domain)+" · "+d.selected_option),el("p","","Rationale: "+d.rationale));
+   if(d.inputs?.calculations)card.append(el("p","", "Calculations: "+d.inputs.calculations));
+   if(d.inputs?.risk_mitigation)card.append(el("p","", "Risks & mitigation: "+d.inputs.risk_mitigation));
+   if(d.inputs?.expected_impact)card.append(el("p","", "Expected KPI impact: "+d.inputs.expected_impact));
    if(d.score!==null)card.append(el("strong","",d.score+"/100 · "+(d.feedback||"Evaluated")));
    else{
     const form=el("form","competition-inline-form");
     const score=el("input","");score.type="number";score.min="0";score.max="100";score.step="1";score.placeholder="Score /100";score.required=true;
-    const feedback=el("input","");feedback.placeholder="Feedback";
+    const feedback=el("input","");feedback.placeholder="Feedback / rubric breakdown";
     const submit=el("button","secondary-button","Evaluate");submit.type="submit";
     form.append(score,feedback,submit);
     form.addEventListener("submit",async e=>{e.preventDefault();submit.disabled=true;try{const {error}=await db.rpc("evaluate_competition_decision",{p_decision_id:d.id,p_score:Number(score.value),p_feedback:feedback.value.trim()});if(error)throw error;say("Decision evaluated.",true);await loadCompetition();}catch(err){say(err.message);submit.disabled=false;}});
@@ -308,14 +311,18 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    }else if(task.submission)card.append(el("pre","competition-submission",JSON.stringify(task.submission,null,2)));
    $("competitionStudentTasks").append(card);
   }
-  const {data:decisions,error:decisionError}=await db.from("competition_decisions").select("domain,selected_option,rationale,score,feedback,created_at")
+  const {data:decisions,error:decisionError}=await db.from("competition_decisions").select("domain,selected_option,rationale,inputs,score,feedback,created_at")
    .eq("competition_id",activeCompetition.id).eq("student_id",user.id).order("created_at",{ascending:false});
   if(decisionError)throw decisionError;
   $("competitionStudentDecisionHistory").replaceChildren();
   if(!decisions?.length)addEmpty($("competitionStudentDecisionHistory"),"Your decision history will appear here.");
   for(const d of decisions||[]){
    const row=el("article","competition-decision-card");
-   row.append(el("b","",statusLabel(d.domain)+" · "+d.selected_option),el("p","",d.rationale),el("small","",d.score===null?"Awaiting evaluation":"Score "+d.score+"/100 · "+(d.feedback||"")));
+   row.append(el("b","",statusLabel(d.domain)+" · "+d.selected_option),el("p","",d.rationale));
+   if(d.inputs?.calculations)row.append(el("p","", "Calculations: "+d.inputs.calculations));
+   if(d.inputs?.risk_mitigation)row.append(el("p","", "Risks & mitigation: "+d.inputs.risk_mitigation));
+   if(d.inputs?.expected_impact)row.append(el("p","", "Expected KPI impact: "+d.inputs.expected_impact));
+   row.append(el("small","",d.score===null?"Awaiting evaluation":"Score "+d.score+"/100 · "+(d.feedback||"")));
    $("competitionStudentDecisionHistory").append(row);
   }
   await loadTeamOperations();
@@ -563,7 +570,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  });
  $("competitionDecisionForm").addEventListener("submit",async e=>{
   e.preventDefault();const btn=$("competitionDecisionButton");btn.disabled=true;
-  try{const {error}=await db.rpc("record_competition_decision",{p_competition_id:activeCompetition.id,p_team_id:activeTeam,p_domain:$("competitionDecisionDomain").value,p_decision_type:$("competitionDecisionType").value.trim(),p_selected_option:$("competitionDecisionOption").value.trim(),p_rationale:$("competitionDecisionRationale").value.trim(),p_inputs:{role:activeRole}});if(error)throw error;
+  try{const {error}=await db.rpc("record_competition_decision",{p_competition_id:activeCompetition.id,p_team_id:activeTeam,p_domain:$("competitionDecisionDomain").value,p_decision_type:$("competitionDecisionType").value.trim(),p_selected_option:$("competitionDecisionOption").value.trim(),p_rationale:$("competitionDecisionRationale").value.trim(),p_inputs:{role:activeRole,calculations:$("competitionDecisionCalculations").value.trim(),risk_mitigation:$("competitionDecisionRisk").value.trim(),expected_impact:$("competitionDecisionImpact").value.trim()}});if(error)throw error;
    $("competitionDecisionForm").reset();say("Your decision was recorded.",true);await loadCompetition();
   }catch(err){say(err.message);}finally{btn.disabled=false;}
  });
