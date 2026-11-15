@@ -1,15 +1,15 @@
 <!doctype html>
-<html lang="en">
+<html lang="uz">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#07111f">
   <meta name="description" content="Explore an end-to-end digital supply chain in an interactive control tower.">
-  <title>SupplyChain14 — Control Tower</title>
+  <title>SupplyChain14 — Raqamli ta’minot zanjiri</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=20261115-competition-advanced-4">
+  <link rel="stylesheet" href="./styles.css?v=20261115-premium-uz-1">
   <script type="importmap">
     {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js"}}
   </script>
@@ -22,204 +22,205 @@
   <script type="module" src="./procurement.js"></script>
   <script type="module" src="./analytics.js"></script>
   <script type="module" src="./competition.js"></script>
+  <script type="module" src="./localization.js"></script>
 </head>
 <body>
   <section class="auth-gate" id="authGate" aria-label="Account access">
     <div class="auth-card">
       <a class="brand auth-brand" href="#" aria-label="SupplyChain14">
         <span class="brand-mark"><span></span><span></span><span></span></span>
-        <span><strong>SUPPLYCHAIN<span>14</span></strong><small>CLASSROOM PLATFORM</small></span>
+        <span><strong>SUPPLYCHAIN<span>14</span></strong><small>TA’LIM PLATFORMASI</small></span>
       </a>
       <div class="auth-heading">
-        <div class="section-kicker">DIGITAL SUPPLY CHAIN LAB</div>
-        <h1 id="authTitle">Welcome back</h1>
-        <p id="authSubtitle">Sign in to enter your classroom workspace.</p>
+        <div class="section-kicker">RAQAMLI TA’MINOT ZANJIRI LABORATORIYASI</div>
+        <h1 id="authTitle">Xush kelibsiz</h1>
+        <p id="authSubtitle">O‘quv maydoningizga kirish uchun tizimga kiring.</p>
       </div>
       <form id="authForm" class="auth-form">
-        <label for="authName" id="authNameLabel" hidden>Full name</label>
-        <input id="authName" name="full_name" type="text" autocomplete="name" placeholder="Full name" hidden>
-        <label for="authEmail">Email address</label>
+        <label for="authName" id="authNameLabel" hidden>To‘liq ism</label>
+        <input id="authName" name="full_name" type="text" autocomplete="name" placeholder="To‘liq ism" hidden>
+        <label for="authEmail">Elektron pochta</label>
         <input id="authEmail" name="email" type="email" autocomplete="email" placeholder="you@example.com" required>
-        <label for="authPassword">Password</label>
-        <input id="authPassword" name="password" type="password" autocomplete="current-password" placeholder="At least 8 characters" minlength="8" required>
-        <button class="primary-button auth-submit" id="authSubmit" type="submit">Sign in</button>
+        <label for="authParol">Parol</label>
+        <input id="authParol" name="password" type="password" autocomplete="current-password" placeholder="Kamida 8 ta belgi" minlength="8" required>
+        <button class="primary-button auth-submit" id="authSubmit" type="submit">Kirish</button>
       </form>
       <p class="auth-message" id="authMessage" role="status" aria-live="polite"></p>
       <div class="auth-switch">
-        <span id="authSwitchText">New to the platform?</span>
-        <button type="button" id="authSwitch">Create student account</button>
+        <span id="authSwitchText">Platformada yangimisiz?</span>
+        <button type="button" id="authSwitch">Talaba hisobini yaratish</button>
       </div>
-      <p class="auth-footnote">Educational simulation · Demo supply-chain data</p>
+      <p class="auth-footnote">O‘quv simulyatsiyasi · Namunaviy ta’minot zanjiri ma’lumotlari</p>
     </div>
   </section>
   <div class="app-shell">
     <aside class="sidebar">
       <a class="brand" href="#" aria-label="SupplyChain14 home">
         <span class="brand-mark"><span></span><span></span><span></span></span>
-        <span><strong>SUPPLYCHAIN<span>14</span></strong><small>CONTROL TOWER</small></span>
+        <span><strong>SUPPLYCHAIN<span>14</span></strong><small>BOSHQARUV MARKAZI</small></span>
       </a>
-      <div class="side-label">WORKSPACE</div>
+      <div class="side-label">ISH MAYDONI</div>
       <nav class="side-nav" aria-label="Main navigation">
-        <a class="nav-link active" href="#overview"><span class="nav-icon">◫</span> Overview</a>
-        <a class="nav-link" href="#network"><span class="nav-icon">⌘</span> Network map</a>
-        <a class="nav-link" href="#operationsWorkspace" hidden><span class="nav-icon">▤</span> Orders & shipments</a>
-        <a class="nav-link" href="#inventoryWorkspace" hidden><span class="nav-icon">▦</span> Inventory</a>
-        <a class="nav-link" href="#scenarioWorkspace"><span class="nav-icon">⚡</span> Scenario lab</a>
-        <a class="nav-link" id="competitionNavLink" href="#competitionWorkspace" hidden><span class="nav-icon">🏆</span> Team competition</a>
-        <a class="nav-link" href="#procurementWorkspace" hidden><span class="nav-icon">⌂</span> Procurement</a>
-        <a class="nav-link" id="analyticsNavLink" href="#teacherAnalytics" hidden><span class="nav-icon">▥</span> Analytics</a>
-        <a class="nav-link" href="#intelligence"><span class="nav-icon">✳</span> Intelligence</a>
+        <a class="nav-link active" href="#overview"><span class="nav-icon">◫</span> Umumiy ko‘rinish</a>
+        <a class="nav-link" href="#network"><span class="nav-icon">⌘</span> Tarmoq xaritasi</a>
+        <a class="nav-link" href="#operationsWorkspace" hidden><span class="nav-icon">▤</span> Buyurtmalar va yuklar</a>
+        <a class="nav-link" href="#inventoryWorkspace" hidden><span class="nav-icon">▦</span> Ombor zaxiralari</a>
+        <a class="nav-link" href="#scenarioWorkspace"><span class="nav-icon">⚡</span> Ssenariy laboratoriyasi</a>
+        <a class="nav-link" id="competitionNavLink" href="#competitionWorkspace" hidden><span class="nav-icon">🏆</span> Jamoaviy musobaqa</a>
+        <a class="nav-link" href="#procurementWorkspace" hidden><span class="nav-icon">⌂</span> Xaridlar</a>
+        <a class="nav-link" id="analyticsNavLink" href="#teacherTahlillar" hidden><span class="nav-icon">▥</span> Tahlillar</a>
+        <a class="nav-link" href="#intelligence"><span class="nav-icon">✳</span> Tahliliy markaz</a>
       </nav>
       <div class="side-bottom">
-        <div class="live-card"><span class="live-dot"></span><div><b>Simulation active</b><small>Demo environment</small></div></div>
-        <div class="profile"><div class="avatar">SC</div><div><b id="sidebarUserName">My account</b><small id="sidebarUserRole">Student workspace</small></div><span class="more">···</span></div>
+        <div class="live-card"><span class="live-dot"></span><div><b>Simulyatsiya faol</b><small>Namoyish muhiti</small></div></div>
+        <div class="profile"><div class="avatar">SC</div><div><b id="sidebarUserName">Mening hisobim</b><small id="sidebarUserRole">Talaba maydoni</small></div><span class="more">···</span></div>
       </div>
     </aside>
 
     <nav class="mobile-nav" aria-label="Mobile navigation">
-      <a class="nav-link mobile-nav-link active" href="#overview"><span class="nav-icon">⌂</span><span>Home</span></a>
-      <a class="nav-link mobile-nav-link" href="#network"><span class="nav-icon">⌘</span><span>Network</span></a>
-      <a class="nav-link mobile-nav-link" href="#operationsWorkspace" hidden><span class="nav-icon">▤</span><span>Orders</span></a>
-      <a class="nav-link mobile-nav-link" href="#inventoryWorkspace" hidden><span class="nav-icon">▦</span><span>Inventory</span></a>
-      <a class="nav-link mobile-nav-link" href="#scenarioWorkspace"><span class="nav-icon">⚡</span><span>Scenarios</span></a>
-      <a class="nav-link mobile-nav-link" id="mobileCompetitionNavLink" href="#competitionWorkspace" hidden><span class="nav-icon">🏆</span><span>Teams</span></a>
-      <a class="nav-link mobile-nav-link" href="#procurementWorkspace" hidden><span class="nav-icon">⌂</span><span>Procurement</span></a>
-      <a class="nav-link mobile-nav-link" id="mobileAnalyticsNavLink" href="#teacherAnalytics" hidden><span class="nav-icon">▥</span><span>Analytics</span></a>
-      <a class="nav-link mobile-nav-link" href="#intelligence"><span class="nav-icon">✳</span><span>More</span></a>
+      <a class="nav-link mobile-nav-link active" href="#overview"><span class="nav-icon">⌂</span><span>Bosh sahifa</span></a>
+      <a class="nav-link mobile-nav-link" href="#network"><span class="nav-icon">⌘</span><span>Tarmoq</span></a>
+      <a class="nav-link mobile-nav-link" href="#operationsWorkspace" hidden><span class="nav-icon">▤</span><span>Yuklar</span></a>
+      <a class="nav-link mobile-nav-link" href="#inventoryWorkspace" hidden><span class="nav-icon">▦</span><span>Ombor zaxiralari</span></a>
+      <a class="nav-link mobile-nav-link" href="#scenarioWorkspace"><span class="nav-icon">⚡</span><span>Ssenariy</span></a>
+      <a class="nav-link mobile-nav-link" id="mobileCompetitionNavLink" href="#competitionWorkspace" hidden><span class="nav-icon">🏆</span><span>Jamoalar</span></a>
+      <a class="nav-link mobile-nav-link" href="#procurementWorkspace" hidden><span class="nav-icon">⌂</span><span>Xaridlar</span></a>
+      <a class="nav-link mobile-nav-link" id="mobileTahlillarNavLink" href="#teacherTahlillar" hidden><span class="nav-icon">▥</span><span>Tahlillar</span></a>
+      <a class="nav-link mobile-nav-link" href="#intelligence"><span class="nav-icon">✳</span><span>Yana</span></a>
     </nav>
 
     <main class="main-content" id="overview">
       <header class="topbar">
-        <div class="crumb">Workspace <span>/</span> <b>Global overview</b></div>
-        <div class="top-actions"><span class="demo-tag"><i></i> SIMULATED DATA</span><span class="user-role" id="userRole">STUDENT</span><button class="icon-button" id="resetBtn" title="Reset simulation" aria-label="Reset simulation">↺</button><button class="signout-button" id="signOutBtn" type="button">Sign out</button><div class="top-avatar" id="userAvatar">U</div></div>
+        <div class="crumb">Ish maydoni <span>/</span> <b>Umumiy ko‘rinish</b></div>
+        <div class="top-actions"><span class="demo-tag"><i></i> SIMULYATSIYA MA’LUMOTLARI</span><span class="user-role" id="userRole">TALABA</span><button class="icon-button" id="resetBtn" title="Simulyatsiyani tiklash" aria-label="Simulyatsiyani tiklash">↺</button><button class="signout-button" id="signOutBtn" type="button">Chiqish</button><div class="top-avatar" id="userAvatar">U</div></div>
       </header>
       <div class="dashboard-scope-bar" role="region" aria-label="Dashboard workspace selector">
         <div class="dashboard-scope-copy">
-          <strong>Dashboard view</strong>
-          <span id="scopeStatus">Choose your personal workspace or the complete supply-chain overview.</span>
+          <strong>Panel ko‘rinishi</strong>
+          <span id="scopeStatus">Shaxsiy ish maydoningiz yoki butun ta’minot zanjiri ko‘rinishini tanlang.</span>
         </div>
-        <div class="workspace-switch" role="group" aria-label="Dashboard view">
-          <button type="button" class="workspace-switch-button" id="myWorkspaceBtn" aria-pressed="false">My workspace</button>
-          <button type="button" class="workspace-switch-button active" id="overallOverviewBtn" aria-pressed="true">Overall overview</button>
+        <div class="workspace-switch" role="group" aria-label="Panel ko‘rinishi">
+          <button type="button" class="workspace-switch-button" id="myWorkspaceBtn" aria-pressed="false">Mening ish maydonim</button>
+          <button type="button" class="workspace-switch-button active" id="overallUmumiy ko‘rinishBtn" aria-pressed="true">Umumiy ko‘rinish</button>
         </div>
       </div>
 
       <section class="classroom-workspace panel" id="classroomWorkspace" aria-live="polite">
         <div class="panel-heading">
-          <div><div class="section-kicker">CLASSROOM MANAGEMENT</div><h2 id="classroomHeading">Your classroom</h2></div>
-          <span class="muted-label" id="classroomRoleLabel">LOADING ROLE</span>
+          <div><div class="section-kicker">GURUHNI BOSHQARISH</div><h2 id="classroomHeading">Sizning guruhingiz</h2></div>
+          <span class="muted-label" id="classroomRoleLabel">ROL YUKLANMOQDA</span>
         </div>
-        <p class="classroom-intro" id="classroomIntro">Connect your account to a learning group.</p>
+        <p class="classroom-intro" id="classroomIntro">Hisobingizni o‘quv guruhiga ulang.</p>
         <div class="classroom-grid">
           <form class="classroom-form" id="createClassForm" hidden>
-            <h3>Create a classroom</h3>
-            <label for="classroomName">Classroom name</label>
+            <h3>Guruh yaratish</h3>
+            <label for="classroomName">Guruh nomi</label>
             <input id="classroomName" maxlength="100" minlength="2" placeholder="e.g. LOG-324 Supply Chain Lab" required>
-            <button class="primary-button" type="submit">＋ Create classroom</button>
+            <button class="primary-button" type="submit">＋ Guruh yaratish</button>
           </form>
           <form class="classroom-form" id="joinClassForm" hidden>
-            <h3>Join a classroom</h3>
-            <label for="joinCode">Class code</label>
+            <h3>Guruhga qo‘shilish</h3>
+            <label for="joinCode">Guruh kodi</label>
             <input id="joinCode" maxlength="10" minlength="6" placeholder="ENTER CODE" autocapitalize="characters" required>
-            <button class="primary-button" type="submit">Join classroom</button>
-            <p class="form-hint">Ask your teacher for the 6–10 character code.</p>
+            <button class="primary-button" type="submit">Guruhga qo‘shilish</button>
+            <p class="form-hint">O‘qituvchingizdan 6–10 belgili kodni oling.</p>
           </form>
           <div class="classroom-list-wrap">
-            <h3 id="classListTitle">Your classrooms</h3>
-            <div class="classroom-list" id="classroomList"><p class="empty-state">Loading classrooms…</p></div>
+            <h3 id="classListTitle">Sizning guruhingizs</h3>
+            <div class="classroom-list" id="classroomList"><p class="empty-state">Guruhlar yuklanmoqda…</p></div>
           </div>
         </div>
         <p class="classroom-message" id="classroomMessage" role="status" aria-live="polite"></p>
       </section>
       <section class="panel competition-workspace" id="competitionWorkspace" hidden aria-live="polite">
         <div class="panel-heading">
-          <div><div class="section-kicker">SUPPLYCHAIN14 · TEAM CHALLENGE</div><h2>Supply Chain Competition</h2></div>
-          <span class="muted-label">COMPETITION ENGINE</span>
+          <div><div class="section-kicker">SUPPLYCHAIN14 · JAMOAVIY BELLASHUV</div><h2>Ta’minot zanjiri musobaqasi</h2></div>
+          <span class="muted-label">MUSOBAQA TIZIMI</span>
         </div>
         <p class="competition-access-note" id="competitionAccessNote">Loading competition permissions…</p>
         <div class="competition-toolbar">
           <div><label for="competitionClassSelect">Classroom</label><select id="competitionClassSelect"></select></div>
           <div><label for="competitionSelect">Competition</label><select id="competitionSelect"></select></div>
         </div>
-        <button class="secondary-button" id="competitionRefreshButton" type="button" hidden>Refresh competition data</button>
+        <button class="secondary-button" id="competitionRefreshButton" type="button" hidden>Musobaqa ma’lumotlarini yangilash</button>
         <div class="competition-current">
-          <div><div class="section-kicker">SELECTED CHALLENGE</div><h3 id="competitionCurrentTitle">No competition selected</h3></div>
+          <div><div class="section-kicker">TANLANGAN MUSOBAQA</div><h3 id="competitionCurrentTitle">Musobaqa tanlanmagan</h3></div>
           <span class="competition-status" id="competitionCurrentStatus">—</span>
         </div>
         <div id="competitionList" class="competition-list" hidden></div>
         <div id="competitionWorkspaceEmpty" hidden></div>
         <div id="competitionTeacherPanel" hidden>
           <form class="competition-form" id="competitionCreateForm">
-            <h3>Create a competition</h3>
-            <label for="competitionTitle">Competition name</label>
+            <h3>Musobaqa yaratish</h3>
+            <label for="competitionTitle">Musobaqa nomi</label>
             <input id="competitionTitle" maxlength="140" minlength="3" placeholder="e.g. LOG-324 Supply Chain Challenge" required>
-            <button class="primary-button" id="competitionCreateButton" type="submit">＋ Create competition</button>
+            <button class="primary-button" id="competitionCreateButton" type="submit">＋ Musobaqa yaratish</button>
           </form>
           <div id="competitionManager" hidden>
           <div class="competition-setup">
-            <div class="competition-section-head"><h3>Company teams</h3><p id="competitionSetupNote">Create balanced teams and assign students.</p></div>
+            <div class="competition-section-head"><h3>Kompaniya jamoalari</h3><p id="competitionSetupNote">Muvozanatli jamoalar tuzing va talabalarni taqsimlang.</p></div>
             <div class="competition-auto-setup" id="competitionAutoSetup">
-              <label for="competitionTeamCount">Number of teams</label>
+              <label for="competitionTeamCount">Jamoalar soni</label>
               <select id="competitionTeamCount"><option value="2" selected>2 teams</option><option value="3">3 teams</option><option value="4">4 teams</option></select>
-              <button class="primary-button" id="competitionAutoSetupButton" type="button">Create balanced teams & assign students</button>
+              <button class="primary-button" id="competitionAutoSetupButton" type="button">Jamoalarni teng taqsimlash</button>
             </div>
             <form class="competition-inline-form" id="competitionManualTeamForm" hidden>
               <input id="competitionManualTeamName" maxlength="80" minlength="2" placeholder="Team name" required>
               <select id="competitionTemplateSelect" required></select>
               <button class="secondary-button" id="competitionManualTeamButton" type="submit">Add team</button>
             </form>
-            <div id="competitionTeams" class="competition-team-grid"><p class="empty-state">Create teams to begin.</p></div>
+            <div id="competitionJamoalar" class="competition-team-grid"><p class="empty-state">Create teams to begin.</p></div>
             <div class="competition-status-controls"><button class="primary-button" id="competitionStartButton" type="button" hidden>Start competition</button><button class="secondary-button" id="competitionPauseButton" type="button" hidden>Pause competition</button></div>
           </div>
           <details class="competition-advanced">
-            <summary>Team tasks and custom assignments</summary>
+            <summary>Jamoa topshiriqlari va maxsus vazifalar</summary>
                       <div class="competition-setup">
-                        <h3>Assign team tasks</h3>
-                        <button class="secondary-button" id="competitionTaskPackButton" type="button">Generate advanced 5-role case pack for every team</button>
+                        <h3>Jamoaga topshiriq berish</h3>
+                        <button class="secondary-button" id="competitionTaskPackButton" type="button">Har bir jamoa uchun 5 rolli keys yaratish</button>
                         <p class="form-hint">Each student receives an individual quantitative case for their role. Duplicate role holders get separate submissions; each case includes constraints, calculations and a 100-point marking rubric.</p>
                         <form class="competition-form" id="competitionTaskForm">
                           <label for="competitionTaskTeam">Team</label><select id="competitionTaskTeam" required></select>
-                          <label for="competitionTaskRole">Responsible role</label><select id="competitionTaskRole" required></select>
-                          <label for="competitionTaskTitle">Task title</label><input id="competitionTaskTitle" maxlength="140" minlength="3" required placeholder="e.g. Compare supplier quotations">
-                          <label for="competitionTaskDescription">Instructions and expected evidence</label><textarea id="competitionTaskDescription" rows="3" maxlength="2000" placeholder="Describe the task, constraints and expected output"></textarea>
+                          <label for="competitionTaskRole">Mas’ul rol</label><select id="competitionTaskRole" required></select>
+                          <label for="competitionTaskTitle">Topshiriq nomi</label><input id="competitionTaskTitle" maxlength="140" minlength="3" required placeholder="e.g. Compare supplier quotations">
+                          <label for="competitionTaskDescription">Ko‘rsatmalar va kutiladigan natija</label><textarea id="competitionTaskDescription" rows="3" maxlength="2000" placeholder="Describe the task, constraints and expected output"></textarea>
                           <div class="competition-toolbar">
-                            <div><label for="competitionTaskPriority">Priority</label><select id="competitionTaskPriority"><option value="normal">Normal</option><option value="high">High</option><option value="critical">Critical</option><option value="low">Low</option></select></div>
-                            <div><label for="competitionTaskDue">Due date</label><input id="competitionTaskDue" type="datetime-local"></div>
+                            <div><label for="competitionTaskMuhimlik darajasi">Muhimlik darajasi</label><select id="competitionTaskMuhimlik darajasi"><option value="normal">Oddiy</option><option value="high">Yuqori</option><option value="critical">Juda muhim</option><option value="low">Past</option></select></div>
+                            <div><label for="competitionTaskDue">Muddat</label><input id="competitionTaskDue" type="datetime-local"></div>
                           </div>
-                          <button class="primary-button" id="competitionTaskButton" type="submit">＋ Assign task</button>
+                          <button class="primary-button" id="competitionTaskButton" type="submit">＋ Topshiriq berish</button>
                         </form>
-                        <div id="competitionTaskList" class="competition-record-list"><p class="empty-state">No tasks yet.</p></div>
+                        <div id="competitionTaskList" class="competition-record-list"><p class="empty-state">Hozircha topshiriqlar yo‘q.</p></div>
                       </div>
           </details>
           <details class="competition-advanced">
-            <summary>Results, scores and teacher review</summary>
+            <summary>Natijalar, ballar va o‘qituvchi bahosi</summary>
                       <div class="competition-setup">
-                        <div class="competition-section-head"><h3>Live team performance</h3><p>Calculated from this competition's saved operations, not sample dashboard figures.</p></div>
-                        <div class="competition-round-controls"><span id="competitionRoundInfo">Round 1 / 5 · Virtual time</span><button class="secondary-button" id="competitionAdvanceRound" type="button">Advance to next round (+7 days)</button><button class="secondary-button" id="competitionCompleteButton" type="button" hidden>Complete competition & finalise results</button><button class="secondary-button" id="competitionCalculateScores" type="button">Calculate official round scores</button></div>
-                        <div id="competitionLeaderboard" class="competition-record-list"><p class="empty-state">No operational scores yet.</p></div>
+                        <div class="competition-section-head"><h3>Jamoalarning jonli natijalari</h3><p>Calculated from this competition's saved operations, not sample dashboard figures.</p></div>
+                        <div class="competition-round-controls"><span id="competitionRoundInfo">Round 1 / 5 · Virtual time</span><button class="secondary-button" id="competitionAdvanceRound" type="button">Keyingi bosqichga o‘tish (+7 kun)</button><button class="secondary-button" id="competitionCompleteButton" type="button" hidden>Musobaqani yakunlash va natijalarni tasdiqlash</button><button class="secondary-button" id="competitionCalculateScores" type="button">Rasmiy bosqich ballarini hisoblash</button></div>
+                        <div id="competitionLeaderboard" class="competition-record-list"><p class="empty-state">Hozircha operatsion ballar yo‘q.</p></div>
                       </div>
                       <div class="competition-setup">
-                        <h3>Individual contribution ranking</h3>
+                        <h3>Shaxsiy hissalar reytingi</h3>
                         <p class="form-hint">Final individual grade: 50% case-task average + 50% evaluated-decision average.</p>
                         <div id="competitionIndividualRanking" class="competition-record-list"><p class="empty-state">No evaluated contributions yet.</p></div>
                       </div>
                       <div class="competition-setup">
-                        <h3>Student decisions & evaluation</h3>
+                        <h3>Talabalar qarorlari va baholash</h3>
                         <p class="form-hint">Evaluate each student with the same rubric: quantitative accuracy 30, feasibility 25, cost/service/risk trade-off 20, cross-functional impact 15, evidence and clarity 10. Review calculations and mitigation before assigning a score.</p>
-                        <div id="competitionDecisionList" class="competition-record-list"><p class="empty-state">No decisions yet.</p></div>
+                        <div id="competitionDecisionList" class="competition-record-list"><p class="empty-state">Hozircha qarorlar yo‘q.</p></div>
                       </div>
           </details>
           </div>
         </div>
         <div id="competitionStudentPanel" hidden>
           <div class="competition-student-summary">
-            <div><span>Your company team</span><strong id="competitionStudentTeam">—</strong></div>
-            <div><span>Your assigned role</span><strong id="competitionStudentRole">—</strong></div>
+            <div><span>Sizning kompaniya jamoangiz</span><strong id="competitionStudentTeam">—</strong></div>
+            <div><span>Sizga biriktirilgan rol</span><strong id="competitionStudentRole">—</strong></div>
           </div>
           <details class="competition-advanced">
-            <summary>Company information and detailed KPIs</summary>
+            <summary>Kompaniya ma’lumotlari va batafsil KPI</summary>
                       <div class="competition-setup" id="competitionCompanyCase">
-                        <h3>Company case profile</h3>
+                        <h3>Kompaniya keys profili</h3>
                         <p id="competitionStudentCompanyNote" class="form-hint">Public company case study; simulation figures are synthetic.</p>
                         <div id="competitionStudentCompanySources" class="competition-record-list"></div>
                       </div>
@@ -229,7 +230,7 @@
                       </div>
           </details>
           <div class="competition-setup" id="competitionSupplierPanel" hidden>
-            <h3>Supplier management</h3>
+            <h3>Yetkazib beruvchilarni boshqarish</h3>
             <div id="competitionSupplierList" class="competition-record-list"></div>
             <form class="competition-form" id="competitionSupplierTermsForm">
               <label for="competitionTermsSupplier">Supplier</label><select id="competitionTermsSupplier" required></select>
@@ -242,8 +243,8 @@
               <button class="primary-button" type="submit">Update supplier terms</button>
             </form>
           </div>
-          <div class="competition-setup" id="competitionProcurementPanel" hidden>
-            <h3>Procurement · create purchase order</h3>
+          <div class="competition-setup" id="competitionXaridlarPanel" hidden>
+            <h3>Xaridlar · create purchase order</h3>
             <form class="competition-form" id="competitionPurchaseOrderForm">
               <label for="competitionPOSupplier">Supplier</label><select id="competitionPOSupplier" required></select>
               <div class="competition-toolbar">
@@ -257,7 +258,7 @@
           <div class="competition-setup" id="competitionWarehousePanel" hidden>
             <h3>Warehouse · purchase receipts</h3>
             <div id="competitionPurchaseOrderList" class="competition-record-list"></div>
-            <h3>Inventory register</h3><div id="competitionInventoryList" class="competition-record-list"></div>
+            <h3>Ombor zaxiralari register</h3><div id="competitionOmbor zaxiralariList" class="competition-record-list"></div>
           </div>
           <div class="competition-setup" id="competitionManufacturerPanel" hidden>
             <h3>Production management</h3>
@@ -279,7 +280,7 @@
               <label for="competitionCustomerItem">Product name</label><input id="competitionCustomerItem" value="Finished product" required>
               <label for="competitionCustomerPrice">Unit price</label><input id="competitionCustomerPrice" type="number" min="0.01" step="0.01" value="42" required>
               <p class="form-hint">Price is anchored to the company benchmark; discounts of up to 20% are allowed.</p>
-              <label for="competitionCustomerDue">Due date</label><input id="competitionCustomerDue" type="datetime-local" required>
+              <label for="competitionCustomerDue">Muddat</label><input id="competitionCustomerDue" type="datetime-local" required>
               <button class="primary-button" type="submit">Create customer order</button>
             </form>
           </div>
@@ -310,7 +311,7 @@
           <form class="competition-form" id="competitionDecisionForm">
             <h3>Record an operational decision</h3>
             <label for="competitionDecisionDomain">Supply-chain area</label>
-            <select id="competitionDecisionDomain"><option value="procurement">Procurement</option><option value="inventory">Inventory</option><option value="production">Production</option><option value="transport">Transport</option><option value="customer_service">Customer service</option><option value="finance">Finance</option><option value="risk">Risk management</option><option value="strategy">Strategy</option></select>
+            <select id="competitionDecisionDomain"><option value="procurement">Xaridlar</option><option value="inventory">Ombor zaxiralari</option><option value="production">Production</option><option value="transport">Transport</option><option value="customer_service">Customer service</option><option value="finance">Finance</option><option value="risk">Risk management</option><option value="strategy">Strategy</option></select>
             <label for="competitionDecisionType">Decision / situation</label><input id="competitionDecisionType" maxlength="80" minlength="2" required placeholder="e.g. Supplier selection">
             <label for="competitionDecisionOption">Chosen action</label><input id="competitionDecisionOption" maxlength="120" minlength="1" required placeholder="e.g. Select supplier B">
             <label for="competitionDecisionCalculations">Quantitative analysis and assumptions</label><textarea id="competitionDecisionCalculations" rows="3" minlength="20" maxlength="2000" required placeholder="Show formulas, units, assumptions and calculated results"></textarea>
@@ -328,7 +329,7 @@
       </section>
       <section class="panel inventory-workspace" id="inventoryWorkspace" hidden>
         <div class="panel-heading">
-          <div><div class="section-kicker">WAREHOUSE MANAGEMENT</div><h2>Inventory workspace</h2></div>
+          <div><div class="section-kicker">WAREHOUSE MANAGEMENT</div><h2>Ombor zaxiralari workspace</h2></div>
           <span class="muted-label">WMS · STOCK CONTROL</span>
         </div>
         <p class="inventory-access-note" id="inventoryAccessNote">Loading inventory permissions…</p>
@@ -337,7 +338,7 @@
           <select id="inventoryClassSelect" aria-label="Select classroom"></select>
         </div>
         <div class="inventory-layout">
-          <form class="inventory-add-panel" id="addInventoryForm" hidden>
+          <form class="inventory-add-panel" id="addOmbor zaxiralariForm" hidden>
             <h3>Add a product</h3>
             <label for="inventorySku">SKU</label>
             <input id="inventorySku" maxlength="40" minlength="2" placeholder="e.g. SKU-1001" required>
@@ -363,7 +364,7 @@
 
       <section class="panel operations-workspace" id="operationsWorkspace" hidden>
         <div class="panel-heading">
-          <div><div class="section-kicker">ORDER-TO-DELIVERY EXECUTION</div><h2>Orders & shipments</h2></div>
+          <div><div class="section-kicker">ORDER-TO-DELIVERY EXECUTION</div><h2>Buyurtmalar va yuklar</h2></div>
           <span class="muted-label">OMS · TMS</span>
         </div>
         <p class="operations-note" id="operationsAccessNote">Loading operational permissions…</p>
@@ -380,7 +381,7 @@
             <input id="orderProduct" maxlength="120" minlength="2" placeholder="e.g. Packaging boxes" required>
             <div class="operations-two-col">
               <div><label for="orderQuantity">Quantity</label><input id="orderQuantity" type="number" min="1" max="1000000" value="10" required></div>
-              <div><label for="orderDueAt">Due date</label><input id="orderDueAt" type="datetime-local"></div>
+              <div><label for="orderDueAt">Muddat</label><input id="orderDueAt" type="datetime-local"></div>
             </div>
             <button class="primary-button" type="submit">＋ Create order</button>
           </form>
@@ -431,7 +432,7 @@
 
       <section class="panel procurement-workspace" id="procurementWorkspace" hidden>
         <div class="panel-heading">
-          <div><div class="section-kicker">SOURCE-TO-PAY EXECUTION</div><h2>Procurement & suppliers</h2></div>
+          <div><div class="section-kicker">SOURCE-TO-PAY EXECUTION</div><h2>Xaridlar & suppliers</h2></div>
           <span class="muted-label">SRM · PURCHASING</span>
         </div>
         <p class="procurement-note" id="procurementAccessNote">Loading procurement permissions…</p>
@@ -471,18 +472,18 @@
         </div>
         <div class="procurement-records">
           <div class="procurement-record-panel"><h3>Supplier register</h3><div id="suppliersList"><p class="empty-state">Loading suppliers…</p></div></div>
-          <div class="procurement-record-panel"><h3>Purchase orders & receipts</h3><div id="purchaseOrdersList"><p class="empty-state">Loading purchase orders…</p></div></div>
+          <div class="procurement-record-panel"><h3>Purchase orders & receipts</h3><div id="purchaseYuklarList"><p class="empty-state">Loading purchase orders…</p></div></div>
         </div>
         <p class="procurement-message" id="procurementMessage" role="status" aria-live="polite"></p>
       </section>
-      <section class="panel teacher-analytics" id="teacherAnalytics" hidden>
+      <section class="panel teacher-analytics" id="teacherTahlillar" hidden>
         <div class="panel-heading">
           <div><div class="section-kicker">CLASSROOM PERFORMANCE</div><h2>Operational analytics</h2></div>
           <span class="muted-label">LIVE CLASS RECORDS</span>
         </div>
         <div class="analytics-toolbar">
           <label for="analyticsClassSelect">Classroom</label>
-          <select id="analyticsClassSelect" aria-label="Analytics classroom"></select>
+          <select id="analyticsClassSelect" aria-label="Tahlillar classroom"></select>
         </div>
         <div class="analytics-metrics" id="analyticsMetrics"></div>
         <div class="analytics-chart-heading"><b>Operational breakdowns</b><span>Calculated from the selected classroom’s saved records</span></div>
@@ -491,13 +492,13 @@
       </section>
 
       <section class="welcome-row">
-        <div><div class="eyebrow"><span id="todayLabel">CLASSROOM WORKSPACE</span> <span class="eyebrow-line"></span> DEMO SIMULATION</div><h1>Supply chain <em>overview</em></h1><p class="subtitle">One connected view from raw material to final delivery.</p></div>
+        <div><div class="eyebrow"><span id="todayLabel">CLASSROOM ISH MAYDONI</span> <span class="eyebrow-line"></span> DEMO SIMULATION</div><h1>Supply chain <em>overview</em></h1><p class="subtitle">One connected view from raw material to final delivery.</p></div>
         <button class="primary-button" id="scenarioBtn"><span>＋</span> Run disruption scenario</button>
       </section>
 
       <section class="kpi-grid" aria-label="Key performance indicators">
         <article class="kpi-card"><div class="kpi-top"><span>On-time delivery</span><span class="kpi-symbol">↗</span></div><div class="kpi-value" id="otd">94.2<span>%</span></div><div class="kpi-foot"><span class="trend positive">↑ 2.4%</span><span>vs. last period</span></div><div class="mini-bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></article>
-        <article class="kpi-card"><div class="kpi-top"><span>Inventory health</span><span class="kpi-symbol">▦</span></div><div class="kpi-value" id="inventory">1,240</div><div class="kpi-foot"><span class="trend positive">● Stable</span><span>units in stock</span></div><div class="progress-track"><i style="width:76%"></i></div></article>
+        <article class="kpi-card"><div class="kpi-top"><span>Ombor zaxiralari health</span><span class="kpi-symbol">▦</span></div><div class="kpi-value" id="inventory">1,240</div><div class="kpi-foot"><span class="trend positive">● Stable</span><span>units in stock</span></div><div class="progress-track"><i style="width:76%"></i></div></article>
         <article class="kpi-card"><div class="kpi-top"><span>Production output</span><span class="kpi-symbol">⌁</span></div><div class="kpi-value" id="production">950</div><div class="kpi-foot"><span class="trend positive">↑ 5.1%</span><span>units / day</span></div><div class="progress-track"><i style="width:84%"></i></div></article>
         <article class="kpi-card"><div class="kpi-top"><span>Average lead time</span><span class="kpi-symbol">◷</span></div><div class="kpi-value" id="leadtime">6.4<span class="unit"> days</span></div><div class="kpi-foot"><span class="trend positive">↓ 0.8 days</span><span>order to delivery</span></div><div class="progress-track"><i style="width:61%"></i></div></article>
       </section>
@@ -520,7 +521,7 @@
           <div class="panel-heading"><div><div class="section-kicker">SAMPLE EVENT STREAM</div><h2>Event stream</h2></div><span class="event-count" id="eventCount">04 EVENTS</span></div>
           <div class="event-list" id="eventList">
             <div class="event"><span class="event-icon green">↗</span><div><b>Shipment departed</b><p>TRK-204 · Central warehouse</p><small>2 minutes ago</small></div><span class="event-status ok">ON TRACK</span></div>
-            <div class="event"><span class="event-icon blue">▦</span><div><b>Inventory replenished</b><p>SKU-8821 · Warehouse 03</p><small>18 minutes ago</small></div><span class="event-status ok">COMPLETED</span></div>
+            <div class="event"><span class="event-icon blue">▦</span><div><b>Ombor zaxiralari replenished</b><p>SKU-8821 · Warehouse 03</p><small>18 minutes ago</small></div><span class="event-status ok">COMPLETED</span></div>
             <div class="event"><span class="event-icon amber">⌁</span><div><b>Production target reached</b><p>Plant A · Shift 1</p><small>41 minutes ago</small></div><span class="event-status ok">COMPLETED</span></div>
             <div class="event"><span class="event-icon violet">✳</span><div><b>Demand forecast updated</b><p>AI planning engine</p><small>1 hour ago</small></div><span class="event-status info">INFO</span></div>
           </div>
@@ -530,7 +531,7 @@
 
       <section class="bottom-grid" id="intelligence">
         <article class="panel process-panel"><div class="panel-heading"><div><div class="section-kicker">PROCESS EXPLORER</div><h2>How the system connects</h2></div><span class="muted-label">5 CORE STAGES</span></div><div class="process-list">
-          <div class="process-item"><span class="process-icon">⌂</span><div><b>Source & procure</b><small>Supplier management · Purchase orders</small></div><span class="system-tag">ERP</span></div>
+          <div class="process-item"><span class="process-icon">⌂</span><div><b>Source & procure</b><small>Yetkazib beruvchilarni boshqarish · Purchase orders</small></div><span class="system-tag">ERP</span></div>
           <div class="process-item"><span class="process-icon">⚙</span><div><b>Make & manufacture</b><small>Capacity · Quality · Production planning</small></div><span class="system-tag">MES</span></div>
           <div class="process-item"><span class="process-icon">▤</span><div><b>Store & fulfil</b><small>Stock visibility · Picking · Packing</small></div><span class="system-tag">WMS</span></div>
           <div class="process-item"><span class="process-icon">⇢</span><div><b>Move & deliver</b><small>Fleet · Routes · Proof of delivery</small></div><span class="system-tag">TMS</span></div>
@@ -543,7 +544,7 @@
           <div class="capability"><span class="cap-icon cloud">☁</span><div><b>Cloud platform</b><small>Unified demo layer</small></div><span class="cap-state"></span></div>
         </div><div class="insight-box"><span class="insight-mark">✦</span><div><b>Control tower insight</b><p id="insightText">Your network is balanced. All major flows are operating within expected parameters.</p></div></div></article>
       </section>
-      <footer><span>SUPPLYCHAIN14 <b>·</b> DIGITAL SUPPLY CHAIN LAB</span><span>Educational simulation <b>·</b> Not connected to live operations</span></footer>
+      <footer><span>SUPPLYCHAIN14 <b>·</b> RAQAMLI TA’MINOT ZANJIRI LABORATORIYASI</span><span>Educational simulation <b>·</b> Not connected to live operations</span></footer>
     </main>
   </div>
 </body>
