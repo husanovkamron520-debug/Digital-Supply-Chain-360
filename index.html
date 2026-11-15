@@ -203,7 +203,7 @@
                       </div>
                       <div class="competition-setup">
                         <h3>Student decisions & evaluation</h3>
-                        <p class="form-hint">Evaluate each student's reasoning and evidence alongside the team's live operational KPIs, calculated from completed simulation actions.</p>
+                        <p class="form-hint">Evaluate each student with the same rubric: quantitative accuracy 30, feasibility 25, cost/service/risk trade-off 20, cross-functional impact 15, evidence and clarity 10. Review calculations and mitigation before assigning a score.</p>
                         <div id="competitionDecisionList" class="competition-record-list"><p class="empty-state">No decisions yet.</p></div>
                       </div>
           </details>
@@ -307,8 +307,11 @@
             <select id="competitionDecisionDomain"><option value="procurement">Procurement</option><option value="inventory">Inventory</option><option value="production">Production</option><option value="transport">Transport</option><option value="customer_service">Customer service</option><option value="finance">Finance</option><option value="risk">Risk management</option><option value="strategy">Strategy</option></select>
             <label for="competitionDecisionType">Decision / situation</label><input id="competitionDecisionType" maxlength="80" minlength="2" required placeholder="e.g. Supplier selection">
             <label for="competitionDecisionOption">Chosen action</label><input id="competitionDecisionOption" maxlength="120" minlength="1" required placeholder="e.g. Select supplier B">
-            <label for="competitionDecisionRationale">Reasoning (minimum 20 characters)</label><textarea id="competitionDecisionRationale" rows="4" minlength="20" maxlength="2000" required placeholder="Explain your analysis, trade-offs, risks and expected result"></textarea>
-            <button class="primary-button" id="competitionDecisionButton" type="submit">Submit decision</button>
+            <label for="competitionDecisionCalculations">Quantitative analysis and assumptions</label><textarea id="competitionDecisionCalculations" rows="3" minlength="20" maxlength="2000" required placeholder="Show formulas, units, assumptions and calculated results"></textarea>
+            <label for="competitionDecisionRationale">Decision rationale and trade-offs</label><textarea id="competitionDecisionRationale" rows="3" minlength="30" maxlength="2000" required placeholder="Explain why this option is better than the alternatives"></textarea>
+            <label for="competitionDecisionRisk">Risks and mitigation plan</label><textarea id="competitionDecisionRisk" rows="2" minlength="20" maxlength="1000" required placeholder="Identify the main risk, trigger and contingency action"></textarea>
+            <label for="competitionDecisionImpact">Expected KPI and cross-functional impact</label><textarea id="competitionDecisionImpact" rows="2" minlength="20" maxlength="1000" required placeholder="State expected effect on cost, service, inventory, lead time or other teams"></textarea>
+            <button class="primary-button" id="competitionDecisionButton" type="submit">Submit analysed decision</button>
           </form>
           <details class="competition-advanced">
             <summary>Your decision history</summary>
