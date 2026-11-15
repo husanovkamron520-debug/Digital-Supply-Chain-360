@@ -296,7 +296,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   if(!myTasks.length)addEmpty($("competitionStudentTasks"),"No tasks have been assigned to your role yet.");
   for(const task of myTasks){
    const card=el("article","competition-task-card");
-   card.append(el("b","",task.title),el("p","",task.description),el("small","",statusLabel(task.status)+(task.due_round?" · Due round "+task.due_round:"")+(task.due_at?" · Due "+new Date(task.due_at).toLocaleString():"")+(task.due_round&&task.submitted_round>task.due_round?" · LATE":"")));
+   card.append(el("b","",task.title),el("p","competition-task-description",task.description),el("small","",statusLabel(task.status)+(task.due_round?" · Due round "+task.due_round:"")+(task.due_at?" · Due "+new Date(task.due_at).toLocaleString():"")+(task.due_round&&task.submitted_round>task.due_round?" · LATE":"")));
    if(task.review_note)card.append(el("p","competition-review-note",task.review_note));
    if(["pending","in_progress","rejected"].includes(task.status)&&activeCompetition.status==="active"){
     const form=el("form","competition-submit-form");
