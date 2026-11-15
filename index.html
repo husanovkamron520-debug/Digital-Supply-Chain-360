@@ -60,7 +60,7 @@
         <span><strong>SUPPLYCHAIN<span>14</span></strong><small>BOSHQARUV MARKAZI</small></span>
       </a>
       <div class="side-label">ISH MAYDONI</div>
-      <nav class="side-nav" aria-label="Main navigation">
+      <nav class="side-nav" aria-label="Asosiy navigatsiya">
         <a class="nav-link active" href="#overview"><span class="nav-icon">◫</span> Umumiy ko‘rinish</a>
         <a class="nav-link" href="#network"><span class="nav-icon">⌘</span> Tarmoq xaritasi</a>
         <a class="nav-link" href="#operationsWorkspace" hidden><span class="nav-icon">▤</span> Buyurtmalar va yuklar</a>
@@ -77,13 +77,13 @@
       </div>
     </aside>
 
-    <nav class="mobile-nav" aria-label="Mobile navigation">
+    <nav class="mobile-nav" aria-label="Mobil navigatsiya">
       <a class="nav-link mobile-nav-link active" href="#overview"><span class="nav-icon">⌂</span><span>Bosh sahifa</span></a>
       <a class="nav-link mobile-nav-link" href="#network"><span class="nav-icon">⌘</span><span>Tarmoq</span></a>
       <a class="nav-link mobile-nav-link" href="#operationsWorkspace" hidden><span class="nav-icon">▤</span><span>Yuklar</span></a>
       <a class="nav-link mobile-nav-link" href="#inventoryWorkspace" hidden><span class="nav-icon">▦</span><span>Ombor zaxiralari</span></a>
       <a class="nav-link mobile-nav-link" href="#scenarioWorkspace"><span class="nav-icon">⚡</span><span>Ssenariy</span></a>
-      <a class="nav-link mobile-nav-link" id="mobileCompetitionNavLink" href="#competitionWorkspace" hidden><span class="nav-icon">🏆</span><span>Jamoalar</span></a>
+      <a class="nav-link mobile-nav-link" id="mobileMusobaqaNavLink" href="#competitionWorkspace" hidden><span class="nav-icon">🏆</span><span>Jamoalar</span></a>
       <a class="nav-link mobile-nav-link" href="#procurementWorkspace" hidden><span class="nav-icon">⌂</span><span>Xaridlar</span></a>
       <a class="nav-link mobile-nav-link" id="mobileTahlillarNavLink" href="#teacherTahlillar" hidden><span class="nav-icon">▥</span><span>Tahlillar</span></a>
       <a class="nav-link mobile-nav-link" href="#intelligence"><span class="nav-icon">✳</span><span>Yana</span></a>
@@ -139,8 +139,8 @@
         </div>
         <p class="competition-access-note" id="competitionAccessNote">Loading competition permissions…</p>
         <div class="competition-toolbar">
-          <div><label for="competitionClassSelect">Classroom</label><select id="competitionClassSelect"></select></div>
-          <div><label for="competitionSelect">Competition</label><select id="competitionSelect"></select></div>
+          <div><label for="competitionClassSelect">O‘quv guruhi</label><select id="competitionClassSelect"></select></div>
+          <div><label for="competitionSelect">Musobaqa</label><select id="competitionSelect"></select></div>
         </div>
         <button class="secondary-button" id="competitionRefreshButton" type="button" hidden>Musobaqa ma’lumotlarini yangilash</button>
         <div class="competition-current">
@@ -161,16 +161,16 @@
             <div class="competition-section-head"><h3>Kompaniya jamoalari</h3><p id="competitionSetupNote">Muvozanatli jamoalar tuzing va talabalarni taqsimlang.</p></div>
             <div class="competition-auto-setup" id="competitionAutoSetup">
               <label for="competitionTeamCount">Jamoalar soni</label>
-              <select id="competitionTeamCount"><option value="2" selected>2 teams</option><option value="3">3 teams</option><option value="4">4 teams</option></select>
+              <select id="competitionTeamCount"><option value="2" selected>2 ta jamoa</option><option value="3">3 ta jamoa</option><option value="4">4 ta jamoa</option></select>
               <button class="primary-button" id="competitionAutoSetupButton" type="button">Jamoalarni teng taqsimlash</button>
             </div>
             <form class="competition-inline-form" id="competitionManualTeamForm" hidden>
               <input id="competitionManualTeamName" maxlength="80" minlength="2" placeholder="Team name" required>
               <select id="competitionTemplateSelect" required></select>
-              <button class="secondary-button" id="competitionManualTeamButton" type="submit">Add team</button>
+              <button class="secondary-button" id="competitionManualTeamButton" type="submit">Jamoa qo‘shish</button>
             </form>
-            <div id="competitionJamoalar" class="competition-team-grid"><p class="empty-state">Create teams to begin.</p></div>
-            <div class="competition-status-controls"><button class="primary-button" id="competitionStartButton" type="button" hidden>Start competition</button><button class="secondary-button" id="competitionPauseButton" type="button" hidden>Pause competition</button></div>
+            <div id="competitionJamoalar" class="competition-team-grid"><p class="empty-state">Boshlash uchun jamoalar tuzing.</p></div>
+            <div class="competition-status-controls"><button class="primary-button" id="competitionStartButton" type="button" hidden>Musobaqani boshlash</button><button class="secondary-button" id="competitionPauseButton" type="button" hidden>Musobaqani to‘xtatish</button></div>
           </div>
           <details class="competition-advanced">
             <summary>Jamoa topshiriqlari va maxsus vazifalar</summary>
@@ -236,9 +236,9 @@
               <label for="competitionTermsSupplier">Supplier</label><select id="competitionTermsSupplier" required></select>
               <div class="competition-toolbar">
                 <div><label for="competitionTermsLeadTime">Lead time (days)</label><input id="competitionTermsLeadTime" type="number" min="1" max="90" required></div>
-                <div><label for="competitionTermsUnitCost">Unit cost</label><input id="competitionTermsUnitCost" type="number" min="0.01" step="0.01" required></div>
+                <div><label for="competitionTermsUnitCost">Birlik narxi</label><input id="competitionTermsUnitCost" type="number" min="0.01" step="0.01" required></div>
               </div>
-              <label for="competitionTermsReliability">Reliability score (0–100)</label><input id="competitionTermsReliability" type="number" min="0" max="100" step="1" required>
+              <label for="competitionTermsReliability">Ishonchlilik ko‘rsatkichi (0–100)</label><input id="competitionTermsReliability" type="number" min="0" max="100" step="1" required>
               <p id="competitionSupplierNegotiationNote" class="form-hint">Negotiation ranges are based on the supplier baseline. Better price, speed and reliability cannot all improve at once.</p>
               <button class="primary-button" type="submit">Update supplier terms</button>
             </form>
@@ -252,52 +252,52 @@
                 <div><label for="competitionPOQuantity">Quantity</label><input id="competitionPOQuantity" type="number" min="1" max="100000" value="100" required></div>
               </div>
               <label for="competitionPOItemName">Item name</label><input id="competitionPOItemName" value="Core raw material" maxlength="120" required>
-              <button class="primary-button" type="submit">Place purchase order</button>
+              <button class="primary-button" type="submit">Xarid buyurtmasini yuborish</button>
             </form>
           </div>
           <div class="competition-setup" id="competitionWarehousePanel" hidden>
-            <h3>Warehouse · purchase receipts</h3>
+            <h3>Ombor · xaridlarni qabul qilish</h3>
             <div id="competitionPurchaseOrderList" class="competition-record-list"></div>
             <h3>Ombor zaxiralari register</h3><div id="competitionOmbor zaxiralariList" class="competition-record-list"></div>
           </div>
           <div class="competition-setup" id="competitionManufacturerPanel" hidden>
-            <h3>Production management</h3>
+            <h3>Ishlab chiqarishni boshqarish</h3>
             <p class="form-hint">Production consumes one RM-001 raw-material unit and adds one FG-001 finished unit. Conversion cost is charged to company cash.</p>
             <p id="competitionProductionCapacityNote" class="form-hint">Round capacity will appear here.</p>
             <form class="competition-form" id="competitionProductionForm">
               <label for="competitionProductionQuantity">Production quantity</label><input id="competitionProductionQuantity" type="number" min="1" max="2000" value="100" required>
-              <button class="primary-button" type="submit">Complete production run</button>
+              <button class="primary-button" type="submit">Ishlab chiqarish bosqichini yakunlash</button>
             </form>
           </div>
           <div class="competition-setup" id="competitionCustomerPanel" hidden>
-            <h3>Customer orders</h3>
+            <h3>Mijoz buyurtmalari</h3>
             <form class="competition-form" id="competitionCustomerOrderForm">
-              <label for="competitionCustomerOrderNumber">Order number</label><input id="competitionCustomerOrderNumber" minlength="3" maxlength="40" required placeholder="CUST-004">
+              <label for="competitionCustomerOrderNumber">Buyurtma raqami</label><input id="competitionCustomerOrderNumber" minlength="3" maxlength="40" required placeholder="CUST-004">
               <div class="competition-toolbar">
                 <div><label for="competitionCustomerSku">SKU</label><input id="competitionCustomerSku" value="FG-001" required></div>
                 <div><label for="competitionCustomerQty">Quantity</label><input id="competitionCustomerQty" type="number" min="1" max="100000" value="100" required></div>
               </div>
-              <label for="competitionCustomerItem">Product name</label><input id="competitionCustomerItem" value="Finished product" required>
-              <label for="competitionCustomerPrice">Unit price</label><input id="competitionCustomerPrice" type="number" min="0.01" step="0.01" value="42" required>
-              <p class="form-hint">Price is anchored to the company benchmark; discounts of up to 20% are allowed.</p>
+              <label for="competitionCustomerItem">Mahsulot nomi</label><input id="competitionCustomerItem" value="Finished product" required>
+              <label for="competitionCustomerPrice">Birlik narxi</label><input id="competitionCustomerPrice" type="number" min="0.01" step="0.01" value="42" required>
+              <p class="form-hint">Narx kompaniya mezoniga asoslanadi; 20% gacha chegirmaga ruxsat beriladi.</p>
               <label for="competitionCustomerDue">Muddat</label><input id="competitionCustomerDue" type="datetime-local" required>
-              <button class="primary-button" type="submit">Create customer order</button>
+              <button class="primary-button" type="submit">Mijoz buyurtmasini yaratish</button>
             </form>
           </div>
           <div class="competition-setup" id="competitionTransportPanel" hidden>
             <h3>Transport · open customer orders</h3>
             <div id="competitionCustomerOrderList" class="competition-record-list"></div>
-            <h3>Shipment tracking</h3><div id="competitionShipmentList" class="competition-record-list"></div>
+            <h3>Yuklarni kuzatish</h3><div id="competitionShipmentList" class="competition-record-list"></div>
           </div>
           <details class="competition-advanced">
-            <summary>Class rankings</summary>
+            <summary>Guruh reytingi</summary>
                       <div class="competition-setup">
-                        <h3>Class leaderboard · all teams</h3>
-                        <div id="competitionPublicLeaderboard" class="competition-record-list"><p class="empty-state">No verified results yet.</p></div>
+                        <h3>Guruh reytingi · barcha jamoalar</h3>
+                        <div id="competitionPublicLeaderboard" class="competition-record-list"><p class="empty-state">Tasdiqlangan natijalar hali yo‘q.</p></div>
                       </div>
                       <div class="competition-setup">
-                        <h3>Top decision-makers</h3>
-                        <div id="competitionPublicIndividualRanking" class="competition-record-list"><p class="empty-state">No evaluated decisions yet.</p></div>
+                        <h3>Eng yaxshi qaror qabul qiluvchilar</h3>
+                        <div id="competitionPublicIndividualRanking" class="competition-record-list"><p class="empty-state">Baholangan qarorlar hali yo‘q.</p></div>
                       </div>
           </details>
           <div class="competition-setup">
@@ -313,50 +313,50 @@
             <label for="competitionDecisionDomain">Supply-chain area</label>
             <select id="competitionDecisionDomain"><option value="procurement">Xaridlar</option><option value="inventory">Ombor zaxiralari</option><option value="production">Production</option><option value="transport">Transport</option><option value="customer_service">Customer service</option><option value="finance">Finance</option><option value="risk">Risk management</option><option value="strategy">Strategy</option></select>
             <label for="competitionDecisionType">Decision / situation</label><input id="competitionDecisionType" maxlength="80" minlength="2" required placeholder="e.g. Supplier selection">
-            <label for="competitionDecisionOption">Chosen action</label><input id="competitionDecisionOption" maxlength="120" minlength="1" required placeholder="e.g. Select supplier B">
-            <label for="competitionDecisionCalculations">Quantitative analysis and assumptions</label><textarea id="competitionDecisionCalculations" rows="3" minlength="20" maxlength="2000" required placeholder="Show formulas, units, assumptions and calculated results"></textarea>
-            <label for="competitionDecisionRationale">Decision rationale and trade-offs</label><textarea id="competitionDecisionRationale" rows="3" minlength="30" maxlength="2000" required placeholder="Explain why this option is better than the alternatives"></textarea>
-            <label for="competitionDecisionRisk">Risks and mitigation plan</label><textarea id="competitionDecisionRisk" rows="2" minlength="20" maxlength="1000" required placeholder="Identify the main risk, trigger and contingency action"></textarea>
-            <label for="competitionDecisionImpact">Expected KPI and cross-functional impact</label><textarea id="competitionDecisionImpact" rows="2" minlength="20" maxlength="1000" required placeholder="State expected effect on cost, service, inventory, lead time or other teams"></textarea>
-            <button class="primary-button" id="competitionDecisionButton" type="submit">Submit analysed decision</button>
+            <label for="competitionDecisionOption">Tanlangan harakat</label><input id="competitionDecisionOption" maxlength="120" minlength="1" required placeholder="e.g. Select supplier B">
+            <label for="competitionDecisionCalculations">Miqdoriy tahlil va taxminlar</label><textarea id="competitionDecisionCalculations" rows="3" minlength="20" maxlength="2000" required placeholder="Show formulas, units, assumptions and calculated results"></textarea>
+            <label for="competitionDecisionRationale">Qaror asoslari va murosali tanlovlar</label><textarea id="competitionDecisionRationale" rows="3" minlength="30" maxlength="2000" required placeholder="Explain why this option is better than the alternatives"></textarea>
+            <label for="competitionDecisionRisk">Xavflar va ularni kamaytirish rejasi</label><textarea id="competitionDecisionRisk" rows="2" minlength="20" maxlength="1000" required placeholder="Identify the main risk, trigger and contingency action"></textarea>
+            <label for="competitionDecisionImpact">Kutilayotgan KPI va bo‘limlararo ta’sir</label><textarea id="competitionDecisionImpact" rows="2" minlength="20" maxlength="1000" required placeholder="State expected effect on cost, service, inventory, lead time or other teams"></textarea>
+            <button class="primary-button" id="competitionDecisionButton" type="submit">Tahlil qilingan qarorni yuborish</button>
           </form>
           <details class="competition-advanced">
-            <summary>Your decision history</summary>
-                      <div class="competition-setup"><h3>Your decision history</h3><div id="competitionStudentDecisionHistory" class="competition-record-list"><p class="empty-state">No decisions submitted yet.</p></div></div>
+            <summary>Qarorlaringiz tarixi</summary>
+                      <div class="competition-setup"><h3>Qarorlaringiz tarixi</h3><div id="competitionStudentDecisionHistory" class="competition-record-list"><p class="empty-state">No decisions submitted yet.</p></div></div>
           </details>
         </div>
         <p class="competition-message" id="competitionMessage" role="status" aria-live="polite"></p>
       </section>
       <section class="panel inventory-workspace" id="inventoryWorkspace" hidden>
         <div class="panel-heading">
-          <div><div class="section-kicker">WAREHOUSE MANAGEMENT</div><h2>Ombor zaxiralari workspace</h2></div>
-          <span class="muted-label">WMS · STOCK CONTROL</span>
+          <div><div class="section-kicker">OMBOR BOSHQARUVI</div><h2>Ombor zaxiralari workspace</h2></div>
+          <span class="muted-label">WMS · ZAXIRALAR NAZORATI</span>
         </div>
         <p class="inventory-access-note" id="inventoryAccessNote">Loading inventory permissions…</p>
         <div class="inventory-class-picker">
-          <label for="inventoryClassSelect">Classroom</label>
+          <label for="inventoryClassSelect">O‘quv guruhi</label>
           <select id="inventoryClassSelect" aria-label="Select classroom"></select>
         </div>
         <div class="inventory-layout">
           <form class="inventory-add-panel" id="addOmbor zaxiralariForm" hidden>
-            <h3>Add a product</h3>
+            <h3>Mahsulot qo‘shish</h3>
             <label for="inventorySku">SKU</label>
             <input id="inventorySku" maxlength="40" minlength="2" placeholder="e.g. SKU-1001" required>
-            <label for="inventoryItemName">Product name</label>
+            <label for="inventoryItemName">Mahsulot nomi</label>
             <input id="inventoryItemName" maxlength="120" minlength="2" placeholder="e.g. Packaging boxes" required>
             <div class="inventory-number-grid">
-              <div><label for="inventoryOpeningQty">Opening stock</label><input id="inventoryOpeningQty" type="number" min="0" step="1" value="0" required></div>
-              <div><label for="inventoryReorderLevel">Reorder level</label><input id="inventoryReorderLevel" type="number" min="0" step="1" value="10" required></div>
+              <div><label for="inventoryOpeningQty">Boshlang‘ich zaxira</label><input id="inventoryOpeningQty" type="number" min="0" step="1" value="0" required></div>
+              <div><label for="inventoryReorderLevel">Qayta buyurtma darajasi</label><input id="inventoryReorderLevel" type="number" min="0" step="1" value="10" required></div>
             </div>
-            <button class="primary-button" type="submit">＋ Add to inventory</button>
+            <button class="primary-button" type="submit">＋ Omborga qo‘shish</button>
           </form>
           <div class="inventory-stock-panel" id="inventoryAddPanel" hidden>
-            <h3>Stock register</h3>
+            <h3>Zaxiralar ro‘yxati</h3>
             <div class="inventory-list" id="inventoryList"><p class="empty-state">Loading stock…</p></div>
           </div>
         </div>
         <div class="inventory-history-panel">
-          <h3>Recent inventory activity</h3>
+          <h3>Ombordagi so‘nggi harakatlar</h3>
           <div id="inventoryHistory"><p class="empty-state">No activity yet.</p></div>
         </div>
         <p class="inventory-message" id="inventoryMessage" role="status" aria-live="polite"></p>
@@ -364,18 +364,18 @@
 
       <section class="panel operations-workspace" id="operationsWorkspace" hidden>
         <div class="panel-heading">
-          <div><div class="section-kicker">ORDER-TO-DELIVERY EXECUTION</div><h2>Buyurtmalar va yuklar</h2></div>
+          <div><div class="section-kicker">BUYURTMADAN YETKAZIB BERISHGACHA</div><h2>Buyurtmalar va yuklar</h2></div>
           <span class="muted-label">OMS · TMS</span>
         </div>
         <p class="operations-note" id="operationsAccessNote">Loading operational permissions…</p>
         <div class="operations-class-picker">
-          <label for="operationsClassSelect">Classroom</label>
+          <label for="operationsClassSelect">O‘quv guruhi</label>
           <select id="operationsClassSelect" aria-label="Select classroom"></select>
         </div>
         <div class="operations-forms">
           <form class="operations-form" id="createOrderForm" hidden>
-            <h3>Create customer order</h3>
-            <label for="orderNumber">Order number</label>
+            <h3>Mijoz buyurtmasini yaratish</h3>
+            <label for="orderNumber">Buyurtma raqami</label>
             <input id="orderNumber" maxlength="40" minlength="3" placeholder="e.g. ORD-1001" required>
             <label for="orderProduct">Product</label>
             <input id="orderProduct" maxlength="120" minlength="2" placeholder="e.g. Packaging boxes" required>
@@ -386,43 +386,43 @@
             <button class="primary-button" type="submit">＋ Create order</button>
           </form>
           <form class="operations-form" id="createShipmentForm" hidden>
-            <h3>Plan shipment</h3>
-            <label for="shipmentOrder">Linked order (optional)</label>
+            <h3>Yuk jo‘natmasini rejalash</h3>
+            <label for="shipmentOrder">Bog‘langan buyurtma (ixtiyoriy)</label>
             <select id="shipmentOrder"><option value="">No linked order</option></select>
-            <label for="shipmentOrigin">Origin</label>
-            <input id="shipmentOrigin" maxlength="120" minlength="2" placeholder="e.g. Samarkand warehouse" required>
-            <label for="shipmentDestination">Destination</label>
-            <input id="shipmentDestination" maxlength="120" minlength="2" placeholder="e.g. Tashkent distribution centre" required>
+            <label for="shipmentJo‘natish manzili">Jo‘natish manzili</label>
+            <input id="shipmentJo‘natish manzili" maxlength="120" minlength="2" placeholder="e.g. Samarkand warehouse" required>
+            <label for="shipmentYetkazish manzili">Yetkazish manzili</label>
+            <input id="shipmentYetkazish manzili" maxlength="120" minlength="2" placeholder="e.g. Tashkent distribution centre" required>
             <div class="operations-two-col">
-              <div><label for="shipmentCarrier">Carrier</label><input id="shipmentCarrier" maxlength="80" value="Demo carrier" required></div>
-              <div><label for="shipmentEta">Estimated arrival</label><input id="shipmentEta" type="datetime-local"></div>
+              <div><label for="shipmentTashuvchi">Tashuvchi</label><input id="shipmentTashuvchi" maxlength="80" value="Demo carrier" required></div>
+              <div><label for="shipmentEta">Taxminiy yetib kelish vaqti</label><input id="shipmentEta" type="datetime-local"></div>
             </div>
-            <button class="primary-button" type="submit">＋ Plan shipment</button>
+            <button class="primary-button" type="submit">＋ Yuk jo‘natmasini rejalash</button>
           </form>
         </div>
         <div class="operations-records">
-          <div class="operations-record-panel"><h3>Customer orders</h3><div id="ordersList"><p class="empty-state">Loading orders…</p></div></div>
-          <div class="operations-record-panel"><h3>Shipment tracking</h3><div id="shipmentsList"><p class="empty-state">Loading shipments…</p></div></div>
+          <div class="operations-record-panel"><h3>Mijoz buyurtmalari</h3><div id="ordersList"><p class="empty-state">Loading orders…</p></div></div>
+          <div class="operations-record-panel"><h3>Yuklarni kuzatish</h3><div id="shipmentsList"><p class="empty-state">Loading shipments…</p></div></div>
         </div>
         <p class="operations-message" id="operationsMessage" role="status" aria-live="polite"></p>
       </section>
 
       <section class="panel scenario-workspace" id="scenarioWorkspace" hidden>
         <div class="panel-heading">
-          <div><div class="section-kicker">DECISION-BASED LEARNING</div><h2>Scenario simulation lab</h2></div>
-          <span class="muted-label">SCENARIO ENGINE · SCORING</span>
+          <div><div class="section-kicker">QARORLAR ASOSIDA TA’LIM</div><h2>Ssenariy simulyatsiyasi laboratoriyasi</h2></div>
+          <span class="muted-label">SSENARIY TIZIMI · BAHOLASH</span>
         </div>
         <p class="scenario-access-note" id="scenarioAccessNote">Loading scenario permissions…</p>
         <div class="scenario-class-picker">
-          <label for="scenarioClassSelect">Classroom</label>
+          <label for="scenarioClassSelect">O‘quv guruhi</label>
           <select id="scenarioClassSelect" aria-label="Select classroom"></select>
         </div>
         <form class="scenario-launch-form" id="scenarioLaunchForm" hidden>
-          <label for="scenarioType">Launch a disruption scenario</label>
+          <label for="scenarioType">Uzilish ssenariysini boshlash</label>
           <select id="scenarioType">
-            <option value="supplier_delay">Supplier delay</option>
-            <option value="demand_spike">Demand spike</option>
-            <option value="route_disruption">Transport route disruption</option>
+            <option value="supplier_delay">Yetkazib beruvchi kechikishi</option>
+            <option value="demand_spike">Talabning keskin oshishi</option>
+            <option value="route_disruption">Transport yo‘nalishidagi uzilish</option>
           </select>
           <button class="primary-button" type="submit">＋ Launch scenario</button>
         </form>
@@ -432,20 +432,20 @@
 
       <section class="panel procurement-workspace" id="procurementWorkspace" hidden>
         <div class="panel-heading">
-          <div><div class="section-kicker">SOURCE-TO-PAY EXECUTION</div><h2>Xaridlar & suppliers</h2></div>
-          <span class="muted-label">SRM · PURCHASING</span>
+          <div><div class="section-kicker">XARIDDAN TO‘LOVGACHA</div><h2>Xaridlar va yetkazib beruvchilar</h2></div>
+          <span class="muted-label">SRM · XARIDLAR</span>
         </div>
         <p class="procurement-note" id="procurementAccessNote">Loading procurement permissions…</p>
         <div class="procurement-class-picker">
-          <label for="procurementClassSelect">Classroom</label>
+          <label for="procurementClassSelect">O‘quv guruhi</label>
           <select id="procurementClassSelect" aria-label="Select classroom"></select>
         </div>
         <div class="procurement-forms">
           <form class="procurement-form" id="createSupplierForm" hidden>
-            <h3>Register supplier</h3>
-            <label for="supplierCode">Supplier code</label>
+            <h3>Yetkazib beruvchini ro‘yxatdan o‘tkazish</h3>
+            <label for="supplierCode">Yetkazib beruvchi kodi</label>
             <input id="supplierCode" maxlength="30" minlength="2" placeholder="SUP-001" required>
-            <label for="supplierName">Supplier name</label>
+            <label for="supplierName">Yetkazib beruvchi nomi</label>
             <input id="supplierName" maxlength="120" minlength="2" placeholder="Regional packaging supplier" required>
             <label for="supplierLeadTime">Lead time (days)</label>
             <input id="supplierLeadTime" type="number" min="0" max="365" value="7" required>
@@ -464,7 +464,7 @@
             <label for="poItemName">Item name</label>
             <input id="poItemName" maxlength="120" minlength="2" placeholder="Packaging material" required>
             <div class="procurement-two-col">
-              <div><label for="poUnitCost">Unit cost</label><input id="poUnitCost" type="number" min="0" step="0.01" value="0" required></div>
+              <div><label for="poUnitCost">Birlik narxi</label><input id="poUnitCost" type="number" min="0" step="0.01" value="0" required></div>
               <div><label for="poExpectedAt">Expected date</label><input id="poExpectedAt" type="datetime-local"></div>
             </div>
             <button class="primary-button" type="submit">＋ Create purchase order</button>
@@ -482,7 +482,7 @@
           <span class="muted-label">LIVE CLASS RECORDS</span>
         </div>
         <div class="analytics-toolbar">
-          <label for="analyticsClassSelect">Classroom</label>
+          <label for="analyticsClassSelect">O‘quv guruhi</label>
           <select id="analyticsClassSelect" aria-label="Tahlillar classroom"></select>
         </div>
         <div class="analytics-metrics" id="analyticsMetrics"></div>
