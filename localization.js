@@ -1,5 +1,5 @@
 // Uzbek-first interface dictionary. Technical acronyms remain, with Uzbek explanations in the UI.
-const UI_UZ = new Map([
+const UI_UZ = new Map(Object.entries({
   "Loading…": "Yuklanmoqda…",
   "Loading data…": "Ma’lumotlar yuklanmoqda…",
   "Loading competition permissions…": "Musobaqa ruxsatlari tekshirilmoqda…",
@@ -310,7 +310,7 @@ const UI_UZ = new Map([
   "Live classroom records · refreshed ": "Guruhning joriy ma’lumotlari · yangilandi: ",
   "Create a classroom to see its operational performance.": "Operatsion natijalarni ko‘rish uchun guruh yarating.",
   "Analytics unavailable: ": "Tahlillar mavjud emas: "
-]);
+}));
 function translateNode(node){
  if(node.nodeType===Node.TEXT_NODE){
   const raw=node.nodeValue, key=raw.trim();
