@@ -28,12 +28,14 @@ Then apply the current competition refinements in this order:
 19. `competition_clock_serialization_guards.sql` — serializes receipts, deliveries, supplier changes, stock counts, task submissions, decision evaluation and round score snapshots against the simulation clock.
 20. `competition_member_reassignment.sql` — allows teachers to correct a student's team and operational role before the competition starts.
 21. `competition_final_evaluation_guard.sql` — prevents finalisation while any submitted student decision remains unevaluated.
+22. `competition_advanced_case_pack.sql` — replaces the short generic role tasks with quantitative, multi-constraint case briefs for Procurement, Supplier, Manufacturer, Warehouse and Transport, each with explicit deliverables and a 100-point rubric.
 
 ## Historical/intermediate patches
 
 - `competition_round_duration_fix.sql` is an intermediate three-day metadata correction. The later `competition_seven_day_rounds.sql` is authoritative.
 - `competition_transport_cost_bounds.sql`, `competition_customer_price_bounds.sql`, `competition_supplier_negotiation_bounds.sql`, and `competition_inventory_adjustment_bounds.sql` supersede earlier versions of their respective RPCs.
 - Apply the refinements in the order above. Reapplying an older function snapshot after a later refinement can revert a security or business-rule guard.
+- The live project also has a follow-up migration named `competition_case_pack_calculation_clarity`, which calibrates the advanced case assumptions (defect cost, rush material availability and overflow unit-day costing). The checked-in `competition_advanced_case_pack.sql` is the consolidated current definition and includes those corrections.
 
 ## Simulation data disclaimer
 
