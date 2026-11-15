@@ -211,7 +211,9 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   if(!taskRows.length)addEmpty($("competitionTaskList"),"No team tasks yet.");
   for(const task of taskRows){
    const card=el("article","competition-task-card");
-   card.append(el("div","competition-card-head",task.title),el("p","competition-task-description",task.description||"No additional instructions"),el("small","",statusLabel(task.assigned_role)+" · "+statusLabel(task.status)+(task.due_round?" · Due round "+task.due_round:"")+(task.submitted_round?" · Submitted round "+task.submitted_round:"")+(task.due_round&&task.submitted_round>task.due_round?" · LATE":"")));
+   const assignedMember=(allMemberRows||[]).find(m=>m.student_id===task.assigned_to&&m.team_id===task.team_id);
+   const assignedTeam=teamRows.find(t=>t.id===task.team_id);
+   card.append(el("div","competition-card-head",task.title),el("p","competition-task-description",task.description||"No additional instructions"),el("small","", (assignedTeam?.name||"Team")+" · "+(assignedMember?.profiles?.full_name||"Unassigned student")+" · "+statusLabel(task.assigned_role)+" · "+statusLabel(task.status)+(task.due_round?" · Due round "+task.due_round:"")+(task.submitted_round?" · Submitted round "+task.submitted_round:"")+(task.due_round&&task.submitted_round>task.due_round?" · LATE":"")));
    if(task.submission)card.append(el("pre","competition-submission",typeof task.submission.response==="string"?task.submission.response:JSON.stringify(task.submission,null,2)));
    if(task.score!==null&&task.score!==undefined)card.append(el("p","competition-review-note","Teacher score: "+Number(task.score).toFixed(1)+"/100 · "+(task.feedback||task.review_note||"")));
    if(task.status==="submitted"){
