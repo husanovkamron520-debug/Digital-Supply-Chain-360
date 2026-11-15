@@ -329,16 +329,20 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   setHidden("competitionAdvanceRound",activeCompetition.status!=="active");
   $("competitionAdvanceRound").disabled=!clock||clock.current_round>=clock.round_limit;
   const pendingDecisionCount=decisionRows.filter(d=>d.score===null).length;
+  const studentsWithoutDecision=allMemberRows.filter(m=>!decisionRows.some(d=>d.student_id===m.student_id&&d.team_id===m.team_id&&d.score!==null)).length;
   const pendingTaskCount=taskRows.filter(task=>task.status!=="approved"||task.score===null||task.score===undefined).length;
+  const studentsWithoutTask=allMemberRows.filter(m=>!taskRows.some(task=>task.assigned_to===m.student_id&&task.team_id===m.team_id&&task.score!==null&&task.score!==undefined)).length;
   setHidden("competitionCompleteButton",activeCompetition.status!=="active"||!clock||clock.current_round<clock.round_limit);
-  $("competitionCompleteButton").disabled=pendingDecisionCount>0||pendingTaskCount>0||taskRows.length===0;
+  $("competitionCompleteButton").disabled=pendingDecisionCount>0||studentsWithoutDecision>0||pendingTaskCount>0||studentsWithoutTask>0||taskRows.length===0;
   $("competitionCompleteButton").textContent=taskRows.length===0
    ?"Generate role case tasks first"
    :pendingDecisionCount>0
     ?"Evaluate "+pendingDecisionCount+" pending decision(s) first"
-    :pendingTaskCount>0
-     ?"Grade or request resubmission for "+pendingTaskCount+" case task(s)"
-     :"Complete competition & finalise results";
+    :studentsWithoutDecision>0
+     ?"Collect and grade a decision from "+studentsWithoutDecision+" student(s)"
+     :pendingTaskCount>0||studentsWithoutTask>0
+      ?"Grade or request resubmission for "+Math.max(pendingTaskCount,studentsWithoutTask)+" case task(s)"
+      :"Complete competition & finalise results";
   const draft=activeCompetition.status==="draft";
   setHidden("competitionAutoSetup",!draft||teamRows.length>0);
   setHidden("competitionManualTeamForm",!draft);
