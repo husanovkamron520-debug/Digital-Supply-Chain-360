@@ -211,12 +211,29 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    if(d.inputs?.expected_impact)card.append(el("p","", "Expected KPI impact: "+d.inputs.expected_impact));
    if(d.score!==null)card.append(el("strong","",d.score+"/100 · "+(d.feedback||"Evaluated")));
    else{
-    const form=el("form","competition-inline-form");
-    const score=el("input","");score.type="number";score.min="0";score.max="100";score.step="1";score.placeholder="Score /100";score.required=true;
-    const feedback=el("input","");feedback.placeholder="Feedback / rubric breakdown";
-    const submit=el("button","secondary-button","Evaluate");submit.type="submit";
-    form.append(score,feedback,submit);
-    form.addEventListener("submit",async e=>{e.preventDefault();submit.disabled=true;try{const {error}=await db.rpc("evaluate_competition_decision",{p_decision_id:d.id,p_score:Number(score.value),p_feedback:feedback.value.trim()});if(error)throw error;say("Decision evaluated.",true);await loadCompetition();}catch(err){say(err.message);submit.disabled=false;}});
+    const form=el("form","competition-rubric-form");
+    const criteria=[["Quantitative accuracy",30],["Feasibility",25],["Cost / service / risk trade-off",20],["Cross-functional impact",15],["Evidence and clarity",10]];
+    const scoreInputs=[];
+    for(const [label,max] of criteria){
+     const field=el("label","competition-rubric-field");
+     field.append(el("span","",label+" / "+max));
+     const input=el("input","");input.type="number";input.min="0";input.max=String(max);input.step="1";input.required=true;input.placeholder="0–"+max;
+     scoreInputs.push(input);field.append(input);form.append(field);
+    }
+    const total=el("strong","competition-rubric-total","Total: — / 100");
+    const feedback=el("input","");feedback.placeholder="Feedback and improvement advice (optional)";
+    const submit=el("button","secondary-button","Save rubric score");submit.type="submit";
+    const updateTotal=()=>{const complete=scoreInputs.every(input=>input.value!=="");const value=scoreInputs.reduce((sum,input)=>sum+(Number(input.value)||0),0);total.textContent=complete?"Total: "+value+" / 100":"Total: — / 100";submit.disabled=!complete||scoreInputs.some((input,index)=>Number(input.value)>criteria[index][1]||Number(input.value)<0);};
+    scoreInputs.forEach(input=>input.addEventListener("input",updateTotal));
+    form.append(total,feedback,submit);
+    updateTotal();
+    form.addEventListener("submit",async e=>{
+     e.preventDefault();const value=scoreInputs.reduce((sum,input)=>sum+Number(input.value),0);submit.disabled=true;
+     const breakdown=criteria.map((item,index)=>item[0]+": "+scoreInputs[index].value+"/"+item[1]).join(" · ");
+     const note=[breakdown,feedback.value.trim()].filter(Boolean).join(" | ");
+     try{const {error}=await db.rpc("evaluate_competition_decision",{p_decision_id:d.id,p_score:value,p_feedback:note});if(error)throw error;say("Decision evaluated with the five-part rubric.",true);await loadCompetition();}
+     catch(err){say(err.message);submit.disabled=false;}
+    });
     card.append(form);
    }
    $("competitionDecisionList").append(card);
