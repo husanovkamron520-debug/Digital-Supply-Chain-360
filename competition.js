@@ -618,7 +618,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
     el("strong","",Number(p.average_score).toFixed(1)+"/100"));
    $("competitionPublicIndividualRanking").append(row);
   }
- } }
+ }
 
  async function initialize(session){
   if(!session?.user){root.hidden=true;return;}
