@@ -144,7 +144,10 @@ form.addEventListener("submit", async (event) => {
     if (mode === "register") {
       const full_name = nameInput.value.trim();
       const {data, error} = await supabase.auth.signUp({
-        email, password, options:{data:{full_name}}
+        email, password, options:{
+          data:{full_name},
+          emailRedirectTo: "https://digital-supply-chain-360.husanovkamron520.workers.dev/"
+        }
       });
       if (error) throw error;
       if (data.session) {
