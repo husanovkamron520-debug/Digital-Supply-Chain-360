@@ -294,27 +294,33 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   }
   const ensureIndividual=(studentId,teamId,name)=>{
    const key=studentId+"|"+teamId;
-   if(!individuals.has(key))individuals.set(key,{name:name||"Student",scores:[],decisionSubmitted:0,decisionEvaluated:0,taskSubmitted:0,taskEvaluated:0});
+   if(!individuals.has(key))individuals.set(key,{name:name||"Student",decisionScores:[],taskScores:[],decisionSubmitted:0,decisionEvaluated:0,taskSubmitted:0,taskEvaluated:0});
    return individuals.get(key);
   };
   for(const d of decisionRows){
    const item=ensureIndividual(d.student_id,d.team_id,d.profiles?.full_name);
-   item.decisionSubmitted++;if(d.score!==null){item.decisionEvaluated++;item.scores.push(Number(d.score));}
+   item.decisionSubmitted++;if(d.score!==null){item.decisionEvaluated++;item.decisionScores.push(Number(d.score));}
   }
   for(const task of taskRows){
    const owner=task.assigned_to?{count:1,student_id:task.assigned_to}:roleOwners.get(task.team_id+"|"+task.assigned_role);
    if(!owner||owner.count!==1||!owner.student_id)continue;
    const member=(allMemberRows||[]).find(m=>m.student_id===owner.student_id&&m.team_id===task.team_id);
    const item=ensureIndividual(owner.student_id,task.team_id,member?.profiles?.full_name);
-   item.taskSubmitted++;if(task.score!==null&&task.score!==undefined){item.taskEvaluated++;item.scores.push(Number(task.score));}
+   item.taskSubmitted++;if(task.score!==null&&task.score!==undefined){item.taskEvaluated++;item.taskScores.push(Number(task.score));}
   }
   $("competitionIndividualRanking").replaceChildren();
-  const ranked=[...individuals.values()].filter(x=>x.scores.length).map(x=>({...x,average:x.scores.reduce((a,b)=>a+b,0)/x.scores.length})).sort((a,b)=>b.average-a.average||b.scores.length-a.scores.length);
+  const ranked=[...individuals.values()].filter(x=>x.decisionScores.length||x.taskScores.length).map(x=>{
+   const decisionAverage=x.decisionScores.length?x.decisionScores.reduce((a,b)=>a+b,0)/x.decisionScores.length:null;
+   const taskAverage=x.taskScores.length?x.taskScores.reduce((a,b)=>a+b,0)/x.taskScores.length:null;
+   const average=decisionAverage!==null&&taskAverage!==null?(decisionAverage+taskAverage)/2:(decisionAverage??taskAverage);
+   return {...x,decisionAverage,taskAverage,average};
+  }).sort((a,b)=>b.average-a.average);
   if(!ranked.length)addEmpty($("competitionIndividualRanking"),"Individual ranking appears after task and decision evaluations.");
   for(const [index,p] of ranked.entries()){
    const evidence=p.decisionEvaluated+" decision(s) + "+p.taskEvaluated+" case task(s) graded";
    const submitted=p.decisionSubmitted+" decision(s) + "+p.taskSubmitted+" task(s) submitted";
-   const row=el("article","competition-score-row");row.append(el("b","",(index+1)+". "+p.name+" · "+evidence),el("small","",submitted),el("strong","",p.average.toFixed(1)+"/100"));
+   const split="Decision avg "+(p.decisionAverage===null?"—":p.decisionAverage.toFixed(1))+" · Case avg "+(p.taskAverage===null?"—":p.taskAverage.toFixed(1))+" · 50/50";
+   const row=el("article","competition-score-row");row.append(el("b","",(index+1)+". "+p.name+" · "+evidence),el("small","",split),el("small","",submitted),el("strong","",p.average.toFixed(1)+"/100"));
    $("competitionIndividualRanking").append(row);
   }
     const {data:clock,error:clockError}=await db.from("competition_simulation_clock").select("current_round,round_limit,virtual_now").eq("competition_id",activeCompetition.id).maybeSingle();
@@ -619,6 +625,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   for(const [i,p] of people.entries()){
    const row=el("article","competition-score-row");
    row.append(el("b","",(i+1)+". "+(p.full_name||"Student")+" · "+p.team_name),
+    el("small","", "Decision avg "+(p.decision_average===null?"—":Number(p.decision_average).toFixed(1))+" · Case avg "+(p.task_average===null?"—":Number(p.task_average).toFixed(1))+" · 50/50"),
     el("small","",p.evaluated_decisions+" decisions + "+p.evaluated_tasks+" case tasks graded"),
     el("strong","",Number(p.average_score).toFixed(1)+"/100"));
    $("competitionPublicIndividualRanking").append(row);
