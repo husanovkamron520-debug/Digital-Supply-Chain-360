@@ -470,3 +470,7 @@
 .competition-workspace>.competition-advanced{margin-top:10px}
 .competition-workspace .competition-access-note{margin-bottom:9px}
 @media(max-width:600px){.competition-advanced>summary{padding:14px;font-size:12px}.competition-advanced>.competition-setup{padding:12px}.competition-round-controls{display:grid;gap:8px}.competition-round-controls button{width:100%}}
+
+
+/* Preserve structured paragraphs in advanced competition case briefs. */
+.competition-task-description{white-space:pre-line;line-height:1.65!important;font-size:10px!important;color:#c0cfdd!important}
