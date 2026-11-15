@@ -61,6 +61,28 @@ begin
   ) then
    raise exception 'Every team must have all five role case tasks before finalising the competition';
   end if;
+  if exists(
+   select 1 from public.competition_team_members m
+   where m.competition_id=p_competition_id
+     and not exists(
+      select 1 from public.competition_tasks x
+      where x.competition_id=m.competition_id and x.team_id=m.team_id
+        and x.assigned_to=m.student_id and x.assigned_role=m.operational_role
+     )
+  ) then
+   raise exception 'Every student must receive an individually assigned role case task';
+  end if;
+  if exists(
+   select 1 from public.competition_team_members m
+   where m.competition_id=p_competition_id
+     and not exists(
+      select 1 from public.competition_decisions d
+      where d.competition_id=m.competition_id and d.team_id=m.team_id
+        and d.student_id=m.student_id and d.score is not null
+     )
+  ) then
+   raise exception 'Every student must submit at least one evaluated operational decision';
+  end if;
   if exists(select 1 from public.competition_tasks where competition_id=p_competition_id and (status<>'approved' or score is null)) then
    raise exception 'Grade every role case task before finalising the competition';
   end if;
