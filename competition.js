@@ -118,13 +118,14 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  }
 
  async function renderTeacherCompetition(){
-  const [{data:teams,error:teamError},{data:students,error:studentError},{data:tasks,error:taskError},{data:decisions,error:decisionError}]=await Promise.all([
+  const [{data:teams,error:teamError},{data:students,error:studentError},{data:tasks,error:taskError},{data:decisions,error:decisionError},{data:allMemberRows,error:memberError}]=await Promise.all([
    db.from("competition_teams").select("id,name,company_template_id,company_templates(name,industry,business_model,case_study_note,source_urls)").eq("competition_id",activeCompetition.id).order("created_at"),
    db.from("classroom_members").select("student_id,profiles(full_name)").eq("classroom_id",activeClassId).order("joined_at"),
-   db.from("competition_tasks").select("id,team_id,title,description,assigned_role,status,due_at,due_round,submitted_round,submission,review_note").eq("competition_id",activeCompetition.id).order("created_at",{ascending:false}),
-   db.from("competition_decisions").select("id,team_id,student_id,domain,decision_type,selected_option,rationale,inputs,score,feedback,created_at,profiles(full_name)").eq("competition_id",activeCompetition.id).order("created_at",{ascending:false})
+   db.from("competition_tasks").select("id,team_id,title,description,assigned_role,status,due_at,due_round,submitted_round,submission,review_note,score,feedback").eq("competition_id",activeCompetition.id).order("created_at",{ascending:false}),
+   db.from("competition_decisions").select("id,team_id,student_id,domain,decision_type,selected_option,rationale,inputs,score,feedback,created_at,profiles(full_name)").eq("competition_id",activeCompetition.id).order("created_at",{ascending:false}),
+   db.from("competition_team_members").select("team_id,student_id,operational_role,profiles(full_name)").eq("competition_id",activeCompetition.id)
   ]);
-  for(const e of [teamError,studentError,taskError,decisionError])if(e)throw e;
+  for(const e of [teamError,studentError,taskError,decisionError,memberError])if(e)throw e;
   const teamRows=teams||[],studentRows=students||[],taskRows=tasks||[],decisionRows=decisions||[];
   const recommendedTeamCount=Math.max(2,Math.min(4,Math.floor(studentRows.length/5)));
   $("competitionTeamCount").value=String(recommendedTeamCount);
@@ -211,16 +212,24 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   for(const task of taskRows){
    const card=el("article","competition-task-card");
    card.append(el("div","competition-card-head",task.title),el("p","competition-task-description",task.description||"No additional instructions"),el("small","",statusLabel(task.assigned_role)+" · "+statusLabel(task.status)+(task.due_round?" · Due round "+task.due_round:"")+(task.submitted_round?" · Submitted round "+task.submitted_round:"")+(task.due_round&&task.submitted_round>task.due_round?" · LATE":"")));
-   if(task.submission)card.append(el("pre","competition-submission",JSON.stringify(task.submission,null,2)));
+   if(task.submission)card.append(el("pre","competition-submission",typeof task.submission.response==="string"?task.submission.response:JSON.stringify(task.submission,null,2)));
+   if(task.score!==null&&task.score!==undefined)card.append(el("p","competition-review-note","Teacher score: "+Number(task.score).toFixed(1)+"/100 · "+(task.feedback||task.review_note||"")));
    if(task.status==="submitted"){
-    const review=el("div","competition-review");
-    const note=el("input","");note.placeholder="Feedback (optional)";
-    const approve=el("button","secondary-button","Approve");approve.type="button";
+    const review=el("form","competition-review");
+    const score=el("input","");score.type="number";score.min="0";score.max="100";score.step="1";score.required=true;score.placeholder="Task score /100";
+    const note=el("textarea","");note.rows=2;note.maxLength=2000;note.placeholder="Feedback: strengths, calculation errors and improvement advice";
+    const approve=el("button","secondary-button","Save score & approve");approve.type="submit";
     const reject=el("button","secondary-button","Request changes");reject.type="button";
-    for(const [btn,ok] of [[approve,true],[reject,false]])btn.addEventListener("click",async()=>{
-     btn.disabled=true;try{const {error}=await db.rpc("review_competition_task",{p_task_id:task.id,p_approved:ok,p_review_note:note.value.trim()});if(error)throw error;say(ok?"Task approved.":"Changes requested.",true);await loadCompetition();}catch(err){say(err.message);btn.disabled=false;}
+    review.append(score,note,approve,reject);
+    review.addEventListener("submit",async e=>{
+     e.preventDefault();approve.disabled=true;
+     try{const {error}=await db.rpc("evaluate_competition_task",{p_task_id:task.id,p_score:Number(score.value),p_feedback:note.value.trim()});if(error)throw error;say("Task graded and approved.",true);await loadCompetition();}
+     catch(err){say(err.message);approve.disabled=false;}
     });
-    review.append(note,approve,reject);card.append(review);
+    reject.addEventListener("click",async()=>{
+     reject.disabled=true;try{const {error}=await db.rpc("review_competition_task",{p_task_id:task.id,p_approved:false,p_review_note:note.value.trim()});if(error)throw error;say("Changes requested.",true);await loadCompetition();}catch(err){say(err.message);reject.disabled=false;}
+    });
+    card.append(review);
    }
    $("competitionTaskList").append(card);
   }
@@ -277,19 +286,38 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    row.append(left,el("strong","",m.total_score===null?"Awaiting data":Number(m.total_score).toFixed(1)+"/100"));
    $("competitionLeaderboard").append(row);
   }
-  const individuals=new Map();
+  const individuals=new Map(),roleOwners=new Map();
+  for(const member of allMemberRows||[]){
+   const key=member.team_id+"|"+member.operational_role;
+   const current=roleOwners.get(key)||{count:0,student_id:null};
+   current.count++;current.student_id=member.student_id;roleOwners.set(key,current);
+  }
+  const ensureIndividual=(studentId,teamId,name)=>{
+   const key=studentId+"|"+teamId;
+   if(!individuals.has(key))individuals.set(key,{name:name||"Student",scores:[],decisionSubmitted:0,decisionEvaluated:0,taskSubmitted:0,taskEvaluated:0});
+   return individuals.get(key);
+  };
   for(const d of decisionRows){
-   if(!individuals.has(d.student_id))individuals.set(d.student_id,{name:d.profiles?.full_name||"Student",scores:[],submittedCount:0});
-   const item=individuals.get(d.student_id);item.submittedCount++;if(d.score!==null)item.scores.push(Number(d.score));
+   const item=ensureIndividual(d.student_id,d.team_id,d.profiles?.full_name);
+   item.decisionSubmitted++;if(d.score!==null){item.decisionEvaluated++;item.scores.push(Number(d.score));}
+  }
+  for(const task of taskRows){
+   const owner=task.assigned_to?{count:1,student_id:task.assigned_to}:roleOwners.get(task.team_id+"|"+task.assigned_role);
+   if(!owner||owner.count!==1||!owner.student_id)continue;
+   const member=(allMemberRows||[]).find(m=>m.student_id===owner.student_id&&m.team_id===task.team_id);
+   const item=ensureIndividual(owner.student_id,task.team_id,member?.profiles?.full_name);
+   item.taskSubmitted++;if(task.score!==null&&task.score!==undefined){item.taskEvaluated++;item.scores.push(Number(task.score));}
   }
   $("competitionIndividualRanking").replaceChildren();
   const ranked=[...individuals.values()].filter(x=>x.scores.length).map(x=>({...x,average:x.scores.reduce((a,b)=>a+b,0)/x.scores.length})).sort((a,b)=>b.average-a.average||b.scores.length-a.scores.length);
-  if(!ranked.length)addEmpty($("competitionIndividualRanking"),"Individual ranking appears after decisions have been evaluated.");
+  if(!ranked.length)addEmpty($("competitionIndividualRanking"),"Individual ranking appears after task and decision evaluations.");
   for(const [index,p] of ranked.entries()){
-   const row=el("article","competition-score-row");row.append(el("b","",(index+1)+". "+p.name+" · "+p.scores.length+" evaluated / "+p.submittedCount+" submitted"),el("strong","",p.average.toFixed(1)+"/100"));
+   const evidence=p.decisionEvaluated+" decision(s) + "+p.taskEvaluated+" case task(s) graded";
+   const submitted=p.decisionSubmitted+" decision(s) + "+p.taskSubmitted+" task(s) submitted";
+   const row=el("article","competition-score-row");row.append(el("b","",(index+1)+". "+p.name+" · "+evidence),el("small","",submitted),el("strong","",p.average.toFixed(1)+"/100"));
    $("competitionIndividualRanking").append(row);
   }
-  const {data:clock,error:clockError}=await db.from("competition_simulation_clock").select("current_round,round_limit,virtual_now").eq("competition_id",activeCompetition.id).maybeSingle();
+    const {data:clock,error:clockError}=await db.from("competition_simulation_clock").select("current_round,round_limit,virtual_now").eq("competition_id",activeCompetition.id).maybeSingle();
   if(clockError)throw clockError;
   $("competitionRoundInfo").textContent=clock?"Round "+clock.current_round+" / "+clock.round_limit+" · Simulation date "+new Date(clock.virtual_now).toLocaleDateString():"Rounds begin when the competition starts.";
   setHidden("competitionAdvanceRound",activeCompetition.status!=="active");
@@ -333,7 +361,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    const studentSources=$("competitionStudentCompanySources");studentSources.replaceChildren();
    (team.company_templates?.source_urls||[]).forEach((url,i)=>{const link=el("a","", "Official source "+(i+1));link.href=url;link.target="_blank";link.rel="noopener noreferrer";studentSources.append(link);});
   $("competitionStudentRole").textContent=statusLabel(activeRole);
-  const {data:tasks,error:taskError}=await db.from("competition_tasks").select("id,title,description,assigned_role,assigned_to,status,due_at,due_round,submitted_round,submission,review_note")
+  const {data:tasks,error:taskError}=await db.from("competition_tasks").select("id,title,description,assigned_role,assigned_to,status,due_at,due_round,submitted_round,submission,review_note,score,feedback")
    .eq("competition_id",activeCompetition.id).eq("team_id",activeTeam).order("created_at",{ascending:false});
   if(taskError)throw taskError;
   const myTasks=(tasks||[]).filter(t=>(!t.assigned_to||t.assigned_to===user.id)&&(!t.assigned_role||t.assigned_role===activeRole));
@@ -585,11 +613,12 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   if(!people.length)addEmpty($("competitionPublicIndividualRanking"),"Individual rankings appear after teacher evaluation.");
   for(const [i,p] of people.entries()){
    const row=el("article","competition-score-row");
-   row.append(el("b","",(i+1)+". "+(p.full_name||"Student")+" · "+p.team_name+" · "+p.evaluated_decisions+" evaluated decisions"),
+   row.append(el("b","",(i+1)+". "+(p.full_name||"Student")+" · "+p.team_name),
+    el("small","",p.evaluated_decisions+" decisions + "+p.evaluated_tasks+" case tasks graded"),
     el("strong","",Number(p.average_score).toFixed(1)+"/100"));
    $("competitionPublicIndividualRanking").append(row);
   }
- }
+ } }
 
  async function initialize(session){
   if(!session?.user){root.hidden=true;return;}
