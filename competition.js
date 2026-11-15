@@ -673,7 +673,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  });
  $("competitionTaskPackButton").addEventListener("click",async()=>{
   const btn=$("competitionTaskPackButton");btn.disabled=true;
-  try{const {data,error}=await db.rpc("create_competition_standard_task_pack",{p_competition_id:activeCompetition.id});if(error)throw error;say(data+" role-specific tasks created across all teams.",true);await loadCompetition();}catch(err){say(err.message);btn.disabled=false;}
+  try{const {data,error}=await db.rpc("create_competition_standard_task_pack",{p_competition_id:activeCompetition.id});if(error)throw error;say(data+" individual role case tasks created across all teams.",true);await loadCompetition();}catch(err){say(err.message);btn.disabled=false;}
  });
  $("competitionTaskForm").addEventListener("submit",async e=>{
   e.preventDefault();const btn=$("competitionTaskButton");btn.disabled=true;
