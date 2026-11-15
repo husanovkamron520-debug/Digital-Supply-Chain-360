@@ -32,6 +32,7 @@ Then apply the current competition refinements in this order:
 23. `competition_task_scoring_and_combined_individual_grades.sql` — adds teacher-scored case submissions, role-to-student grade attribution, and an individual leaderboard combining evaluated case tasks with evaluated operational decisions.
 24. `competition_case_pack_precision_clarification.sql` — clarifies warehouse inbound/outbound timing and day-by-day overflow-cost comparison, supplier fill/defect calculations, procurement order quantity formula and transport trip/penalty cost assumptions.
 25. `competition_task_review_requires_score.sql` — blocks unscored task approval and adds a database constraint requiring every approved case submission to have a numeric grade.
+26. `competition_task_finalization_guard.sql` — prevents competition completion until the advanced role case pack exists and every task is approved with a numeric grade.
 
 ## Historical/intermediate patches
 
