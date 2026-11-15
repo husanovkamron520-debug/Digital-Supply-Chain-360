@@ -322,7 +322,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    const evidence=p.decisionEvaluated+" decision(s) + "+p.taskEvaluated+" case task(s) graded";
    const submitted=p.decisionSubmitted+" decision(s) + "+p.taskSubmitted+" task(s) submitted";
    const split="Decision avg "+(p.decisionAverage===null?"—":p.decisionAverage.toFixed(1))+" · Case avg "+(p.taskAverage===null?"—":p.taskAverage.toFixed(1))+" · 50/50";
-   const row=el("article","competition-score-row");row.append(el("b","",(index+1)+". "+p.name+" · "+evidence),el("small","",split),el("small","",submitted),el("strong","",p.average.toFixed(1)+"/100"));
+   const row=el("article","competition-score-row");row.append(el("b","",(index+1)+". "+p.name+" · "+evidence),el("small","",split),el("small","",submitted),el("strong","",p.decisionAverage!==null&&p.taskAverage!==null?p.average.toFixed(1)+"/100":"In progress"));
    $("competitionIndividualRanking").append(row);
   }
     const {data:clock,error:clockError}=await db.from("competition_simulation_clock").select("current_round,round_limit,virtual_now").eq("competition_id",activeCompetition.id).maybeSingle();
@@ -633,7 +633,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    row.append(el("b","",(i+1)+". "+(p.full_name||"Student")+" · "+p.team_name),
     el("small","", "Decision avg "+(p.decision_average===null?"—":Number(p.decision_average).toFixed(1))+" · Case avg "+(p.task_average===null?"—":Number(p.task_average).toFixed(1))+" · 50/50"),
     el("small","",p.evaluated_decisions+" decisions + "+p.evaluated_tasks+" case tasks graded"),
-    el("strong","",Number(p.average_score).toFixed(1)+"/100"));
+    el("strong","",p.decision_average!==null&&p.task_average!==null?Number(p.average_score).toFixed(1)+"/100":"In progress"));
    $("competitionPublicIndividualRanking").append(row);
   }
  }
