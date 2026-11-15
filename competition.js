@@ -105,6 +105,8 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   ]);
   for(const e of [teamError,studentError,taskError,decisionError])if(e)throw e;
   const teamRows=teams||[],studentRows=students||[],taskRows=tasks||[],decisionRows=decisions||[];
+  const recommendedTeamCount=Math.max(2,Math.min(4,Math.floor(studentRows.length/5)));
+  $("competitionTeamCount").value=String(recommendedTeamCount);
   $("competitionTeams").replaceChildren();
   let assignedStudentCount=0;const teamSizes=[];let allTeamsReady=teamRows.length>=2&&teamRows.length<=4;
   const coreRoles=["procurement","supplier","manufacturer","warehouse","transport"];
@@ -290,10 +292,12 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   $("competitionStartButton").disabled=!readyToStart;
   setHidden("competitionPauseButton",!["active","paused"].includes(activeCompetition.status));
   $("competitionPauseButton").textContent=activeCompetition.status==="paused"?"Resume competition":"Pause competition";
-  $("competitionAutoSetupButton").disabled=!draft||teamRows.length>0;
+  $("competitionAutoSetupButton").disabled=!draft||teamRows.length>0||studentRows.length<10;
   setHidden("competitionManualTeamForm",!draft||teamRows.length>=4);
   if(!draft){$("competitionSetupNote").textContent="Teams are locked after the competition starts."; }
-  else $("competitionSetupNote").textContent="Create teams and assign students. Each team needs at least 5 students and all 5 core roles before you can start.";
+  else $("competitionSetupNote").textContent=studentRows.length<10
+   ?"Only "+studentRows.length+" students are enrolled. At least 10 are required to create two valid teams."
+   :"Recommended setup: "+recommendedTeamCount+" teams for "+studentRows.length+" enrolled students. Each team needs at least 5 students and all 5 core roles.";
  }
 
  async function renderStudentCompetition(){
