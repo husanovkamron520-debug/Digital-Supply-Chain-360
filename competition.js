@@ -323,11 +323,16 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   setHidden("competitionAdvanceRound",activeCompetition.status!=="active");
   $("competitionAdvanceRound").disabled=!clock||clock.current_round>=clock.round_limit;
   const pendingDecisionCount=decisionRows.filter(d=>d.score===null).length;
+  const pendingTaskCount=taskRows.filter(task=>task.status!=="approved"||task.score===null||task.score===undefined).length;
   setHidden("competitionCompleteButton",activeCompetition.status!=="active"||!clock||clock.current_round<clock.round_limit);
-  $("competitionCompleteButton").disabled=pendingDecisionCount>0;
-  $("competitionCompleteButton").textContent=pendingDecisionCount
-   ?"Evaluate "+pendingDecisionCount+" pending decision(s) first"
-   :"Complete competition & finalise results";
+  $("competitionCompleteButton").disabled=pendingDecisionCount>0||pendingTaskCount>0||taskRows.length===0;
+  $("competitionCompleteButton").textContent=taskRows.length===0
+   ?"Generate role case tasks first"
+   :pendingDecisionCount>0
+    ?"Evaluate "+pendingDecisionCount+" pending decision(s) first"
+    :pendingTaskCount>0
+     ?"Grade or request resubmission for "+pendingTaskCount+" case task(s)"
+     :"Complete competition & finalise results";
   const draft=activeCompetition.status==="draft";
   setHidden("competitionAutoSetup",!draft||teamRows.length>0);
   setHidden("competitionManualTeamForm",!draft);
