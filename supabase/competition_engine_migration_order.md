@@ -34,6 +34,7 @@ Then apply the current competition refinements in this order:
 25. `competition_task_review_requires_score.sql` — blocks unscored task approval and adds a database constraint requiring every approved case submission to have a numeric grade.
 26. `competition_task_finalization_guard.sql` — prevents competition completion until the advanced role case pack exists and every task is approved with a numeric grade.
 27. `competition_finalization_requires_all_role_tasks.sql` — additionally requires every team to have all five core role tasks before finalization.
+28. `competition_individual_role_case_tasks.sql` — creates one separately assigned case submission per student, including duplicate role holders in teams of six or seven.
 
 ## Historical/intermediate patches
 
