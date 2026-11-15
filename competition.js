@@ -26,6 +26,27 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  function addEmpty(host,message){host.replaceChildren(el("p","empty-state",message));}
  function setHidden(id,value){$(id).hidden=value;}
 
+ function renderLiveChallenges(challenges){
+  const host=$("competitionLiveChallenges");if(!host)return;host.replaceChildren();
+  if(!challenges.length){addEmpty(host,"No live exceptions. Complete a preventive risk review before the next round.");return;}
+  for(const challenge of challenges.slice(0,4)){
+   const card=el("article","competition-challenge-card");
+   const head=el("div","competition-challenge-head");
+   head.append(el("b","",challenge.title),el("span","competition-challenge-severity",challenge.severity));
+   card.append(head,el("p","",challenge.prompt));
+   if(challenge.evidence)card.append(el("small","",challenge.evidence));
+   const btn=el("button","secondary-button","Use in decision");btn.type="button";
+   btn.addEventListener("click",()=>{
+    $("competitionDecisionDomain").value=challenge.domain;
+    $("competitionDecisionType").value=challenge.title.slice(0,80);
+    $("competitionDecisionRationale").placeholder="Address this live exception: "+challenge.prompt;
+    say("Live challenge added to your decision form.",true);
+    $("competitionDecisionForm").scrollIntoView({behavior:"smooth",block:"start"});
+   });
+   card.append(btn);host.append(card);
+  }
+ }
+
  async function loadClassrooms(){
   if(isTeacher){
    const {data,error}=await db.from("classrooms").select("id,name").eq("teacher_id",user.id).order("created_at",{ascending:false});
@@ -383,6 +404,78 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   const productionSubmit=$("competitionProductionForm").querySelector("button");
   if(productionSubmit)productionSubmit.disabled=remainingProductionCapacity===0||!canPlan;
   const m=metricResult.data,suppliers=supplierResult.data||[],inventory=inventoryResult.data||[],pos=poResult.data||[],orders=orderResult.data||[],shipments=shipmentResult.data||[];
+  const virtualNow=new Date(clockResult.data.virtual_now);
+  const liveChallenges=[];
+  const addChallenge=(severity,title,domain,prompt,evidence)=>liveChallenges.push({severity,title,domain,prompt,evidence,rank:severity==="CRITICAL"?3:severity==="HIGH"?2:1});
+  const remainingForOrder=order=>Math.max(0,Number(order.quantity)-shipments.filter(s=>s.order_id===order.id&&s.status!=="cancelled").reduce((sum,s)=>sum+Number(s.quantity),0));
+  if(activeRole==="warehouse"){
+   for(const item of inventory.filter(x=>Number(x.quantity)<=Number(x.reorder_level)).slice(0,3)){
+    addChallenge(Number(item.quantity)===0?"CRITICAL":"HIGH","Replenishment exception · "+item.item_name,"inventory",
+     "Available stock is "+item.quantity+" units against a reorder point of "+item.reorder_level+". Calculate the replenishment gap, inventory position including open POs, and the service risk before deciding whether to expedite or wait.",
+     "SKU "+item.sku+" · "+item.quantity+" on hand · reorder at "+item.reorder_level);
+   }
+   for(const po of pos.filter(x=>["placed","partially_received"].includes(x.status)).slice(0,2)){
+    const available=new Date(po.available_at||po.expected_at),days=(available-virtualNow)/86400000;
+    if(days<=3){
+     addChallenge(days<=0?"HIGH":"MEDIUM","Inbound receipt control · "+po.po_number,"inventory",
+      "Purchase order "+po.po_number+" has "+(po.quantity-po.received_quantity)+" units outstanding. Availability is "+(days<=0?"reached":"in "+Math.max(0,days).toFixed(1)+" virtual days")+". Decide the receiving sequence, verify quantity and protect put-away capacity.",
+      po.item_name+" · "+po.received_quantity+"/"+po.quantity+" received");
+    }
+   }
+   for(const item of inventory.filter(x=>Number(x.reorder_level)>0&&Number(x.quantity)>Number(x.reorder_level)*2.5).slice(0,1)){
+    addChallenge("MEDIUM","Excess inventory exposure · "+item.item_name,"inventory",
+     "Stock is above 2.5 times its reorder point. Quantify the cash tied up and holding-cost exposure, then recommend a controlled reduction without creating a stockout.",
+     "SKU "+item.sku+" · "+item.quantity+" units · reorder point "+item.reorder_level);
+   }
+  }
+  if(["procurement","supplier"].includes(activeRole)){
+   for(const supplier of suppliers.filter(x=>x.active&&(Number(x.reliability_score)<92||Number(x.lead_time_days)>Number(x.base_lead_time_days)||Number(x.unit_cost)>Number(x.base_unit_cost))).slice(0,3)){
+    addChallenge(Number(supplier.reliability_score)<85?"CRITICAL":"HIGH","Supplier performance variance · "+supplier.name,"procurement",
+     "Current supplier terms differ from baseline. Compare price, lead time and reliability; quantify the service exposure and propose an SLA recovery or alternative-source plan without improving every term for free.",
+     "Reliability "+supplier.reliability_score+"% · lead time "+supplier.lead_time_days+" days · unit cost "+Number(supplier.unit_cost).toFixed(2));
+   }
+  }
+  if(activeRole==="manufacturer"){
+   const raw=inventory.filter(x=>x.item_type==="raw_material").reduce((sum,x)=>sum+Number(x.quantity),0);
+   const finished=inventory.filter(x=>x.item_type==="finished_goods").reduce((sum,x)=>sum+Number(x.quantity),0);
+   const openDemand=orders.filter(x=>!["delivered","cancelled"].includes(x.status)).reduce((sum,x)=>sum+remainingForOrder(x),0);
+   const productionNeed=Math.max(0,openDemand-finished);
+   if(productionNeed>raw){
+    addChallenge("CRITICAL","Raw-material constraint","production",
+     "Open unshipped demand exceeds available raw material by "+(productionNeed-raw)+" units. Calculate feasible good output, protect safety stock and coordinate a recovery plan with Procurement and Warehouse.",
+     "Open demand "+openDemand+" · finished stock "+finished+" · raw material "+raw);
+   }
+   if(productionNeed>remainingProductionCapacity){
+    addChallenge("HIGH","Production capacity bottleneck","production",
+     "Remaining round capacity is "+remainingProductionCapacity+" units against estimated net production need of "+productionNeed+". Build a feasible schedule and quantify the service impact of overtime, partial fulfilment or reprioritisation.",
+     "Round "+clockResult.data.current_round+" · capacity remaining "+remainingProductionCapacity);
+   }
+  }
+  if(activeRole==="transport"){
+   for(const order of orders.filter(x=>!["delivered","cancelled"].includes(x.status)).map(order=>({...order,remaining:remainingForOrder(order),days:(new Date(order.due_at)-virtualNow)/86400000})).filter(x=>x.remaining>0&&x.days<=3).sort((a,b)=>a.days-b.days).slice(0,3)){
+    addChallenge(order.days<0?"CRITICAL":"HIGH","Customer due-date exposure · "+order.order_number,"transport",
+     "There are "+order.remaining+" units still to dispatch and the due date is "+(order.days<0?Math.abs(order.days).toFixed(1)+" virtual days overdue":"in "+order.days.toFixed(1)+" virtual days")+". Compare route speed, cost and load capacity; propose a dispatch sequence that minimises expected late units.",
+     order.item_name+" · "+order.remaining+" units remaining");
+   }
+   for(const shipment of shipments.filter(x=>x.status==="delayed"||(x.status==="in_transit"&&new Date(x.eta)<virtualNow)).slice(0,2)){
+    addChallenge("CRITICAL","Shipment exception · "+shipment.destination,"transport",
+     "Shipment ETA has passed or the shipment is marked delayed. Assess customer impact, escalation timing and recovery routing; document who must be notified and what evidence confirms delivery.",
+     shipment.quantity+" units · "+shipment.carrier+" · ETA "+new Date(shipment.eta).toLocaleDateString());
+   }
+  }
+  if(activeRole==="finance"&&Number(m.cash_balance)<Number(m.starting_capital||100000)*.25){
+   addChallenge("HIGH","Working-capital pressure","finance",
+    "Cash balance has fallen below 25% of starting capital. Analyse outstanding purchase commitments, production costs and receivables; recommend which spend to defer without breaking customer service.",
+    "Cash balance "+Number(m.cash_balance).toFixed(2));
+  }
+  if(!liveChallenges.length){
+   const domain={warehouse:"inventory",procurement:"procurement",supplier:"procurement",manufacturer:"production",transport:"transport",finance:"finance",customer:"customer_service",retailer:"customer_service",operations:"strategy",analyst:"strategy"}[activeRole]||"strategy";
+   addChallenge("MEDIUM","Preventive control review",domain,
+    "No critical threshold exception is active in your team's current data. Identify the most likely supply-chain failure over the next round, quantify its probability or exposure, and recommend one preventive control with a measurable trigger.",
+    "Round "+clockResult.data.current_round+" · current live team data");
+  }
+  liveChallenges.sort((a,b)=>b.rank-a.rank);
+  renderLiveChallenges(liveChallenges);
   const metricCards=[
    ["Cash balance",Number(m.cash_balance).toLocaleString(undefined,{maximumFractionDigits:0})],
    ["OTIF",m.service_score===null?"—":Number(m.service_score).toFixed(1)+"%"],
