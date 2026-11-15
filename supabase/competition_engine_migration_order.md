@@ -29,6 +29,7 @@ Then apply the current competition refinements in this order:
 20. `competition_member_reassignment.sql` — allows teachers to correct a student's team and operational role before the competition starts.
 21. `competition_final_evaluation_guard.sql` — prevents finalisation while any submitted student decision remains unevaluated.
 22. `competition_advanced_case_pack.sql` — replaces the short generic role tasks with quantitative, multi-constraint case briefs for Procurement, Supplier, Manufacturer, Warehouse and Transport, each with explicit deliverables and a 100-point rubric.
+23. `competition_task_scoring_and_combined_individual_grades.sql` — adds teacher-scored case submissions, role-to-student grade attribution, and an individual leaderboard combining evaluated case tasks with evaluated operational decisions.
 
 ## Historical/intermediate patches
 
