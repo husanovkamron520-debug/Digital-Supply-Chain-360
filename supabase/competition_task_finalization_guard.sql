@@ -49,6 +49,18 @@ begin
   if not exists(select 1 from public.competition_tasks where competition_id=p_competition_id) then
    raise exception 'Generate the advanced role case pack before finalising the competition';
   end if;
+  if exists(
+   select 1 from public.competition_teams t
+   where t.competition_id=p_competition_id and (
+    not exists(select 1 from public.competition_tasks x where x.competition_id=p_competition_id and x.team_id=t.id and x.assigned_role='procurement')
+    or not exists(select 1 from public.competition_tasks x where x.competition_id=p_competition_id and x.team_id=t.id and x.assigned_role='supplier')
+    or not exists(select 1 from public.competition_tasks x where x.competition_id=p_competition_id and x.team_id=t.id and x.assigned_role='manufacturer')
+    or not exists(select 1 from public.competition_tasks x where x.competition_id=p_competition_id and x.team_id=t.id and x.assigned_role='warehouse')
+    or not exists(select 1 from public.competition_tasks x where x.competition_id=p_competition_id and x.team_id=t.id and x.assigned_role='transport')
+   )
+  ) then
+   raise exception 'Every team must have all five role case tasks before finalising the competition';
+  end if;
   if exists(select 1 from public.competition_tasks where competition_id=p_competition_id and (status<>'approved' or score is null)) then
    raise exception 'Grade every role case task before finalising the competition';
   end if;
