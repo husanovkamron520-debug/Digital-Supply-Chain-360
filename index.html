@@ -138,6 +138,15 @@
           <span class="muted-label">MUSOBAQA TIZIMI</span>
         </div>
         <p class="competition-access-note" id="competitionAccessNote">Loading competition permissions…</p>
+        <div class="telegram-link-card">
+          <div><h3>Telegram xabarnomalari</h3><p>SupplyChain14 akkauntingizni Telegram bilan xavfsiz ulang. Kod 10 daqiqa amal qiladi.</p></div>
+          <button class="secondary-button" id="telegramLinkGenerateButton" type="button">Telegramni ulash kodini yaratish</button>
+          <div id="telegramLinkResult" class="telegram-link-result" hidden role="status" aria-live="polite">
+            <strong id="telegramLinkCode"></strong>
+            <p>Botga qayting va <b>/link KOD</b> yuboring. Kodni boshqa odamga bermang.</p>
+            <button class="copy-code" id="telegramLinkCopyButton" type="button">Kodni nusxalash</button>
+          </div>
+        </div>
         <div class="competition-toolbar">
           <div><label for="competitionClassSelect">O‘quv guruhi</label><select id="competitionClassSelect"></select></div>
           <div><label for="competitionSelect">Musobaqa</label><select id="competitionSelect"></select></div>
