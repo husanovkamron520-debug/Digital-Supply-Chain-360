@@ -26,6 +26,28 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  function addEmpty(host,message){host.replaceChildren(el("p","empty-state",message));}
  function setHidden(id,value){$(id).hidden=value;}
 
+ const telegramGenerateButton=$("telegramLinkGenerateButton");
+ if(telegramGenerateButton){
+  telegramGenerateButton.addEventListener("click",async()=>{
+   telegramGenerateButton.disabled=true;
+   try{
+    const bytes=crypto.getRandomValues(new Uint8Array(24));
+    const code=Array.from(bytes,b=>b.toString(16).padStart(2,"0")).join("");
+    const {data,error}=await db.rpc("create_telegram_link_code",{p_code:code});
+    if(error)throw error;
+    $("telegramLinkCode").textContent=code;
+    $("telegramLinkResult").hidden=false;
+    telegramGenerateButton.textContent="Yangi kod yaratish";
+    say("Bir martalik ulash kodi tayyor. Uni botga yuboring.",true);
+   }catch(err){say("Telegram kodini yaratib bo‘lmadi: "+err.message);}
+   finally{telegramGenerateButton.disabled=false;}
+  });
+  $("telegramLinkCopyButton").addEventListener("click",async()=>{
+   try{await navigator.clipboard.writeText($("telegramLinkCode").textContent);$("telegramLinkCopyButton").textContent="Nusxalandi ✓";}
+   catch(err){say("Kodni bosib ushlab nusxalashingiz mumkin.");}
+  });
+ }
+
  function renderLiveChallenges(challenges){
   const host=$("competitionLiveChallenges");if(!host)return;host.replaceChildren();
   if(!challenges.length){addEmpty(host,"No live exceptions. Complete a preventive risk review before the next round.");return;}
