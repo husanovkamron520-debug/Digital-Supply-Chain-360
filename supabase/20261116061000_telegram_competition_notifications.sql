@@ -12,7 +12,7 @@ create table if not exists private.telegram_notification_config (
   secret_hash bytea not null,
   updated_at timestamptz not null default now()
 );
-insert into private.telegram_notification_config(singleton,secret_hash) values(true,extensions.digest(current_setting('app.telegram_notification_secret',true),'sha256'))
+insert into private.telegram_notification_config(singleton,secret_hash) values(true,extensions.digest('migration-placeholder-not-a-live-secret','sha256'))
 on conflict(singleton) do update set secret_hash=excluded.secret_hash,updated_at=now();
 alter table private.telegram_notification_queue enable row level security;
 alter table private.telegram_notification_config enable row level security;
