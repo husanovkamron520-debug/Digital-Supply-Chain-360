@@ -89,6 +89,18 @@ DECLARE
   v_guard_class uuid;
   v_guard_comp uuid;
   v_rejected boolean;
+  v_task record;
+  v_member record;
+  v_decision record;
+  v_task_pack_count integer;
+  v_submitted integer;
+  v_graded integer;
+  v_decision_count integer;
+  v_leaderboard_count integer;
+  v_min_individual_score numeric;
+  v_max_individual_score numeric;
+  v_round integer;
+  v_final_status text;
 BEGIN
   FOR v_case IN
     SELECT * FROM (VALUES (15, 3), (16, 3), (19, 3), (20, 4)) AS scenarios(student_count, team_count)
@@ -153,6 +165,154 @@ BEGIN
     IF v_bad_role_teams <> 0 THEN
       RAISE EXCEPTION '% teams lack one or more of the five core roles',
         v_bad_role_teams;
+    END IF;
+
+    -- Full individual assessment lifecycle on the 15-student cohort.
+    IF v_case.student_count = 15 THEN
+      PERFORM public.set_competition_status(v_competition_id, 'active');
+      v_task_pack_count := public.create_competition_standard_task_pack(v_competition_id);
+      IF v_task_pack_count <> 15 THEN
+        RAISE EXCEPTION 'Expected 15 individually assigned case tasks, got %', v_task_pack_count;
+      END IF;
+
+      v_submitted := 0;
+      FOR v_task IN
+        SELECT id, assigned_to
+        FROM public.competition_tasks
+        WHERE competition_id = v_competition_id
+        ORDER BY assigned_to
+      LOOP
+        PERFORM set_config('request.jwt.claim.sub', v_task.assigned_to::text, true);
+        PERFORM set_config(
+          'request.jwt.claims',
+          jsonb_build_object(
+            'sub', v_task.assigned_to::text,
+            'role', 'authenticated',
+            'aud', 'authenticated'
+          )::text,
+          true
+        );
+        PERFORM public.submit_competition_task(
+          v_task.id,
+          jsonb_build_object(
+            'summary', 'Virtual QA student case submission',
+            'analysis', 'Calculated the relevant trade-offs and documented a feasible operational recommendation.',
+            'assumptions', jsonb_build_array('Synthetic QA data only'),
+            'result', 'Submitted successfully through the student RPC'
+          )
+        );
+        v_submitted := v_submitted + 1;
+      END LOOP;
+      IF v_submitted <> 15 THEN
+        RAISE EXCEPTION 'Expected 15 task submissions, got %', v_submitted;
+      END IF;
+
+      -- Restore teacher identity for grading and simulation control.
+      PERFORM set_config('request.jwt.claim.sub', md5('supplychain14-qa-teacher')::uuid::text, true);
+      PERFORM set_config(
+        'request.jwt.claims',
+        jsonb_build_object(
+          'sub', md5('supplychain14-qa-teacher')::uuid::text,
+          'role', 'authenticated',
+          'aud', 'authenticated'
+        )::text,
+        true
+      );
+
+      v_graded := 0;
+      FOR v_task IN
+        SELECT id FROM public.competition_tasks
+        WHERE competition_id = v_competition_id
+        ORDER BY id
+      LOOP
+        PERFORM public.evaluate_competition_task(
+          v_task.id, 80, 'QA rubric: correct submission workflow and feedback recorded.'
+        );
+        v_graded := v_graded + 1;
+      END LOOP;
+      IF v_graded <> 15 THEN
+        RAISE EXCEPTION 'Expected 15 graded case tasks, got %', v_graded;
+      END IF;
+
+      v_decision_count := 0;
+      FOR v_member IN
+        SELECT student_id, team_id
+        FROM public.competition_team_members
+        WHERE competition_id = v_competition_id
+        ORDER BY student_id
+      LOOP
+        PERFORM set_config('request.jwt.claim.sub', v_member.student_id::text, true);
+        PERFORM set_config(
+          'request.jwt.claims',
+          jsonb_build_object(
+            'sub', v_member.student_id::text,
+            'role', 'authenticated',
+            'aud', 'authenticated'
+          )::text,
+          true
+        );
+        PERFORM public.record_competition_decision(
+          v_competition_id,
+          v_member.team_id,
+          'strategy',
+          'virtual_qa_decision',
+          'balanced_option',
+          'Virtual student selected a balanced option after evaluating cost, service and operational risk.',
+          '{"qa":true,"source":"synthetic"}'::jsonb
+        );
+        v_decision_count := v_decision_count + 1;
+      END LOOP;
+      IF v_decision_count <> 15 THEN
+        RAISE EXCEPTION 'Expected 15 student decisions, got %', v_decision_count;
+      END IF;
+
+      PERFORM set_config('request.jwt.claim.sub', md5('supplychain14-qa-teacher')::uuid::text, true);
+      PERFORM set_config(
+        'request.jwt.claims',
+        jsonb_build_object(
+          'sub', md5('supplychain14-qa-teacher')::uuid::text,
+          'role', 'authenticated',
+          'aud', 'authenticated'
+        )::text,
+        true
+      );
+
+      FOR v_decision IN
+        SELECT id FROM public.competition_decisions
+        WHERE competition_id = v_competition_id
+        ORDER BY id
+      LOOP
+        PERFORM public.evaluate_competition_decision(
+          v_decision.id, 70, 'QA decision evaluation: score and feedback saved.'
+        );
+      END LOOP;
+
+      SELECT count(*), min(average_score), max(average_score)
+        INTO v_leaderboard_count, v_min_individual_score, v_max_individual_score
+      FROM public.get_competition_individual_leaderboard(v_competition_id);
+
+      IF v_leaderboard_count <> 15
+         OR v_min_individual_score <> 75
+         OR v_max_individual_score <> 75 THEN
+        RAISE EXCEPTION
+          'Individual 50/50 grading mismatch: students %, score range %..%',
+          v_leaderboard_count, v_min_individual_score, v_max_individual_score;
+      END IF;
+
+      FOR v_round IN 1..4 LOOP
+        PERFORM public.competition_advance_round(v_competition_id);
+      END LOOP;
+
+      PERFORM public.set_competition_status(v_competition_id, 'completed');
+      SELECT status INTO v_final_status
+      FROM public.competitions
+      WHERE id = v_competition_id;
+
+      IF v_final_status <> 'completed' THEN
+        RAISE EXCEPTION 'Competition finalization failed; status is %', v_final_status;
+      END IF;
+
+      RAISE NOTICE 'PASS lifecycle tasks=15 submitted=15 graded=15 decisions=15 evaluated=15 individual_score=75 rounds=5 finalised=true';
     END IF;
 
     RAISE NOTICE 'PASS roster=% teams=% sizes=%..% role_coverage=5/5',
