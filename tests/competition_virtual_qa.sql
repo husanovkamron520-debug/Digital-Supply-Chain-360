@@ -43,6 +43,24 @@ FROM (VALUES (15), (16), (19), (20)) AS cohorts(cohort)
 CROSS JOIN LATERAL generate_series(1, cohort) AS students(student_no)
 ON CONFLICT (classroom_id, student_id) DO NOTHING;
 
+-- Prepare the minimum-roster rejection fixture with database-owner privileges;
+-- client roles intentionally cannot insert classroom_members directly.
+INSERT INTO public.classrooms (id, teacher_id, name, join_code)
+VALUES (
+  md5('supplychain14-qa-minimum-guard')::uuid,
+  md5('supplychain14-qa-teacher')::uuid,
+  'QA Minimum Roster Guard',
+  'QAGUARD'
+)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO public.classroom_members (classroom_id, student_id, operational_role)
+SELECT md5('supplychain14-qa-minimum-guard')::uuid,
+       md5('supplychain14-qa-student:' || n)::uuid,
+       'customer'
+FROM generate_series(1, 14) AS students(n)
+ON CONFLICT (classroom_id, student_id) DO NOTHING;
+
 SELECT set_config('qa.scenario', :'scenario', true);
 SELECT set_config('request.jwt.claim.sub', md5('supplychain14-qa-teacher')::uuid::text, true);
 SELECT set_config(
@@ -142,20 +160,9 @@ BEGIN
   END LOOP;
 
   -- Fourteen students cannot be split into three teams with five required roles each.
-  INSERT INTO public.classrooms (id, teacher_id, name, join_code)
-  VALUES (
-    md5('supplychain14-qa-minimum-guard')::uuid,
-    md5('supplychain14-qa-teacher')::uuid,
-    'QA Minimum Roster Guard',
-    'QAGUARD'
-  );
-  INSERT INTO public.classroom_members (classroom_id, student_id, operational_role)
-  SELECT md5('supplychain14-qa-minimum-guard')::uuid,
-         md5('supplychain14-qa-student:' || n)::uuid,
-         'customer'
-  FROM generate_series(1, 14) AS students(n);
-
-  v_guard_class := md5('supplychain14-qa-minimum-guard')::uuid;
+  SELECT id INTO v_guard_class
+  FROM public.classrooms
+  WHERE join_code = 'QAGUARD';
   v_guard_comp := public.create_competition(v_guard_class, 'QA minimum guard', '{}'::jsonb);
   v_rejected := false;
   BEGIN
