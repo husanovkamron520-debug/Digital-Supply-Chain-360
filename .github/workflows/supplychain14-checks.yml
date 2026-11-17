@@ -16,6 +16,8 @@ jobs:
           node-version: 22
       - name: Check competition UI JavaScript
         run: node --check competition.js
+      - name: Check authentication JavaScript module syntax
+        run: node --input-type=module --check < auth.js
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
