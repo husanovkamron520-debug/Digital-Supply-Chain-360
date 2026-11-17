@@ -227,9 +227,16 @@ form.addEventListener("submit", async (event) => {
       const full_name = nameInput.value.trim();
       let signupEmail = email;
       if (telegramRegistrationToken) {
-        const telegramUserId = new URLSearchParams(window.location.search).get("tg_user") || "";
-        if (!/^[1-9]\d{4,19}$/.test(telegramUserId) || !/^[a-fA-F0-9]{64}$/.test(telegramRegistrationToken)) {
+        if (!/^[a-fA-F0-9]{64}$/.test(telegramRegistrationToken)) {
           throw new Error("Telegram ro'yxatdan o'tish havolasi noto'g'ri. Botdan yangi havola oling.");
+        }
+        const {data: telegramUserId, error: identityError} = await supabase.rpc(
+          "get_telegram_registration_user_id",
+          {p_token: telegramRegistrationToken}
+        );
+        if (identityError) throw identityError;
+        if (!/^[1-9]\d{4,19}$/.test(String(telegramUserId || ""))) {
+          throw new Error("Telegram ro'yxatdan o'tish ma'lumoti topilmadi. Botdan yangi havola oling.");
         }
         // Supabase Auth requires an email-shaped identifier for password auth.
         // This reserved .invalid address is internal only and is never used for delivery.
