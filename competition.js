@@ -447,7 +447,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
     const answer=el("textarea","");answer.rows=3;answer.maxLength=10000;answer.placeholder="Describe your work, calculations and evidence…";answer.required=true;
     const btn=el("button","primary-button","Submit task");btn.type="submit";
     form.append(answer,btn);
-    form.addEventListener("submit",async e=>{e.preventDefault();btn.disabled=true;try{const {error}=await db.rpc("submit_competition_task",{p_task_id:task.id,p_submission:{response:answer.value.trim(),role:activeRole,submitted_at:new Date().toISOString()}});if(error)throw error;say("Task submitted for review.",true);await loadCompetition();}catch(err){say(err.message);btn.disabled=false;}});
+    form.addEventListener("submit",async e=>{e.preventDefault();btn.disabled=true;try{const {error}=await db.rpc("submit_competition_task",{p_task_id:task.id,p_submission:{response:answer.value.trim(),role:activeRole,submitted_at:new Date().toISOString()}});if(error)throw error;say("Javob yuborildi. AI baholashi boshlanmoqda…",true);await loadCompetition();await requestAiGrade(task.id,null);}catch(err){say(err.message);btn.disabled=false;}});
     card.append(form);
    }else if(task.submission){
     card.append(el("pre","competition-submission",JSON.stringify(task.submission,null,2)));
