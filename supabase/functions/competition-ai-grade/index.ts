@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
 
   const { data: task, error: taskError } = await admin
     .from("competition_tasks")
-    .select("id,competition_id,team_id,classroom_id,assigned_to,assigned_role,title,description,status,submission,score,ai_graded_at")
+    .select("id,competition_id,team_id,classroom_id,assigned_to,assigned_role,title,description,status,submission,score,ai_graded_at,ai_grading_started_at")
     .eq("id", taskId)
     .maybeSingle();
   if (taskError) return json({ error: "Could not load the task." }, 500);
@@ -117,6 +117,12 @@ Deno.serve(async (req) => {
   if (task.ai_graded_at) {
     return json({ error: "This submission has already been AI-graded.", score: task.score }, 409);
   }
+  if (task.ai_grading_started_at) {
+    const started = new Date(task.ai_grading_started_at).getTime();
+    if (Number.isFinite(started) && Date.now() - started < 5 * 60 * 1000) {
+      return json({ error: "AI grading is already in progress. Please wait." }, 409);
+    }
+  }
 
   const { data: spec, error: specError } = await admin
     .from("competition_task_grading_specs")
@@ -132,6 +138,25 @@ Deno.serve(async (req) => {
 
   const studentSubmission = JSON.stringify(task.submission);
   if (studentSubmission.length > 12000) return json({ error: "Submission is too large." }, 413);
+
+  // Atomically claim this task so two rapid taps cannot trigger duplicate AI calls.
+  const staleBefore = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+  const { data: claim, error: claimError } = await admin
+    .from("competition_tasks")
+    .update({ ai_grading_started_at: new Date().toISOString() })
+    .eq("id", taskId)
+    .is("ai_graded_at", null)
+    .or("ai_grading_started_at.is.null,ai_grading_started_at.lt." + staleBefore)
+    .select("id")
+    .maybeSingle();
+  if (claimError) return json({ error: "Could not start AI grading safely." }, 500);
+  if (!claim) return json({ error: "AI grading is already running or this task was graded. Please refresh." }, 409);
+
+  const failAfterClaim = async (message: string, status: number) => {
+    await admin.from("competition_tasks").update({ ai_grading_started_at: null })
+      .eq("id", taskId).is("ai_graded_at", null);
+    return json({ error: message }, status);
+  };
 
   const systemPrompt = [
     "You are the SupplyChain14 case examiner.",
@@ -156,10 +181,10 @@ Deno.serve(async (req) => {
   let modelResponse: Response;
   try {
     modelResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(geminiKey)}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-goog-api-key": geminiKey },
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: systemPrompt }] },
           contents: [{ role: "user", parts: [{ text: userPrompt }] }],
@@ -171,12 +196,12 @@ Deno.serve(async (req) => {
       },
     );
   } catch {
-    return json({ error: "AI provider could not be reached. Please retry later." }, 502);
+    return await failAfterClaim("AI provider could not be reached. Please retry later.", 502);
   }
   if (!modelResponse.ok) {
     const providerBody = await modelResponse.text();
     console.error("Gemini grading error", modelResponse.status, providerBody.slice(0, 1200));
-    return json({ error: "AI grading provider returned an error. No grade was saved." }, 502);
+    return await failAfterClaim("AI grading provider returned an error. No grade was saved.", 502);
   }
 
   let generatedText = "";
@@ -185,22 +210,22 @@ Deno.serve(async (req) => {
     generatedText = responseData.candidates?.[0]?.content?.parts
       ?.map((part: { text?: string }) => part.text ?? "").join("") ?? "";
   } catch {
-    return json({ error: "AI returned an unreadable response. No grade was saved." }, 502);
+    return await failAfterClaim("AI returned an unreadable response. No grade was saved.", 502);
   }
 
   let grade: Record<string, unknown>;
   try { grade = parseModelJson(generatedText); }
-  catch { return json({ error: "AI returned invalid grading JSON. No grade was saved." }, 502); }
+  catch { return await failAfterClaim("AI returned invalid grading JSON. No grade was saved.", 502); }
 
   if (!Array.isArray(grade.criteria) || typeof grade.summary !== "string" ||
       !Array.isArray(grade.strengths) || !Array.isArray(grade.improvements) ||
       !Array.isArray(grade.flags)) {
-    return json({ error: "AI grading response is missing required fields. No grade was saved." }, 502);
+    return await failAfterClaim("AI grading response is missing required fields. No grade was saved.", 502);
   }
 
   const returned = grade.criteria as GradeCriterion[];
   if (returned.length !== criteria.length) {
-    return json({ error: "AI grading response does not match the rubric. No grade was saved." }, 502);
+    return await failAfterClaim("AI grading response does not match the rubric. No grade was saved.", 502);
   }
   const normalized: GradeCriterion[] = [];
   for (let i = 0; i < criteria.length; i++) {
@@ -210,7 +235,7 @@ Deno.serve(async (req) => {
         typeof actual.awarded_points !== "number" || !Number.isFinite(actual.awarded_points) ||
         actual.awarded_points < 0 || actual.awarded_points > expected.max_points ||
         typeof actual.evidence !== "string" || typeof actual.feedback !== "string") {
-      return json({ error: "AI grading result failed validation. No grade was saved." }, 502);
+      return await failAfterClaim("AI grading result failed validation. No grade was saved.", 502);
     }
     normalized.push({
       name: expected.name,
@@ -240,20 +265,25 @@ Deno.serve(async (req) => {
     ...normalized.map((x) => `${x.name}: ${x.awarded_points}/${x.max_points}. ${x.feedback}`),
   ].join("\n");
 
-  const { error: updateError } = await admin
+  const { data: savedTask, error: updateError } = await admin
     .from("competition_tasks")
     .update({
       score,
       feedback: feedback.slice(0, 8000),
       ai_grade: savedGrade,
       ai_graded_at: savedGrade.graded_at,
+      ai_grading_started_at: null,
       ai_model: model,
     })
     .eq("id", taskId)
-    .is("ai_graded_at", null);
-  if (updateError) {
+    .is("ai_graded_at", null)
+    .select("id")
+    .maybeSingle();
+  if (updateError || !savedTask) {
     console.error("Could not save AI grade", updateError);
-    return json({ error: "Could not save the AI grade." }, 500);
+    await admin.from("competition_tasks").update({ ai_grading_started_at: null })
+      .eq("id", taskId).is("ai_graded_at", null);
+    return json({ error: "Could not save the AI grade. Refresh and check whether another request completed it." }, 500);
   }
 
   return json({ task_id: taskId, score, grade: savedGrade });
