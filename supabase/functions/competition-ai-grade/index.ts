@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
 
   const { data: task, error: taskError } = await admin
     .from("competition_tasks")
-    .select("id,competition_id,team_id,classroom_id,assigned_to,assigned_role,title,description,status,submission,score,ai_graded_at,ai_grading_started_at")
+    .select("id,competition_id,team_id,classroom_id,assigned_to,assigned_role,title,description,status,submission,score,ai_grade,ai_graded_at,ai_grading_started_at")
     .eq("id", taskId)
     .maybeSingle();
   if (taskError) return json({ error: "Could not load the task." }, 500);
@@ -125,7 +125,7 @@ Deno.serve(async (req) => {
     return json({ error: "Submit the task before requesting AI grading." }, 409);
   }
   if (task.ai_graded_at) {
-    return json({ error: "This submission has already been AI-graded.", score: task.score }, 409);
+    return json({ error: "This submission has already been AI-graded.", score: task.ai_grade?.score ?? task.score }, 409);
   }
   if (task.ai_grading_started_at) {
     const started = new Date(task.ai_grading_started_at).getTime();
@@ -268,12 +268,6 @@ Deno.serve(async (req) => {
     graded_at: new Date().toISOString(),
     status: "ai_graded_pending_teacher_review",
   };
-  const feedback = [
-    `AI dastlabki bahosi: ${score}/100.`,
-    savedGrade.summary,
-    ...normalized.map((x) => `${x.name}: ${x.awarded_points}/${x.max_points}. ${x.feedback}`),
-  ].join("\n");
-
   const { data: savedTask, error: updateError } = await admin
     .from("competition_tasks")
     .update({
