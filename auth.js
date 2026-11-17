@@ -226,7 +226,7 @@ form.addEventListener("submit", async (event) => {
       let signupEmail = email;
       if (telegramRegistrationToken) {
         const telegramUserId = new URLSearchParams(window.location.search).get("tg_user") || "";
-        if (!/^[1-9]\\d{4,19}$/.test(telegramUserId) || !/^[a-fA-F0-9]{64}$/.test(telegramRegistrationToken)) {
+        if (!/^[1-9]\d{4,19}$/.test(telegramUserId) || !/^[a-fA-F0-9]{64}$/.test(telegramRegistrationToken)) {
           throw new Error("Telegram ro'yxatdan o'tish havolasi noto'g'ri. Botdan yangi havola oling.");
         }
         // Supabase Auth requires an email-shaped identifier for password auth.
