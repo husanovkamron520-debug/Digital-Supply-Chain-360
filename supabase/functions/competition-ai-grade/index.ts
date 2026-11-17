@@ -277,8 +277,6 @@ Deno.serve(async (req) => {
   const { data: savedTask, error: updateError } = await admin
     .from("competition_tasks")
     .update({
-      score,
-      feedback: feedback.slice(0, 8000),
       ai_grade: savedGrade,
       ai_graded_at: savedGrade.graded_at,
       ai_grading_started_at: null,
