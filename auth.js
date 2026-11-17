@@ -8,7 +8,13 @@ const subtitle = document.querySelector("#authSubtitle");
 const nameInput = document.querySelector("#authName");
 const nameLabel = document.querySelector("#authNameLabel");
 const emailInput = document.querySelector("#authEmail");
-const passwordInput = document.querySelector("#authPassword");
+const passwordInput = document.querySelector("#authParol");
+const magicLinkButton = document.querySelector("#authMagicLink");
+const telegramConfirmPanel = document.querySelector("#telegramRegistrationConfirm");
+const telegramConfirmButton = document.querySelector("#telegramRegistrationConfirmButton");
+const telegramRegistrationToken = new URLSearchParams(window.location.search).get("tg_reg");
+let telegramRegistrationCompleted = false;
+let telegramConfirmationBusy = false;
 const submit = document.querySelector("#authSubmit");
 const message = document.querySelector("#authMessage");
 const switchText = document.querySelector("#authSwitchText");
@@ -33,6 +39,7 @@ function setMode(nextMode) {
   nameInput.required = registering;
   passwordInput.autocomplete = registering ? "new-password" : "current-password";
   submit.textContent = registering ? "Create student account" : "Sign in";
+  if (magicLinkButton) magicLinkButton.hidden = registering;
   switchText.textContent = registering ? "Already have an account?" : "New to the platform?";
   switchButton.textContent = registering ? "Sign in" : "Create student account";
   showMessage("");
@@ -41,6 +48,7 @@ function showApp(user, profile) {
   const fullName = profile?.full_name || user.user_metadata?.full_name || user.email?.split("@")[0] || "User";
   const role = profile?.platform_role || "student";
   gate.hidden = true;
+  if (telegramConfirmPanel) telegramConfirmPanel.hidden = true;
   appShell?.classList.remove("auth-locked");
   document.querySelector("#userRole").textContent = role.toUpperCase();
   document.querySelector("#userAvatar").textContent = fullName.trim().charAt(0).toUpperCase();
@@ -106,6 +114,15 @@ async function handleSession(session) {
     gate.hidden = false;
     return;
   }
+  if (telegramRegistrationToken && !telegramRegistrationCompleted) {
+    gate.hidden = false;
+    appShell?.classList.add("auth-locked");
+    form.hidden = true;
+    document.querySelector(".auth-switch").hidden = true;
+    if (magicLinkButton) magicLinkButton.hidden = true;
+    if (telegramConfirmPanel) telegramConfirmPanel.hidden = false;
+    return;
+  }
   try {
     const profile = await loadProfile(session.user);
     showApp(session.user, profile);
@@ -132,6 +149,59 @@ if (!SUPABASE_URL.startsWith("https://") || SUPABASE_ANON_KEY.startsWith("PASTE_
 }
 
 switchButton.addEventListener("click", () => setMode(mode === "login" ? "register" : "login"));
+
+if (magicLinkButton) {
+  magicLinkButton.addEventListener("click", async () => {
+    if (!supabase) return;
+    const email = emailInput.value.trim();
+    if (!email) {
+      showMessage("Avval email manzilingizni kiriting.");
+      emailInput.focus();
+      return;
+    }
+    magicLinkButton.disabled = true;
+    try {
+      const {error} = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          shouldCreateUser: false,
+          emailRedirectTo: "https://digital-supply-chain-360.husanovkamron520.workers.dev/"
+        }
+      });
+      if (error) throw error;
+      showMessage("Kirish havolasi emailingizga yuborildi. Inbox yoki Spam papkasini tekshiring.", true);
+    } catch (error) {
+      showMessage(error.message || "Email havolasini yuborib bo‘lmadi.");
+    } finally {
+      magicLinkButton.disabled = false;
+    }
+  });
+}
+
+if (telegramConfirmButton) {
+  telegramConfirmButton.addEventListener("click", async () => {
+    if (!supabase || !telegramRegistrationToken || telegramConfirmationBusy) return;
+    telegramConfirmationBusy = true;
+    telegramConfirmButton.disabled = true;
+    try {
+      const {data: sessionData, error: sessionError} = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      if (!sessionData.session?.user) throw new Error("Email havolasi orqali qayta kiring.");
+      const {error} = await supabase.rpc("complete_telegram_registration", {
+        p_token: telegramRegistrationToken
+      });
+      if (error) throw error;
+      telegramRegistrationCompleted = true;
+      window.history.replaceState({}, document.title, window.location.pathname);
+      await handleSession(sessionData.session);
+    } catch (error) {
+      showMessage(error.message || "Telegram akkauntini ulash amalga oshmadi.");
+    } finally {
+      telegramConfirmationBusy = false;
+      telegramConfirmButton.disabled = false;
+    }
+  });
+}
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!supabase) return;
