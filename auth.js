@@ -33,7 +33,9 @@ function setMode(nextMode) {
   const registering = mode === "register";
   title.textContent = registering ? "Create your account" : "Welcome back";
   subtitle.textContent = registering
-    ? "Register as a student, then join your classroom with its code."
+    ? (telegramRegistrationToken
+      ? "Create your account with Telegram. No email address is needed."
+      : "Register as a student, then join your classroom with its code.")
     : "Sign in to enter your classroom workspace.";
   nameInput.hidden = !registering;
   nameLabel.hidden = !registering;
