@@ -4,7 +4,7 @@
 
 1. In the Navyblue bot, a new user chooses **SupplyChain14 ro'yxatdan o'tish** (or sends `/sc14`).
 2. The bot collects only the user's full name. Telegram supplies the authenticated Telegram user ID; no email address or phone number is requested.
-3. The bot creates a 256-bit, 30-minute, single-use registration intent through the service-role-only database RPC and returns a direct website URL containing the token and Telegram ID.
+3. The bot creates a 256-bit, 30-minute, single-use registration intent through the service-role-only database RPC and returns a direct website URL containing only the one-time token.
 4. The user opens the URL, creates a password, and creates a Supabase Auth account. The website derives an internal, non-deliverable identifier in the reserved `.invalid` domain from the Telegram ID; the user does not enter or need an email address.
 5. The website requires an explicit **Telegram akkauntini ulash** click. The authenticated RPC consumes the one-time token and links the signed-in Supabase user to the Telegram ID.
 6. Existing website users can choose **Sign in**, enter their existing email and password, and then confirm the Telegram link. The legacy website-to-Telegram `/link CODE` flow remains available.
@@ -39,7 +39,7 @@ Because Telegram-only accounts have no recovery email, password recovery cannot 
 - Pending registrations expire after 30 minutes and are single-use.
 - Only the service role can create pending registration rows.
 - Only an authenticated Supabase user can complete registration, and the user must explicitly click the confirmation button.
-- The pending token binds the signed-in account to the Telegram ID recorded by the bot. The URL's Telegram ID is used only to derive the internal Supabase Auth identifier; the database token is authoritative for linking.
+- The pending token binds the signed-in account to the Telegram ID recorded by the bot. The website uses a token-protected RPC to retrieve the Telegram ID and derive the internal Supabase Auth identifier; the database token is authoritative for linking.
 - A Telegram ID and a SupplyChain14 account cannot be linked to multiple accounts.
 - Platform roles remain controlled by the existing profile/teacher process; Telegram registration creates a normal student profile and does not assign a class, team, or competition.
 - No email address, SMTP provider, or paid domain is required for Telegram-first registration.
