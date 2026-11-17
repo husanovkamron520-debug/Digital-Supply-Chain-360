@@ -431,7 +431,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    const studentSources=$("competitionStudentCompanySources");studentSources.replaceChildren();
    (team.company_templates?.source_urls||[]).forEach((url,i)=>{const link=el("a","", "Official source "+(i+1));link.href=url;link.target="_blank";link.rel="noopener noreferrer";studentSources.append(link);});
   $("competitionStudentRole").textContent=statusLabel(activeRole);
-  const {data:tasks,error:taskError}=await db.from("competition_tasks").select("id,title,description,assigned_role,assigned_to,status,due_at,due_round,submitted_round,submission,review_note,score,feedback")
+  const {data:tasks,error:taskError}=await db.from("competition_tasks").select("id,title,description,assigned_role,assigned_to,status,due_at,due_round,submitted_round,submission,review_note,score,feedback,ai_grade,ai_graded_at,ai_model")
    .eq("competition_id",activeCompetition.id).eq("team_id",activeTeam).order("created_at",{ascending:false});
   if(taskError)throw taskError;
   const myTasks=(tasks||[]).filter(t=>(!t.assigned_to||t.assigned_to===user.id)&&(!t.assigned_role||t.assigned_role===activeRole));
