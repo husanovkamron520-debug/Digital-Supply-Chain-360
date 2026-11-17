@@ -12,6 +12,16 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
+const DEFAULT_RUBRIC = {
+  criteria: [
+    { name: "Quantitative accuracy", max_points: 30, description: "Correct calculations, units, assumptions, and numerical conclusions." },
+    { name: "Feasibility", max_points: 25, description: "Whether the proposed action can realistically be executed within capacity, time, and operational constraints." },
+    { name: "Cost, service and risk trade-off", max_points: 20, description: "Comparison of relevant alternatives and explicit consideration of total cost, service, and risk." },
+    { name: "Cross-functional impact", max_points: 15, description: "Coordination with other supply-chain roles and awareness of downstream or upstream effects." },
+    { name: "Evidence and clarity", max_points: 10, description: "A structured explanation supported by case facts, assumptions, and an actionable plan." },
+  ],
+};
+
 type Criterion = { name: string; max_points: number; description: string };
 type GradeCriterion = {
   name: string;
@@ -130,10 +140,9 @@ Deno.serve(async (req) => {
     .eq("task_id", taskId)
     .maybeSingle();
   if (specError) return json({ error: "Could not load the teacher's grading guide." }, 500);
-  if (!spec) return json({ error: "This case does not have a teacher-approved AI grading guide yet." }, 409);
 
   let criteria: Criterion[];
-  try { criteria = validateRubric(spec.rubric); }
+  try { criteria = validateRubric(spec?.rubric ?? DEFAULT_RUBRIC); }
   catch (error) { return json({ error: (error as Error).message }, 422); }
 
   const studentSubmission = JSON.stringify(task.submission);
@@ -174,7 +183,7 @@ Deno.serve(async (req) => {
   const userPrompt = JSON.stringify({
     task: { title: task.title, description: task.description, role: task.assigned_role },
     rubric: criteria,
-    reference_answer: spec.reference_answer,
+    reference_answer: spec?.reference_answer ?? {},
     student_submission: task.submission,
   });
 
