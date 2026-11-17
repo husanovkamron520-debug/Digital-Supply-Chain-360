@@ -8,6 +8,7 @@ const subtitle = document.querySelector("#authSubtitle");
 const nameInput = document.querySelector("#authName");
 const nameLabel = document.querySelector("#authNameLabel");
 const emailInput = document.querySelector("#authEmail");
+const emailLabel = document.querySelector('label[for="authEmail"]');
 const passwordInput = document.querySelector("#authParol");
 const magicLinkButton = document.querySelector("#authMagicLink");
 const telegramConfirmPanel = document.querySelector("#telegramRegistrationConfirm");
@@ -37,9 +38,17 @@ function setMode(nextMode) {
   nameInput.hidden = !registering;
   nameLabel.hidden = !registering;
   nameInput.required = registering;
+  const telegramNewAccount = Boolean(telegramRegistrationToken) && registering;
+  if (emailInput) {
+    emailInput.hidden = telegramNewAccount;
+    emailInput.required = !telegramNewAccount;
+  }
+  if (emailLabel) emailLabel.hidden = telegramNewAccount;
   passwordInput.autocomplete = registering ? "new-password" : "current-password";
-  submit.textContent = registering ? "Create student account" : "Sign in";
-  if (magicLinkButton) magicLinkButton.hidden = registering;
+  submit.textContent = registering
+    ? (telegramRegistrationToken ? "Create Telegram account" : "Create student account")
+    : "Sign in";
+  if (magicLinkButton) magicLinkButton.hidden = registering || Boolean(telegramRegistrationToken);
   switchText.textContent = registering ? "Already have an account?" : "New to the platform?";
   switchButton.textContent = registering ? "Sign in" : "Create student account";
   showMessage("");
@@ -149,6 +158,7 @@ if (!SUPABASE_URL.startsWith("https://") || SUPABASE_ANON_KEY.startsWith("PASTE_
 }
 
 switchButton.addEventListener("click", () => setMode(mode === "login" ? "register" : "login"));
+if (telegramRegistrationToken) setMode("register");
 
 if (magicLinkButton) {
   magicLinkButton.addEventListener("click", async () => {
@@ -213,15 +223,29 @@ form.addEventListener("submit", async (event) => {
     const password = passwordInput.value;
     if (mode === "register") {
       const full_name = nameInput.value.trim();
+      let signupEmail = email;
+      if (telegramRegistrationToken) {
+        const telegramUserId = new URLSearchParams(window.location.search).get("tg_user") || "";
+        if (!/^[1-9]\\d{4,19}$/.test(telegramUserId) || !/^[a-fA-F0-9]{64}$/.test(telegramRegistrationToken)) {
+          throw new Error("Telegram ro'yxatdan o'tish havolasi noto'g'ri. Botdan yangi havola oling.");
+        }
+        // Supabase Auth requires an email-shaped identifier for password auth.
+        // This reserved .invalid address is internal only and is never used for delivery.
+        signupEmail = `tg_${telegramUserId}@telegram.invalid`;
+      }
       const {data, error} = await supabase.auth.signUp({
-        email, password, options:{
+        email: signupEmail, password, options:{
           data:{full_name},
-          emailRedirectTo: "https://digital-supply-chain-360.husanovkamron520.workers.dev/"
+          ...(telegramRegistrationToken ? {} : {
+            emailRedirectTo: "https://digital-supply-chain-360.husanovkamron520.workers.dev/"
+          })
         }
       });
       if (error) throw error;
       if (data.session) {
         await handleSession(data.session);
+      } else if (telegramRegistrationToken) {
+        showMessage("Hisob yaratilmadi: Supabase Auth email tasdiqlashni talab qildi. Dashboard → Authentication → Sign In / Providers → Email bo'limida Confirm email ni o'chiring, so'ng botdan yangi havola oling.");
       } else {
         showMessage("Account created. Check your email to confirm the address, then sign in.", true);
         setMode("login");
@@ -235,7 +259,9 @@ form.addEventListener("submit", async (event) => {
     showMessage(error.message || "Something went wrong. Please try again.");
   } finally {
     submit.disabled = false;
-    submit.textContent = mode === "register" ? "Create student account" : "Sign in";
+    submit.textContent = mode === "register"
+      ? (telegramRegistrationToken ? "Create Telegram account" : "Create student account")
+      : "Sign in";
   }
 });
 document.querySelector("#signOutBtn").addEventListener("click", async () => {
