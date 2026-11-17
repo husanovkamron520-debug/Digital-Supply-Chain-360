@@ -1,19 +1,16 @@
--- Email-verified Telegram-first registration for SupplyChain14.
--- Bot creates pending registrations with the service-role-only RPC.
--- A signed-in user can complete linking only after Supabase confirms the same email.
+-- Telegram-first SupplyChain14 registration without collecting email or sending email.
+-- The bot creates pending intents with its server-side service-role credential.
+-- A signed-in Supabase Auth user explicitly confirms the Telegram link on the website.
 
 create table if not exists private.telegram_registration_pending (
   token_hash bytea primary key,
   telegram_user_id bigint not null unique check (telegram_user_id > 0),
   telegram_username text,
   full_name text not null check (char_length(full_name) between 2 and 120),
-  email text not null check (char_length(email) between 5 and 320),
   expires_at timestamptz not null,
   created_at timestamptz not null default now()
 );
 
-create unique index if not exists telegram_registration_pending_email_idx
-  on private.telegram_registration_pending (lower(email));
 create index if not exists telegram_registration_pending_expiry_idx
   on private.telegram_registration_pending (expires_at);
 
@@ -24,8 +21,7 @@ create or replace function public.create_telegram_registration_pending(
   p_token text,
   p_telegram_user_id bigint,
   p_telegram_username text,
-  p_full_name text,
-  p_email text
+  p_full_name text
 )
 returns jsonb
 language plpgsql
@@ -33,14 +29,11 @@ security definer
 set search_path = ''
 as $$
 declare
-  v_email text := lower(trim(coalesce(p_email, '')));
   v_name text := trim(coalesce(p_full_name, ''));
 begin
   if p_token is null or p_token !~ '^[A-Fa-f0-9]{64}$'
      or p_telegram_user_id is null or p_telegram_user_id <= 0
-     or char_length(v_name) not between 2 and 120
-     or char_length(v_email) not between 5 and 320
-     or position('@' in v_email) <= 1 then
+     or char_length(v_name) not between 2 and 120 then
     raise exception 'Invalid registration details';
   end if;
 
@@ -51,35 +44,25 @@ begin
     raise exception 'This Telegram account is already linked';
   end if;
 
-  if exists (
-    select 1
-    from auth.users u
-    join private.telegram_accounts a on a.user_id = u.id
-    where lower(u.email) = v_email
-  ) then
-    raise exception 'This email account is already linked to Telegram';
-  end if;
-
   delete from private.telegram_registration_pending
    where expires_at <= now()
       or telegram_user_id = p_telegram_user_id;
 
   insert into private.telegram_registration_pending(
-    token_hash, telegram_user_id, telegram_username, full_name, email, expires_at
+    token_hash, telegram_user_id, telegram_username, full_name, expires_at
   )
   values (
     extensions.digest(lower(p_token), 'sha256'),
     p_telegram_user_id,
     nullif(left(trim(coalesce(p_telegram_username, '')), 64), ''),
     v_name,
-    v_email,
     now() + interval '30 minutes'
   );
 
   return jsonb_build_object('success', true, 'expires_in_seconds', 1800);
 exception
   when unique_violation then
-    raise exception 'An active registration already exists for this email';
+    raise exception 'An active registration already exists for this Telegram account';
 end;
 $$;
 
@@ -92,22 +75,13 @@ as $$
 declare
   v_user_id uuid := (select auth.uid());
   v_pending private.telegram_registration_pending%rowtype;
-  v_email text;
   v_existing private.telegram_accounts%rowtype;
 begin
   if v_user_id is null then
-    raise exception 'Sign in with the verified email first';
+    raise exception 'Sign in to your SupplyChain14 account first';
   end if;
   if p_token is null or p_token !~ '^[A-Fa-f0-9]{64}$' then
     raise exception 'Invalid registration token';
-  end if;
-
-  select lower(u.email) into v_email
-    from auth.users u
-   where u.id = v_user_id
-     and u.email_confirmed_at is not null;
-  if v_email is null then
-    raise exception 'Email verification is required';
   end if;
 
   select * into v_pending
@@ -117,10 +91,6 @@ begin
    for update;
   if not found then
     raise exception 'Registration link expired or already used; restart from Telegram';
-  end if;
-
-  if v_email <> lower(v_pending.email) then
-    raise exception 'Sign in with the same email address entered in Telegram';
   end if;
 
   insert into private.telegram_accounts(user_id, telegram_user_id, telegram_username)
@@ -155,9 +125,12 @@ exception
 end;
 $$;
 
-revoke all on function public.create_telegram_registration_pending(text,bigint,text,text,text)
+-- Drop the earlier email-parameter signature if this migration is replacing the draft version.
+drop function if exists public.create_telegram_registration_pending(text,bigint,text,text,text);
+
+revoke all on function public.create_telegram_registration_pending(text,bigint,text,text)
   from public, anon, authenticated, service_role;
-grant execute on function public.create_telegram_registration_pending(text,bigint,text,text,text)
+grant execute on function public.create_telegram_registration_pending(text,bigint,text,text)
   to service_role;
 
 revoke all on function public.complete_telegram_registration(text)
