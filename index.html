@@ -45,8 +45,14 @@
         <label for="authParol">Parol</label>
         <input id="authParol" name="password" type="password" autocomplete="current-password" placeholder="Kamida 8 ta belgi" minlength="8" required>
         <button class="primary-button auth-submit" id="authSubmit" type="submit">Kirish</button>
+        <button class="secondary-button auth-magic-link" id="authMagicLink" type="button">Email orqali kirish havolasini yuborish</button>
       </form>
       <p class="auth-message" id="authMessage" role="status" aria-live="polite"></p>
+      <div id="telegramRegistrationConfirm" class="telegram-registration-confirm" hidden>
+        <h2>Email tasdiqlandi</h2>
+        <p>SupplyChain14 akkauntingizni aynan shu Telegram profilingizga ulashni tasdiqlang.</p>
+        <button class="primary-button" id="telegramRegistrationConfirmButton" type="button">Tasdiqlash va Telegramni ulash</button>
+      </div>
       <div class="auth-switch">
         <span id="authSwitchText">Platformada yangimisiz?</span>
         <button type="button" id="authSwitch">Talaba hisobini yaratish</button>
