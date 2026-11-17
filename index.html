@@ -41,8 +41,8 @@
         <input id="authName" name="full_name" type="text" autocomplete="name" placeholder="To‘liq ism" hidden>
         <label for="authEmail">Elektron pochta</label>
         <input id="authEmail" name="email" type="email" autocomplete="email" placeholder="you@example.com" required>
-        <label for="authParol">Parol</label>
-        <input id="authParol" name="password" type="password" autocomplete="current-password" placeholder="Kamida 8 ta belgi" minlength="8" required>
+        <label for="authPassword">Parol</label>
+        <input id="authPassword" name="password" type="password" autocomplete="current-password" placeholder="Kamida 8 ta belgi" minlength="8" required>
         <button class="primary-button auth-submit" id="authSubmit" type="submit">Kirish</button>
       </form>
       <p class="auth-message" id="authMessage" role="status" aria-live="polite"></p>
@@ -101,7 +101,7 @@
         </div>
         <div class="workspace-switch" role="group" aria-label="Panel ko‘rinishi">
           <button type="button" class="workspace-switch-button" id="myWorkspaceBtn" aria-pressed="false">Mening ish maydonim</button>
-          <button type="button" class="workspace-switch-button active" id="overallUmumiy ko‘rinishBtn" aria-pressed="true">Umumiy ko‘rinish</button>
+          <button type="button" class="workspace-switch-button active" id="overallOverviewBtn" aria-pressed="true">Umumiy ko‘rinish</button>
         </div>
       </div>
 
@@ -178,7 +178,7 @@
               <select id="competitionTemplateSelect" required></select>
               <button class="secondary-button" id="competitionManualTeamButton" type="submit">Jamoa qo‘shish</button>
             </form>
-            <div id="competitionJamoalar" class="competition-team-grid"><p class="empty-state">Boshlash uchun jamoalar tuzing.</p></div>
+            <div id="competitionTeams" class="competition-team-grid"><p class="empty-state">Boshlash uchun jamoalar tuzing.</p></div>
             <div class="competition-status-controls"><button class="primary-button" id="competitionStartButton" type="button" hidden>Musobaqani boshlash</button><button class="secondary-button" id="competitionPauseButton" type="button" hidden>Musobaqani to‘xtatish</button></div>
           </div>
           <details class="competition-advanced">
@@ -193,7 +193,7 @@
                           <label for="competitionTaskTitle">Topshiriq nomi</label><input id="competitionTaskTitle" maxlength="140" minlength="3" required placeholder="e.g. Compare supplier quotations">
                           <label for="competitionTaskDescription">Ko‘rsatmalar va kutiladigan natija</label><textarea id="competitionTaskDescription" rows="3" maxlength="2000" placeholder="Describe the task, constraints and expected output"></textarea>
                           <div class="competition-toolbar">
-                            <div><label for="competitionTaskMuhimlik darajasi">Muhimlik darajasi</label><select id="competitionTaskMuhimlik darajasi"><option value="normal">Oddiy</option><option value="high">Yuqori</option><option value="critical">Juda muhim</option><option value="low">Past</option></select></div>
+                            <div><label for="competitionTaskPriority">Muhimlik darajasi</label><select id="competitionTaskPriority"><option value="normal">Oddiy</option><option value="high">Yuqori</option><option value="critical">Juda muhim</option><option value="low">Past</option></select></div>
                             <div><label for="competitionTaskDue">Muddat</label><input id="competitionTaskDue" type="datetime-local"></div>
                           </div>
                           <button class="primary-button" id="competitionTaskButton" type="submit">＋ Topshiriq berish</button>
@@ -267,7 +267,7 @@
           <div class="competition-setup" id="competitionWarehousePanel" hidden>
             <h3>Ombor · xaridlarni qabul qilish</h3>
             <div id="competitionPurchaseOrderList" class="competition-record-list"></div>
-            <h3>Ombor zaxiralari register</h3><div id="competitionOmbor zaxiralariList" class="competition-record-list"></div>
+            <h3>Ombor zaxiralari register</h3><div id="competitionInventoryList" class="competition-record-list"></div>
           </div>
           <div class="competition-setup" id="competitionManufacturerPanel" hidden>
             <h3>Ishlab chiqarishni boshqarish</h3>
@@ -347,7 +347,7 @@
           <select id="inventoryClassSelect" aria-label="Select classroom"></select>
         </div>
         <div class="inventory-layout">
-          <form class="inventory-add-panel" id="addOmbor zaxiralariForm" hidden>
+          <form class="inventory-add-panel" id="addInventoryForm" hidden>
             <h3>Mahsulot qo‘shish</h3>
             <label for="inventorySku">SKU</label>
             <input id="inventorySku" maxlength="40" minlength="2" placeholder="e.g. SKU-1001" required>
@@ -398,12 +398,12 @@
             <h3>Yuk jo‘natmasini rejalash</h3>
             <label for="shipmentOrder">Bog‘langan buyurtma (ixtiyoriy)</label>
             <select id="shipmentOrder"><option value="">No linked order</option></select>
-            <label for="shipmentJo‘natish manzili">Jo‘natish manzili</label>
-            <input id="shipmentJo‘natish manzili" maxlength="120" minlength="2" placeholder="e.g. Samarkand warehouse" required>
-            <label for="shipmentYetkazish manzili">Yetkazish manzili</label>
-            <input id="shipmentYetkazish manzili" maxlength="120" minlength="2" placeholder="e.g. Tashkent distribution centre" required>
+            <label for="shipmentOrigin">Jo‘natish manzili</label>
+            <input id="shipmentOrigin" maxlength="120" minlength="2" placeholder="e.g. Samarkand warehouse" required>
+            <label for="shipmentDestination">Yetkazish manzili</label>
+            <input id="shipmentDestination" maxlength="120" minlength="2" placeholder="e.g. Tashkent distribution centre" required>
             <div class="operations-two-col">
-              <div><label for="shipmentTashuvchi">Tashuvchi</label><input id="shipmentTashuvchi" maxlength="80" value="Demo carrier" required></div>
+              <div><label for="shipmentCarrier">Tashuvchi</label><input id="shipmentCarrier" maxlength="80" value="Demo carrier" required></div>
               <div><label for="shipmentEta">Taxminiy yetib kelish vaqti</label><input id="shipmentEta" type="datetime-local"></div>
             </div>
             <button class="primary-button" type="submit">＋ Yuk jo‘natmasini rejalash</button>
