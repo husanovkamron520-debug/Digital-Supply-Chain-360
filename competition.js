@@ -54,6 +54,50 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   $("competitionSupplierNegotiationNote").textContent="Allowed range: "+minLead+"–"+maxLead+" days · "+minCost+"–"+maxCost+" cost · "+minReliability+"–"+maxReliability+" reliability. Improving all three terms at once is not allowed.";
  }
  function addEmpty(host,message){host.replaceChildren(el("p","empty-state",message));}
+ function formatSimulationMoney(value){
+  const amount=Number(value||0);
+  return (amount<0?"−":"")+Math.abs(amount).toLocaleString(undefined,{maximumFractionDigits:0})+" USD";
+ }
+ function formatSimulationPct(value){
+  return value===null||value===undefined?"—":Number(value).toFixed(1)+"%";
+ }
+ function renderFinalReport(host,rows){
+  host.replaceChildren();
+  if(!rows?.length){addEmpty(host,"Yakuniy moliyaviy hisobot uchun ma’lumot topilmadi.");return;}
+  for(const report of rows){
+   const card=el("article","competition-task-card");
+   const head=el("div","competition-card-head");
+   const identity=el("div");
+   identity.append(
+    el("b","",report.team_name+" · "+report.company_name),
+    el("small","","Yakuniy jamoa bahosi: "+Number(report.total_score||0).toFixed(1)+"/100 · Ma’lumot qamrovi "+Number(report.score_coverage_pct||0).toFixed(0)+"%")
+   );
+   const profit=el("strong",Number(report.operating_profit)>=0?"positive":"negative",formatSimulationMoney(report.operating_profit));
+   head.append(identity,profit);
+   card.append(head);
+   const grid=el("div","competition-metric-grid");
+   const metrics=[
+    ["Jami tushum",formatSimulationMoney(report.revenue)],
+    ["Operatsion xarajatlar",formatSimulationMoney(report.operating_cost)],
+    ["Operatsion foyda",formatSimulationMoney(report.operating_profit)],
+    ["Foyda marjasi",formatSimulationPct(report.profit_margin_pct)],
+    ["Boshlang‘ich kapitalga ROI",formatSimulationPct(report.return_on_capital_pct)],
+    ["Yakuniy pul qoldig‘i",formatSimulationMoney(report.cash_balance)],
+    ["OTIF — vaqtida yetkazish",formatSimulationPct(report.service_score)],
+    ["Inventar salomatligi",formatSimulationPct(report.inventory_score)],
+    ["O‘rtacha yetkazish muddati",report.avg_delivery_days===null?"—":Number(report.avg_delivery_days).toFixed(1)+" kun"],
+    ["Yetkazilgan buyurtmalar",Number(report.delivered_orders||0)+" / "+Number(report.total_orders||0)]
+   ];
+   for(const [label,value] of metrics){
+    const item=el("div","competition-metric");
+    item.append(el("span","",label),el("strong","",value));
+    grid.append(item);
+   }
+   card.append(grid);
+   card.append(el("small","form-hint","Hisoblash: operatsion foyda = tushum − simulyatsiyada qayd etilgan xarajatlar; foyda marjasi = foyda / tushum; ROI = foyda / boshlang‘ich kapital. Bu o‘quv simulyatsiyasi hisoboti, auditdan o‘tgan moliyaviy hisobot emas."));
+   host.append(card);
+  }
+ }
  function setHidden(id,value){$(id).hidden=value;}
 
  const telegramGenerateButton=$("telegramLinkGenerateButton");
@@ -115,7 +159,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  }
 
  async function loadTemplates(){
-  const {data,error}=await db.from("company_templates").select("id,name,industry,business_model,case_study_note,source_urls").order("name");
+  const {data,error}=await db.from("company_templates").select("id,name,industry,business_model,case_study_note,source_urls").eq("slug","omnichannel-retail").order("name");
   if(error)throw error;templates=data||[];
   $("competitionTemplateSelect").replaceChildren(...templates.map(t=>option(t.name+" · "+t.industry,t.id)));
  }
@@ -327,6 +371,16 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   }
   const {data:metricRows,error:metricError}=await db.from("competition_team_live_metrics").select("*").eq("competition_id",activeCompetition.id).order("total_score",{ascending:false});
   if(metricError)throw metricError;
+  const finalReportWrap=$("competitionFinalReportsWrap");
+  if(activeCompetition.status==="completed"){
+   const {data:finalReports,error:finalReportError}=await db.rpc("get_competition_final_report",{p_competition_id:activeCompetition.id});
+   if(finalReportError)throw finalReportError;
+   setHidden("competitionFinalReportsWrap",false);
+   renderFinalReport($("competitionFinalReports"),finalReports||[]);
+  }else{
+   setHidden("competitionFinalReportsWrap",true);
+   $("competitionFinalReports").replaceChildren();
+  }
   const {data:taskMetricRows,error:taskMetricError}=await db.from("competition_task_performance").select("team_id,due_tasks,approved_tasks,completion_pct,awaiting_review,late_submissions").eq("competition_id",activeCompetition.id);
   if(taskMetricError)throw taskMetricError;
   const taskMetricByTeam=new Map((taskMetricRows||[]).map(x=>[x.team_id,x]));
@@ -696,6 +750,16 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
     el("small","",p.evaluated_decisions+" decisions + "+p.evaluated_tasks+" case tasks graded"),
     el("strong","",p.decision_average!==null&&p.task_average!==null?Number(p.average_score).toFixed(1)+"/100":"In progress"));
    $("competitionPublicIndividualRanking").append(row);
+  }
+  const finalWrap=$("competitionStudentFinalReportWrap");
+  if(activeCompetition.status==="completed"){
+   const {data:finalReports,error:finalReportError}=await db.rpc("get_competition_final_report",{p_competition_id:activeCompetition.id});
+   if(finalReportError)throw finalReportError;
+   setHidden("competitionStudentFinalReportWrap",false);
+   renderFinalReport($("competitionStudentFinalReport"),(finalReports||[]).filter(item=>item.team_id===activeTeam));
+  }else{
+   setHidden("competitionStudentFinalReportWrap",true);
+   $("competitionStudentFinalReport").replaceChildren();
   }
  }
 
