@@ -8,7 +8,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
  const option=(label,value)=>{const n=el("option","",label);n.value=value;return n;};
  const roles=["procurement","manufacturer","warehouse","transport","operations","supplier","retailer","customer","finance","analyst"];
- let user=null,isTeacher=false,classrooms=[],templates=[],activeClassId=null,activeCompetition=null,activeTeam=null,activeRole=null;
+ let user=null,isTeacher=false,classrooms=[],templates=[],activeClassId=null,activeCompetition=null,activeTeam=null,activeRole=null,amazonRoundTimerInterval=null;
 
  function say(message,success=false){$("competitionMessage").textContent=message;$("competitionMessage").classList.toggle("success",success);}
  function statusLabel(value){if(value==="manufacturer")return "FULFILLMENT OPERATIONS MANAGER";return (value||"").replaceAll("_"," ").toUpperCase();}
@@ -441,7 +441,16 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   $("competitionRoundInfo").textContent=clock?(isAmazonCase()?"Round "+clock.current_round+" / 3 · Day "+((clock.current_round-1)*10+1)+"–"+(clock.current_round*10)+" · 10 min/round · "+(roundWindow?.ends_at?"Tugash vaqti "+new Date(roundWindow.ends_at).toLocaleTimeString():""):"Round "+clock.current_round+" / "+clock.round_limit+" · Simulation date "+new Date(clock.virtual_now).toLocaleDateString()):"Rounds begin when the competition starts.";
   setHidden("competitionAdvanceRound",activeCompetition.status!=="active");
   $("competitionAdvanceRound").disabled=!clock||clock.current_round>=clock.round_limit||(isAmazonCase()&&roundStillRunning);
-  if(isAmazonCase()&&roundStillRunning)$("competitionAdvanceRound").title="Round 10 real minutes tugagach keyingi bosqich ochiladi.";
+  if(amazonRoundTimerInterval){clearInterval(amazonRoundTimerInterval);amazonRoundTimerInterval=null;}
+  if(isAmazonCase()&&roundWindow?.ends_at){
+   const endsAt=new Date(roundWindow.ends_at).getTime();
+   const updateRoundTimer=()=>{const remaining=Math.max(0,endsAt-Date.now());const mm=String(Math.floor(remaining/60000)).padStart(2,"0");const ss=String(Math.floor((remaining%60000)/1000)).padStart(2,"0");
+    $("competitionRoundInfo").textContent="Round "+clock.current_round+" / 3 · Day "+((clock.current_round-1)*10+1)+"–"+(clock.current_round*10)+" · Qolgan vaqt "+mm+":"+ss;
+    $("competitionAdvanceRound").disabled=remaining>0||clock.current_round>=3;
+    if(remaining===0&&amazonRoundTimerInterval){clearInterval(amazonRoundTimerInterval);amazonRoundTimerInterval=null;}
+   };
+   updateRoundTimer();if(roundStillRunning)amazonRoundTimerInterval=setInterval(updateRoundTimer,1000);
+  }
   const pendingDecisionCount=decisionRows.filter(d=>d.score===null).length;
   const studentsWithoutDecision=allMemberRows.filter(m=>!decisionRows.some(d=>d.student_id===m.student_id&&d.team_id===m.team_id&&d.score!==null)).length;
   const pendingTaskCount=taskRows.filter(task=>task.status!=="approved"||task.score===null||task.score===undefined).length;
