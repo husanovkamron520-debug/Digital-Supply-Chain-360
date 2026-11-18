@@ -435,7 +435,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   }
     const {data:clock,error:clockError}=await db.from("competition_simulation_clock").select("current_round,round_limit,virtual_now").eq("competition_id",activeCompetition.id).maybeSingle();
   if(clockError)throw clockError;
-  $("competitionRoundInfo").textContent=clock?"Round "+clock.current_round+" / "+clock.round_limit+" · Simulation date "+new Date(clock.virtual_now).toLocaleDateString():"Rounds begin when the competition starts.";
+  $("competitionRoundInfo").textContent=clock?(isAmazonCase()?"Round "+clock.current_round+" / 3 · Day "+((clock.current_round-1)*10+1)+"–"+(clock.current_round*10)+" · 10 min/round · "+new Date(clock.virtual_now).toLocaleDateString():"Round "+clock.current_round+" / "+clock.round_limit+" · Simulation date "+new Date(clock.virtual_now).toLocaleDateString()):"Rounds begin when the competition starts.";
   setHidden("competitionAdvanceRound",activeCompetition.status!=="active");
   $("competitionAdvanceRound").disabled=!clock||clock.current_round>=clock.round_limit;
   const pendingDecisionCount=decisionRows.filter(d=>d.score===null).length;
@@ -546,12 +546,12 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   ]);
   for(const e of [ordersError,inventoryError,poError,shipError])if(e)throw e;
   let host=$("amazonCasePanel");
-  if(!host){host=el("section","competition-panel");host.id="amazonCasePanel";$("competitionStudentPanel").append(host);}
+  if(!host){host=el("section","competition-setup");host.id="amazonCasePanel";$("competitionStudentPanel").append(host);}
   host.replaceChildren();
   const state=caseData.state||{},skus=caseData.skus||[],offers=caseData.offers||[],fulfilment=caseData.fulfilment||[],approvals=caseData.approvals||[];
   const round=Number(clock.current_round),day=(round-1)*10+1;
   const header=el("div","competition-panel-heading");
-  header.append(el("h3","","Amazon Global Combined Crisis"),el("p","","30 kunlik global e-commerce inqirozi · Round "+round+"/3 · Day "+day+"–"+(day+9)));
+  header.append(el("h3","","Amazon Global Combined Crisis"),el("p","","30 kunlik global e-commerce inqirozi · Round "+round+"/3 · Day "+day+"–"+(day+9)+" · 10 real minutes per round"));
   host.append(header);
   const summary=el("div","competition-metric-grid");
   const summaryValues=[
