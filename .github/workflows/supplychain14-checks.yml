@@ -1,0 +1,37 @@
+name: SupplyChain14 checks
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [feature/telegram-miniapp-unified-menu]
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check competition UI JavaScript
+        run: node --check competition.js
+      - name: Check authentication JavaScript module syntax
+        run: node --input-type=module --check < auth.js
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check AI grading Edge Function
+        run: deno check supabase/functions/competition-ai-grade/index.ts
+      - name: Type-check Telegram password recovery Edge Function
+        run: deno check supabase/functions/telegram-password-recovery/index.ts
+      - name: Validate registration migration SQL grammar
+        run: |
+          python -m pip install --quiet pglast
+          python - <<'PY'
+          from pathlib import Path
+          from pglast import parse_sql
+          path = Path("supabase/migrations/20261117190000_telegram_email_registration.sql")
+          parse_sql(path.read_text())
+          print("Migration SQL parsed successfully")
+          PY

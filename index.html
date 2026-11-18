@@ -10,6 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css?v=20261115-premium-uz-1">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script type="importmap">
     {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js"}}
   </script>
@@ -44,8 +45,23 @@
         <label for="authParol">Parol</label>
         <input id="authParol" name="password" type="password" autocomplete="current-password" placeholder="Kamida 8 ta belgi" minlength="8" required>
         <button class="primary-button auth-submit" id="authSubmit" type="submit">Kirish</button>
+        <button class="secondary-button auth-magic-link" id="authMagicLink" type="button">Email orqali kirish havolasini yuborish</button>
       </form>
       <p class="auth-message" id="authMessage" role="status" aria-live="polite"></p>
+      <div id="telegramRegistrationConfirm" class="telegram-registration-confirm" hidden>
+        <h2>Telegram akkauntini ulash</h2>
+        <p>Telegram orqali ro‘yxatdan o‘tishingiz boshlandi. Ushbu SupplyChain14 hisobini aynan shu Telegram profilingizga ulashni tasdiqlang.</p>
+        <button class="primary-button" id="telegramRegistrationConfirmButton" type="button">Tasdiqlash va Telegramni ulash</button>
+      </div>
+      <form id="telegramPasswordRecovery" class="telegram-registration-confirm" hidden>
+        <h2>Telegram orqali parolni tiklash</h2>
+        <p>Yangi parolni kiriting. Havola bir martalik va 15 daqiqa amal qiladi.</p>
+        <label for="telegramRecoveryPassword">Yangi parol</label>
+        <input id="telegramRecoveryPassword" type="password" minlength="8" maxlength="128" autocomplete="new-password" required>
+        <label for="telegramRecoveryConfirmPassword">Parolni qayta kiriting</label>
+        <input id="telegramRecoveryConfirmPassword" type="password" minlength="8" maxlength="128" autocomplete="new-password" required>
+        <button class="primary-button" id="telegramRecoverySubmit" type="submit">Parolni yangilash</button>
+      </form>
       <div class="auth-switch">
         <span id="authSwitchText">Platformada yangimisiz?</span>
         <button type="button" id="authSwitch">Talaba hisobini yaratish</button>

@@ -1,5 +1,18 @@
 import * as THREE from "three";
 
+// Telegram Mini App bootstrap. Authentication remains the normal Supabase
+// sign-in flow until signed initData verification is implemented server-side.
+const telegramWebApp = window.Telegram?.WebApp;
+if (telegramWebApp) {
+  try {
+    telegramWebApp.ready();
+    telegramWebApp.expand();
+    document.documentElement.classList.add("telegram-mini-app");
+  } catch (error) {
+    console.warn("Telegram Mini App initialization skipped:", error);
+  }
+}
+
 const stageData = [
   {name:"Supplier",sub:"Raw materials",detail:"Supplier portal · purchase orders · inbound quality",system:"ERP / SRM"},
   {name:"Factory",sub:"Production",detail:"Production planning · manufacturing execution · quality control",system:"ERP / MES"},

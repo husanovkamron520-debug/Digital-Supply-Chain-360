@@ -12,6 +12,36 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
 
  function say(message,success=false){$("competitionMessage").textContent=message;$("competitionMessage").classList.toggle("success",success);}
  function statusLabel(value){return (value||"").replaceAll("_"," ").toUpperCase();}
+ async function requestAiGrade(taskId,button){
+  if(button)button.disabled=true;
+  try{
+   const {data,error}=await db.functions.invoke("competition-ai-grade",{body:{task_id:taskId}});
+   if(error)throw error;
+   if(data?.error)throw new Error(data.error);
+   say("AI dastlabki bahosi: "+Number(data.score).toFixed(1)+"/100. O‘qituvchi tasdig‘ini kutmoqda.",true);
+   await loadCompetition();
+  }catch(err){
+   say("AI baholash: "+(err.message||"Noma’lum xatolik"));
+   if(button)button.disabled=false;
+  }
+ }
+ function appendAiGrade(card,task){
+  if(!task.ai_grade)return;
+  const grade=task.ai_grade;
+  const panel=el("section","competition-review-note");
+  panel.append(el("b","","🤖 AI dastlabki bahosi: "+Number(grade.score??task.score??0).toFixed(1)+"/100"));
+  if(grade.summary)panel.append(el("p","",grade.summary));
+  if(Array.isArray(grade.criteria)){
+   const list=el("ul","competition-ai-criteria");
+   for(const item of grade.criteria){
+    const li=el("li","",item.name+": "+item.awarded_points+"/"+item.max_points+" — "+(item.feedback||""));
+    list.append(li);
+   }
+   panel.append(list);
+  }
+  if(grade.status==="ai_graded_pending_teacher_review")panel.append(el("small","","AI natijasi hali yakuniy emas — o‘qituvchi tasdiqlashi yoki o‘zgartirishi mumkin."));
+  card.append(panel);
+ }
  function localDateTimeValue(value){const d=new Date(value);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);}
  function applySupplierNegotiationBounds(s){
   const baseLead=Number(s.base_lead_time_days),baseCost=Number(s.base_unit_cost),baseReliability=Number(s.base_reliability_score);
@@ -143,7 +173,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   const [{data:teams,error:teamError},{data:students,error:studentError},{data:tasks,error:taskError},{data:decisions,error:decisionError},{data:allMemberRows,error:memberError}]=await Promise.all([
    db.from("competition_teams").select("id,name,company_template_id,company_templates(name,industry,business_model,case_study_note,source_urls)").eq("competition_id",activeCompetition.id).order("created_at"),
    db.from("classroom_members").select("student_id,profiles(full_name)").eq("classroom_id",activeClassId).order("joined_at"),
-   db.from("competition_tasks").select("id,team_id,title,description,assigned_role,assigned_to,status,due_at,due_round,submitted_round,submission,review_note,score,feedback").eq("competition_id",activeCompetition.id).order("created_at",{ascending:false}),
+   db.from("competition_tasks").select("id,team_id,title,description,assigned_role,assigned_to,status,due_at,due_round,submitted_round,submission,review_note,score,feedback,ai_grade,ai_graded_at,ai_model").eq("competition_id",activeCompetition.id).order("created_at",{ascending:false}),
    db.from("competition_decisions").select("id,team_id,student_id,domain,decision_type,selected_option,rationale,inputs,score,feedback,created_at,profiles(full_name)").eq("competition_id",activeCompetition.id).order("created_at",{ascending:false}),
    db.from("competition_team_members").select("team_id,student_id,operational_role,profiles(full_name)").eq("competition_id",activeCompetition.id)
   ]);
@@ -237,11 +267,12 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    const assignedTeam=teamRows.find(t=>t.id===task.team_id);
    card.append(el("div","competition-card-head",task.title),el("p","competition-task-description",task.description||"No additional instructions"),el("small","", (assignedTeam?.name||"Team")+" · "+(assignedMember?.profiles?.full_name||"Unassigned student")+" · "+statusLabel(task.assigned_role)+" · "+statusLabel(task.status)+(task.due_round?" · Due round "+task.due_round:"")+(task.submitted_round?" · Submitted round "+task.submitted_round:"")+(task.due_round&&task.submitted_round>task.due_round?" · LATE":"")));
    if(task.submission)card.append(el("pre","competition-submission",typeof task.submission.response==="string"?task.submission.response:JSON.stringify(task.submission,null,2)));
+   appendAiGrade(card,task);
    if(task.score!==null&&task.score!==undefined)card.append(el("p","competition-review-note","Teacher score: "+Number(task.score).toFixed(1)+"/100 · "+(task.feedback||task.review_note||"")));
    if(task.status==="submitted"){
     const review=el("form","competition-review");
-    const score=el("input","");score.type="number";score.min="0";score.max="100";score.step="1";score.required=true;score.placeholder="Task score /100";
-    const note=el("textarea","");note.rows=2;note.maxLength=2000;note.placeholder="Feedback: strengths, calculation errors and improvement advice";
+    const score=el("input","");score.type="number";score.min="0";score.max="100";score.step="1";score.required=true;score.placeholder="Task score /100";if(task.ai_grade)score.value=String(task.ai_grade.score??task.score??"");
+    const note=el("textarea","");note.rows=2;note.maxLength=2000;note.placeholder="Feedback: strengths, calculation errors and improvement advice";if(task.ai_grade)note.value=String(task.ai_grade.summary||"AI dastlabki bahosi: "+task.ai_grade.score+"/100");
     const approve=el("button","secondary-button","Save score & approve");approve.type="submit";
     const reject=el("button","secondary-button","Request changes");reject.type="button";
     review.append(score,note,approve,reject);
@@ -400,7 +431,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    const studentSources=$("competitionStudentCompanySources");studentSources.replaceChildren();
    (team.company_templates?.source_urls||[]).forEach((url,i)=>{const link=el("a","", "Official source "+(i+1));link.href=url;link.target="_blank";link.rel="noopener noreferrer";studentSources.append(link);});
   $("competitionStudentRole").textContent=statusLabel(activeRole);
-  const {data:tasks,error:taskError}=await db.from("competition_tasks").select("id,title,description,assigned_role,assigned_to,status,due_at,due_round,submitted_round,submission,review_note,score,feedback")
+  const {data:tasks,error:taskError}=await db.from("competition_tasks").select("id,title,description,assigned_role,assigned_to,status,due_at,due_round,submitted_round,submission,review_note,score,feedback,ai_grade,ai_graded_at,ai_model")
    .eq("competition_id",activeCompetition.id).eq("team_id",activeTeam).order("created_at",{ascending:false});
   if(taskError)throw taskError;
   const myTasks=(tasks||[]).filter(t=>(!t.assigned_to||t.assigned_to===user.id)&&(!t.assigned_role||t.assigned_role===activeRole));
@@ -410,14 +441,22 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    const card=el("article","competition-task-card");
    card.append(el("b","",task.title),el("p","competition-task-description",task.description),el("small","",statusLabel(task.status)+(task.due_round?" · Due round "+task.due_round:"")+(task.due_at?" · Due "+new Date(task.due_at).toLocaleString():"")+(task.due_round&&task.submitted_round>task.due_round?" · LATE":"")));
    if(task.review_note)card.append(el("p","competition-review-note",task.review_note));
+   appendAiGrade(card,task);
    if(["pending","in_progress","rejected"].includes(task.status)&&activeCompetition.status==="active"){
     const form=el("form","competition-submit-form");
     const answer=el("textarea","");answer.rows=3;answer.maxLength=10000;answer.placeholder="Describe your work, calculations and evidence…";answer.required=true;
     const btn=el("button","primary-button","Submit task");btn.type="submit";
     form.append(answer,btn);
-    form.addEventListener("submit",async e=>{e.preventDefault();btn.disabled=true;try{const {error}=await db.rpc("submit_competition_task",{p_task_id:task.id,p_submission:{response:answer.value.trim(),role:activeRole,submitted_at:new Date().toISOString()}});if(error)throw error;say("Task submitted for review.",true);await loadCompetition();}catch(err){say(err.message);btn.disabled=false;}});
+    form.addEventListener("submit",async e=>{e.preventDefault();btn.disabled=true;try{const {error}=await db.rpc("submit_competition_task",{p_task_id:task.id,p_submission:{response:answer.value.trim(),role:activeRole,submitted_at:new Date().toISOString()}});if(error)throw error;say("Javob yuborildi. AI baholashi boshlanmoqda…",true);await loadCompetition();await requestAiGrade(task.id,null);}catch(err){say(err.message);btn.disabled=false;}});
     card.append(form);
-   }else if(task.submission)card.append(el("pre","competition-submission",JSON.stringify(task.submission,null,2)));
+   }else if(task.submission){
+    card.append(el("pre","competition-submission",JSON.stringify(task.submission,null,2)));
+    if(task.status==="submitted"&&!task.ai_graded_at){
+     const gradeBtn=el("button","secondary-button","🤖 AI orqali baholash");gradeBtn.type="button";
+     gradeBtn.addEventListener("click",()=>requestAiGrade(task.id,gradeBtn));
+     card.append(gradeBtn);
+    }
+   }
    $("competitionStudentTasks").append(card);
   }
   const {data:decisions,error:decisionError}=await db.from("competition_decisions").select("domain,selected_option,rationale,inputs,score,feedback,created_at")
