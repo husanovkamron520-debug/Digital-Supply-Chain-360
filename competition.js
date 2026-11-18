@@ -227,6 +227,9 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   const teamRows=teams||[],studentRows=students||[],taskRows=tasks||[],decisionRows=decisions||[];
   const recommendedTeamCount=Math.max(2,Math.min(4,Math.floor(studentRows.length/5)));
   $("competitionTeamCount").value=String(recommendedTeamCount);
+  $("competitionTeamCount").dataset.studentCount=String(studentRows.length);
+  for(const opt of $("competitionTeamCount").options)opt.disabled=studentRows.length<Number(opt.value)*5;
+  $("competitionTeamCount").disabled=studentRows.length<10;
   $("competitionTeams").replaceChildren();
   let assignedStudentCount=0;const teamSizes=[];let allTeamsReady=teamRows.length>=2&&teamRows.length<=4;
   const coreRoles=["procurement","supplier","manufacturer","warehouse","transport"];
@@ -483,9 +486,13 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   $("competitionAutoSetupButton").disabled=!draft||teamRows.length>0||studentRows.length<10;
   setHidden("competitionManualTeamForm",!draft||teamRows.length>=4);
   if(!draft){$("competitionSetupNote").textContent="Teams are locked after the competition starts."; }
-  else $("competitionSetupNote").textContent=studentRows.length<10
-   ?"Only "+studentRows.length+" students are enrolled. At least 10 are required to create two valid teams."
-   :"Recommended setup: "+recommendedTeamCount+" teams for "+studentRows.length+" enrolled students. Each team needs at least 5 students and all 5 core roles.";
+  else $("competitionSetupNote").textContent=isAmazonCase()
+   ?(studentRows.length<10
+    ?"Amazon case uchun kamida 10 o‘quvchi kerak (2 jamoa × 5 rol). Hozir: "+studentRows.length+"."
+    :"Amazon case: "+recommendedTeamCount+" jamoa tavsiya etiladi. Har bir jamoada 5 ta alohida rol bo‘ladi.")
+   :(studentRows.length<10
+    ?"Only "+studentRows.length+" students are enrolled. At least 10 are required to create two valid teams."
+    :"Recommended setup: "+recommendedTeamCount+" teams for "+studentRows.length+" enrolled students. Each team needs at least 5 students and all 5 core roles.");
  }
 
  async function renderStudentCompetition(){
