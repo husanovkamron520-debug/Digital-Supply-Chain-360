@@ -569,7 +569,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   let host=$("amazonCasePanel");
   if(!host){host=el("section","competition-setup");host.id="amazonCasePanel";$("competitionStudentPanel").append(host);}
   host.replaceChildren();
-  const state=caseData.state||{},skus=caseData.skus||[],offers=caseData.offers||[],fulfilment=caseData.fulfilment||[],approvals=caseData.approvals||[],commitments=caseData.commitments||[];
+  const state=caseData.state||{},skus=caseData.skus||[],offers=caseData.offers||[],fulfilment=caseData.fulfilment||[],approvals=caseData.approvals||[],commitments=caseData.commitments||[],qualityReceipts=caseData.quality_receipts||[];
   const round=Number(clock.current_round),day=(round-1)*10+1;
   const header=el("div","competition-panel-heading");
   header.append(el("h3","","Amazon Global Combined Crisis"),el("p","","30 kunlik global e-commerce inqirozi · Round "+round+"/3 · Day "+day+"–"+(day+9)+" · 10 real minutes per round"));
@@ -678,6 +678,18 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
      line.append(btn);
     }
     card.append(line);
+   }
+   card.append(el("h4","","Quality quarantine · defect units"));
+   const quarantine=qualityReceipts.filter(q=>Number(q.defective_quantity)>Number(q.disposed_quantity||0));
+   if(!quarantine.length)card.append(el("p","empty-state","Quarantine’da defect mahsulot yo‘q."));
+   for(const qr of quarantine){
+    const remaining=Number(qr.defective_quantity)-Number(qr.disposed_quantity||0);
+    const line=el("div","competition-task-card");line.append(el("b","",qr.supplier_code+" · "+qr.sku),el("p","",remaining+" dona karantinda · defect rate "+qr.defect_rate_pct+"% · received "+qr.received_quantity));
+    const form=el("form","competition-inline-form"),qty=el("input",""),reason=el("input",""),btn=el("button","secondary-button","Defectni disposal / supplier return qilish");
+    qty.type="number";qty.min="1";qty.max=String(remaining);qty.value=String(remaining);qty.required=true;
+    reason.placeholder="Disposal yoki supplier return sababi";reason.required=true;btn.type="submit";form.append(qty,reason,btn);
+    form.addEventListener("submit",async e=>{e.preventDefault();btn.disabled=true;try{const {data,error}=await db.rpc("amazon_dispose_defects",{p_quality_receipt_id:qr.id,p_quantity:Number(qty.value),p_reason:reason.value});if(error)throw error;say("Quarantine’dan "+qty.value+" dona chiqarildi. Qoldiq: "+data.remaining_quarantine,true);await loadTeamOperations();}catch(err){say(err.message);btn.disabled=false;}});
+    line.append(form);card.append(line);
    }
    host.append(card);
   }
