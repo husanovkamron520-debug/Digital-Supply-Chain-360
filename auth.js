@@ -14,6 +14,7 @@ const magicLinkButton = document.querySelector("#authMagicLink");
 const telegramConfirmPanel = document.querySelector("#telegramRegistrationConfirm");
 const telegramConfirmButton = document.querySelector("#telegramRegistrationConfirmButton");
 const telegramRegistrationToken = new URLSearchParams(window.location.search).get("tg_reg");
+if (telegramRegistrationToken) window.history.replaceState({}, document.title, window.location.pathname);
 let telegramRegistrationCompleted = false;
 let telegramConfirmationBusy = false;
 const submit = document.querySelector("#authSubmit");
