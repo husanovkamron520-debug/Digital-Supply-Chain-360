@@ -17,147 +17,22 @@ create index if not exists telegram_registration_pending_expiry_idx
 alter table private.telegram_registration_pending enable row level security;
 revoke all on private.telegram_registration_pending from public, anon, authenticated, service_role;
 
--- The bearer token is required to read this one identity value. The RPC exposes no
--- pending-row data beyond the Telegram ID and is used to derive the hidden Auth login.
+-- The bearer token is required to read this one identity value.
 create or replace function public.get_telegram_registration_user_id(p_token text)
 returns text
 language plpgsql
 security definer
 set search_path = ''
-as $
+as $$
 declare
   v_telegram_user_id bigint;
 begin
-  if p_token is null or p_token !~ '^[A-Fa-f0-9]{64}
-  p_token text,
-  p_telegram_user_id bigint,
-  p_telegram_username text,
-  p_full_name text
-)
-returns jsonb
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_name text := trim(coalesce(p_full_name, ''));
-begin
-  if p_token is null or p_token !~ '^[A-Fa-f0-9]{64}$'
-     or p_telegram_user_id is null or p_telegram_user_id <= 0
-     or char_length(v_name) not between 2 and 120 then
-    raise exception 'Invalid registration details';
-  end if;
-
-  if exists (
-    select 1 from private.telegram_accounts a
-    where a.telegram_user_id = p_telegram_user_id
-  ) then
-    raise exception 'This Telegram account is already linked';
-  end if;
-
-  delete from private.telegram_registration_pending
-   where expires_at <= now()
-      or telegram_user_id = p_telegram_user_id;
-
-  insert into private.telegram_registration_pending(
-    token_hash, telegram_user_id, telegram_username, full_name, expires_at
-  )
-  values (
-    extensions.digest(lower(p_token), 'sha256'),
-    p_telegram_user_id,
-    nullif(left(trim(coalesce(p_telegram_username, '')), 64), ''),
-    v_name,
-    now() + interval '30 minutes'
-  );
-
-  return jsonb_build_object('success', true, 'expires_in_seconds', 1800);
-exception
-  when unique_violation then
-    raise exception 'An active registration already exists for this Telegram account';
-end;
-$$;
-
-create or replace function public.complete_telegram_registration(p_token text)
-returns jsonb
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_user_id uuid := (select auth.uid());
-  v_pending private.telegram_registration_pending%rowtype;
-  v_existing private.telegram_accounts%rowtype;
-begin
-  if v_user_id is null then
-    raise exception 'Sign in to your SupplyChain14 account first';
-  end if;
   if p_token is null or p_token !~ '^[A-Fa-f0-9]{64}$' then
     raise exception 'Invalid registration token';
   end if;
 
-  select * into v_pending
-    from private.telegram_registration_pending
-   where token_hash = extensions.digest(lower(p_token), 'sha256')
-     and expires_at > now()
-   for update;
-  if not found then
-    raise exception 'Registration link expired or already used; restart from Telegram';
-  end if;
-
-  insert into private.telegram_accounts(user_id, telegram_user_id, telegram_username)
-  values (
-    v_user_id,
-    v_pending.telegram_user_id,
-    v_pending.telegram_username
-  )
-  on conflict (user_id) do nothing;
-
-  if not found then
-    select * into v_existing
-      from private.telegram_accounts
-     where user_id = v_user_id;
-    if v_existing.telegram_user_id is distinct from v_pending.telegram_user_id then
-      raise exception 'This SupplyChain14 account is already linked to another Telegram account';
-    end if;
-  end if;
-
-  update public.profiles
-     set full_name = v_pending.full_name
-   where id = v_user_id
-     and (full_name is null or btrim(full_name) = '');
-
-  delete from private.telegram_registration_pending
-   where token_hash = v_pending.token_hash;
-
-  return jsonb_build_object('success', true, 'telegram_linked', true);
-exception
-  when unique_violation then
-    raise exception 'This Telegram account is already linked to another SupplyChain14 account';
-end;
-$$;
-
--- Drop the earlier email-parameter signature if this migration is replacing the draft version.
-drop function if exists public.create_telegram_registration_pending(text,bigint,text,text,text);
-
-revoke all on function public.get_telegram_registration_user_id(text)
-  from public, anon, authenticated, service_role;
-grant execute on function public.get_telegram_registration_user_id(text)
-  to anon, authenticated;
-
-revoke all on function public.create_telegram_registration_pending(text,bigint,text,text)
-  from public, anon, authenticated, service_role;
-grant execute on function public.create_telegram_registration_pending(text,bigint,text,text)
-  to service_role;
-
-revoke all on function public.complete_telegram_registration(text)
-  from public, anon, service_role;
-grant execute on function public.complete_telegram_registration(text)
-  to authenticated;
- then
-    raise exception 'Invalid registration token';
-  end if;
-
-  select telegram_user_id into v_telegram_user_id
+  select telegram_user_id
+    into v_telegram_user_id
     from private.telegram_registration_pending
    where token_hash = extensions.digest(lower(p_token), 'sha256')
      and expires_at > now();
@@ -168,7 +43,7 @@ grant execute on function public.complete_telegram_registration(text)
 
   return v_telegram_user_id::text;
 end;
-$;
+$$;
 
 create or replace function public.create_telegram_registration_pending(
   p_token text,
@@ -191,8 +66,9 @@ begin
   end if;
 
   if exists (
-    select 1 from private.telegram_accounts a
-    where a.telegram_user_id = p_telegram_user_id
+    select 1
+      from private.telegram_accounts a
+     where a.telegram_user_id = p_telegram_user_id
   ) then
     raise exception 'This Telegram account is already linked';
   end if;
@@ -226,22 +102,25 @@ security definer
 set search_path = ''
 as $$
 declare
-  v_user_id uuid := (select auth.uid());
+  v_user_id uuid := auth.uid();
   v_pending private.telegram_registration_pending%rowtype;
   v_existing private.telegram_accounts%rowtype;
 begin
   if v_user_id is null then
     raise exception 'Sign in to your SupplyChain14 account first';
   end if;
+
   if p_token is null or p_token !~ '^[A-Fa-f0-9]{64}$' then
     raise exception 'Invalid registration token';
   end if;
 
-  select * into v_pending
+  select *
+    into v_pending
     from private.telegram_registration_pending
    where token_hash = extensions.digest(lower(p_token), 'sha256')
      and expires_at > now()
    for update;
+
   if not found then
     raise exception 'Registration link expired or already used; restart from Telegram';
   end if;
@@ -255,9 +134,11 @@ begin
   on conflict (user_id) do nothing;
 
   if not found then
-    select * into v_existing
+    select *
+      into v_existing
       from private.telegram_accounts
      where user_id = v_user_id;
+
     if v_existing.telegram_user_id is distinct from v_pending.telegram_user_id then
       raise exception 'This SupplyChain14 account is already linked to another Telegram account';
     end if;
@@ -278,8 +159,13 @@ exception
 end;
 $$;
 
--- Drop the earlier email-parameter signature if this migration is replacing the draft version.
+-- Remove the earlier draft signature if present.
 drop function if exists public.create_telegram_registration_pending(text,bigint,text,text,text);
+
+revoke all on function public.get_telegram_registration_user_id(text)
+  from public, anon, authenticated, service_role;
+grant execute on function public.get_telegram_registration_user_id(text)
+  to anon, authenticated;
 
 revoke all on function public.create_telegram_registration_pending(text,bigint,text,text)
   from public, anon, authenticated, service_role;
