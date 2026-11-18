@@ -160,9 +160,9 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  }
 
  async function loadTemplates(){
-  const {data,error}=await db.from("company_templates").select("id,name,industry,business_model,case_study_note,source_urls").eq("slug","amazon-global-combined-crisis").order("name");
+  const {data,error}=await db.from("company_templates").select("id,name,industry,business_model,case_study_note,source_urls").in("slug",["omnichannel-retail","amazon-global-combined-crisis"]).order("name");
   if(error)throw error;templates=data||[];
-  $("competitionTemplateSelect").replaceChildren(...templates.map(t=>option(t.name+" · "+t.industry,t.id)));
+  $("competitionTemplateSelect").replaceChildren(...templates.map(t=>option((t.slug==="amazon-global-combined-crisis"?"Amazon Global Combined Crisis":"Amazon · Legacy case")+" · "+t.industry,t.id)));
  }
 
  async function loadCompetitions(){
@@ -207,6 +207,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   const {data:comp,error}=await db.from("competitions").select("id,title,status,settings,starts_at,completed_at")
    .eq("id",activeCompetition.id).single();
   if(error)throw error;activeCompetition={...activeCompetition,...comp};
+  if($("competitionTemplateSelect")){const desiredSlug=comp.settings?.case_code==="amazon-global-combined-crisis"?"amazon-global-combined-crisis":"omnichannel-retail";const template=templates.find(t=>t.slug===desiredSlug);if(template)$("competitionTemplateSelect").value=template.id;}
   setHidden("competitionManager",false);
   $("competitionCurrentTitle").textContent=comp.title;
   $("competitionCurrentStatus").textContent=statusLabel(comp.status);
