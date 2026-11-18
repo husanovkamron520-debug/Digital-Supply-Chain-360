@@ -23,6 +23,8 @@ jobs:
           deno-version: v2.x
       - name: Type-check AI grading Edge Function
         run: deno check supabase/functions/competition-ai-grade/index.ts
+      - name: Type-check Telegram password recovery Edge Function
+        run: deno check supabase/functions/telegram-password-recovery/index.ts
       - name: Validate registration migration SQL grammar
         run: |
           python -m pip install --quiet pglast
