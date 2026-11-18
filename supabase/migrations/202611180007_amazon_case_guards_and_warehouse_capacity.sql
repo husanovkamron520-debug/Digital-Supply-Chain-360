@@ -3,8 +3,8 @@ do $migration$
 declare v_def text;
 begin
  select pg_get_functiondef('public.amazon_receive_purchase_order(uuid,integer)'::regprocedure) into v_def;
- v_def:=replace(v_def,' v_new integer; v_stock integer; v_cost numeric; v_item text; v_capacity integer; v_occupied integer;',
-  ' v_new integer; v_stock integer; v_cost numeric; v_competition_id uuid; v_capacity integer; v_occupied integer;');
+ v_def:=replace(v_def,' v_new integer; v_stock integer; v_cost numeric; v_item text;',
+  ' v_new integer; v_stock integer; v_cost numeric; v_item text; v_capacity integer; v_occupied integer;');
  v_def:=replace(v_def,
   ' if not found then raise exception ''Purchase order not found''; end if;
  if not public.is_competition_role',
