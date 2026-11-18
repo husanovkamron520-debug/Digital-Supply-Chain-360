@@ -176,3 +176,100 @@ revoke all on function public.complete_telegram_registration(text)
   from public, anon, service_role;
 grant execute on function public.complete_telegram_registration(text)
   to authenticated;
+
+
+-- Telegram-only password recovery. No real email address is stored or sent.
+create table if not exists private.telegram_password_recovery_pending (
+  token_hash bytea primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  telegram_user_id bigint not null,
+  expires_at timestamptz not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists telegram_password_recovery_expiry_idx
+  on private.telegram_password_recovery_pending (expires_at);
+alter table private.telegram_password_recovery_pending enable row level security;
+revoke all on private.telegram_password_recovery_pending from public, anon, authenticated, service_role;
+
+create or replace function public.create_telegram_password_recovery_pending(
+  p_token text,
+  p_telegram_user_id bigint
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user_id uuid;
+begin
+  if p_token is null or p_token !~ '^[A-Fa-f0-9]{64}$'
+     or p_telegram_user_id is null or p_telegram_user_id <= 0 then
+    raise exception 'Invalid recovery request';
+  end if;
+
+  select user_id into v_user_id
+    from private.telegram_accounts
+   where telegram_user_id = p_telegram_user_id;
+
+  if v_user_id is null then
+    raise exception 'No SupplyChain14 account is linked to this Telegram account';
+  end if;
+
+  delete from private.telegram_password_recovery_pending
+   where expires_at <= now()
+      or telegram_user_id = p_telegram_user_id;
+
+  insert into private.telegram_password_recovery_pending(
+    token_hash, user_id, telegram_user_id, expires_at
+  )
+  values (
+    extensions.digest(lower(p_token), 'sha256'),
+    v_user_id,
+    p_telegram_user_id,
+    now() + interval '15 minutes'
+  );
+
+  return jsonb_build_object('success', true, 'expires_in_seconds', 900);
+end;
+$$;
+
+-- Service-role-only atomic consume. The one-time token is deleted before the admin
+-- password update is attempted; users can request a fresh token if that update fails.
+create or replace function public.consume_telegram_password_recovery(p_token text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_pending private.telegram_password_recovery_pending%rowtype;
+begin
+  if p_token is null or p_token !~ '^[A-Fa-f0-9]{64}$' then
+    raise exception 'Invalid recovery token';
+  end if;
+
+  delete from private.telegram_password_recovery_pending
+   where token_hash = extensions.digest(lower(p_token), 'sha256')
+     and expires_at > now()
+  returning * into v_pending;
+
+  if not found then
+    raise exception 'Recovery link expired or already used. Request a new one from Telegram.';
+  end if;
+
+  return jsonb_build_object(
+    'user_id', v_pending.user_id,
+    'telegram_user_id', v_pending.telegram_user_id
+  );
+end;
+$$;
+
+revoke all on function public.create_telegram_password_recovery_pending(text,bigint)
+  from public, anon, authenticated, service_role;
+grant execute on function public.create_telegram_password_recovery_pending(text,bigint)
+  to service_role;
+revoke all on function public.consume_telegram_password_recovery(text)
+  from public, anon, authenticated, service_role;
+grant execute on function public.consume_telegram_password_recovery(text)
+  to service_role;
