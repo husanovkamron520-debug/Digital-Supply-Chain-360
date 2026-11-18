@@ -11,7 +11,8 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  let user=null,isTeacher=false,classrooms=[],templates=[],activeClassId=null,activeCompetition=null,activeTeam=null,activeRole=null;
 
  function say(message,success=false){$("competitionMessage").textContent=message;$("competitionMessage").classList.toggle("success",success);}
- function statusLabel(value){return (value||"").replaceAll("_"," ").toUpperCase();}
+ function statusLabel(value){if(value==="manufacturer")return "FULFILLMENT OPERATIONS MANAGER";return (value||"").replaceAll("_"," ").toUpperCase();}
+ const isAmazonCase=()=>activeCompetition?.settings?.case_code==="amazon-global-combined-crisis";
  async function requestAiGrade(taskId,button){
   if(button)button.disabled=true;
   try{
@@ -159,7 +160,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  }
 
  async function loadTemplates(){
-  const {data,error}=await db.from("company_templates").select("id,name,industry,business_model,case_study_note,source_urls").eq("slug","omnichannel-retail").order("name");
+  const {data,error}=await db.from("company_templates").select("id,name,industry,business_model,case_study_note,source_urls").eq("slug","amazon-global-combined-crisis").order("name");
   if(error)throw error;templates=data||[];
   $("competitionTemplateSelect").replaceChildren(...templates.map(t=>option(t.name+" · "+t.industry,t.id)));
  }
@@ -672,7 +673,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    const supplierAvailable=new Date(clockResult.data.virtual_now)>=new Date(po.available_at||po.expected_at);
    if(activeCompetition.status==="active"&&activeRole==="warehouse"&&supplierAvailable){const form=el("form","competition-inline-form"),qty=el("input","");qty.type="number";qty.min="1";qty.max=String(po.quantity-po.received_quantity);qty.value=qty.max;qty.required=true;
    const btn=el("button","secondary-button","Receive stock");btn.type="submit";form.append(qty,btn);
-   form.addEventListener("submit",async e=>{e.preventDefault();btn.disabled=true;try{const {data,error}=await db.rpc("competition_receive_purchase_order",{p_purchase_order_id:po.id,p_quantity:Number(qty.value)});if(error)throw error;say("Received "+data.received_quantity+" units; stock and cash updated.",true);await loadTeamOperations();}catch(err){say(err.message);btn.disabled=false;}});
+   form.addEventListener("submit",async e=>{e.preventDefault();btn.disabled=true;try{const {data,error}=await db.rpc(isAmazonCase()?"amazon_receive_purchase_order":"competition_receive_purchase_order",{p_purchase_order_id:po.id,p_quantity:Number(qty.value)});if(error)throw error;say("Received "+data.received_quantity+" units; stock and cash updated.",true);await loadTeamOperations();}catch(err){say(err.message);btn.disabled=false;}});
    card.append(form);}else if(activeCompetition.status==="active"&&activeRole==="warehouse"){card.append(el("small","", "Awaiting supplier availability · "+new Date(po.available_at||po.expected_at).toLocaleDateString()));}
    $("competitionPurchaseOrderList").append(card);
   }
@@ -786,7 +787,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  $("competitionSelect").addEventListener("change",async()=>{activeCompetition={id:$("competitionSelect").value};try{await loadCompetition();say("");}catch(err){say(err.message);}});
  $("competitionCreateForm").addEventListener("submit",async e=>{
   e.preventDefault();const btn=$("competitionCreateButton");btn.disabled=true;
-  try{const {data,error}=await db.rpc("create_competition",{p_classroom_id:activeClassId,p_title:$("competitionTitle").value.trim(),p_settings:{round_count:5,round_duration_minutes:20,scoring_version:"v1"}});if(error)throw error;
+  try{const {data,error}=await db.rpc("create_competition",{p_classroom_id:activeClassId,p_title:$("competitionTitle").value.trim(),p_settings:{case_code:"amazon-global-combined-crisis",round_count:3,round_duration_minutes:10,horizon_days:30,demand_shock_pct:40,main_supplier_delay_days:10,scoring_version:"amazon-global-v1"}});if(error)throw error;
    $("competitionTitle").value="";say("Competition created. Configure teams next.",true);await loadCompetitions();$("competitionSelect").value=data;activeCompetition={id:data};await loadCompetition();
   }catch(err){say(err.message);}finally{btn.disabled=false;}
  });
@@ -798,7 +799,8 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  });
  $("competitionManualTeamForm").addEventListener("submit",async e=>{
   e.preventDefault();const btn=$("competitionManualTeamButton");btn.disabled=true;
-  try{const {error}=await db.rpc("create_competition_team",{p_competition_id:activeCompetition.id,p_team_name:$("competitionManualTeamName").value.trim(),p_company_template_id:$("competitionTemplateSelect").value});if(error)throw error;
+  try{const {data:teamId,error}=await db.rpc("create_competition_team",{p_competition_id:activeCompetition.id,p_team_name:$("competitionManualTeamName").value.trim(),p_company_template_id:$("competitionTemplateSelect").value});if(error)throw error;
+   if(isAmazonCase()){const init=await db.rpc("amazon_initialize_team",{p_team_id:teamId});if(init.error)throw init.error;}
    $("competitionManualTeamName").value="";say("Team created. Assign its students below.",true);await loadCompetition();
   }catch(err){say(err.message);}finally{btn.disabled=false;}
  });
@@ -832,7 +834,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  });
  $("competitionPurchaseOrderForm").addEventListener("submit",async e=>{
   e.preventDefault();const btn=$("competitionPurchaseOrderForm").querySelector("button");btn.disabled=true;
-  try{const {error}=await db.rpc("competition_create_purchase_order",{p_team_id:activeTeam,p_supplier_id:$("competitionPOSupplier").value,p_sku:$("competitionPOSku").value.trim(),p_item_name:$("competitionPOItemName").value.trim(),p_quantity:Number($("competitionPOQuantity").value)});if(error)throw error;say("Purchase order placed. Lead time and supplier reliability determine availability.",true);await loadTeamOperations();}catch(err){say(err.message);}finally{btn.disabled=false;}
+  try{let error=null;if(isAmazonCase()){const supplier=await db.from("competition_suppliers").select("supplier_code").eq("id",$("competitionPOSupplier").value).single();if(supplier.error)throw supplier.error;const result=await db.rpc("amazon_place_purchase_order",{p_team_id:activeTeam,p_supplier_code:supplier.data.supplier_code,p_sku:$("competitionPOSku").value.trim(),p_quantity:Number($("competitionPOQuantity").value),p_order_day:null});error=result.error;}else{const result=await db.rpc("competition_create_purchase_order",{p_team_id:activeTeam,p_supplier_id:$("competitionPOSupplier").value,p_sku:$("competitionPOSku").value.trim(),p_item_name:$("competitionPOItemName").value.trim(),p_quantity:Number($("competitionPOQuantity").value)});error=result.error;}if(error)throw error;say("Purchase order placed. Supplier capacity, MOQ, budget and ETA validated.",true);await loadTeamOperations();}catch(err){say(err.message);}finally{btn.disabled=false;}
  });
  $("competitionProductionForm").addEventListener("submit",async e=>{
   e.preventDefault();const btn=$("competitionProductionForm").querySelector("button");btn.disabled=true;
@@ -848,7 +850,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  });
  $("competitionAdvanceRound").addEventListener("click",async()=>{
   const btn=$("competitionAdvanceRound");btn.disabled=true;
-  try{const {data,error}=await db.rpc("competition_advance_round",{p_competition_id:activeCompetition.id});if(error)throw error;say("Advanced to round "+data.current_round+". Simulation time moved forward seven days.",true);await loadCompetition();}catch(err){say(err.message);btn.disabled=false;}
+  try{const {data,error}=await db.rpc(isAmazonCase()?"amazon_advance_round":"competition_advance_round",{p_competition_id:activeCompetition.id});if(error)throw error;say("Advanced to round "+data.current_round+". Simulation time moved forward "+(data.days_advanced||7)+" days.",true);await loadCompetition();}catch(err){say(err.message);btn.disabled=false;}
  });
  $("competitionCalculateScores").addEventListener("click",async()=>{
   const btn=$("competitionCalculateScores");btn.disabled=true;
