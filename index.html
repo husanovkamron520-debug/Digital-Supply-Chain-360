@@ -53,6 +53,15 @@
         <p>Telegram orqali ro‘yxatdan o‘tishingiz boshlandi. Ushbu SupplyChain14 hisobini aynan shu Telegram profilingizga ulashni tasdiqlang.</p>
         <button class="primary-button" id="telegramRegistrationConfirmButton" type="button">Tasdiqlash va Telegramni ulash</button>
       </div>
+      <form id="telegramPasswordRecovery" class="telegram-registration-confirm" hidden>
+        <h2>Telegram orqali parolni tiklash</h2>
+        <p>Yangi parolni kiriting. Havola bir martalik va 15 daqiqa amal qiladi.</p>
+        <label for="telegramRecoveryPassword">Yangi parol</label>
+        <input id="telegramRecoveryPassword" type="password" minlength="8" maxlength="128" autocomplete="new-password" required>
+        <label for="telegramRecoveryConfirmPassword">Parolni qayta kiriting</label>
+        <input id="telegramRecoveryConfirmPassword" type="password" minlength="8" maxlength="128" autocomplete="new-password" required>
+        <button class="primary-button" id="telegramRecoverySubmit" type="submit">Parolni yangilash</button>
+      </form>
       <div class="auth-switch">
         <span id="authSwitchText">Platformada yangimisiz?</span>
         <button type="button" id="authSwitch">Talaba hisobini yaratish</button>
