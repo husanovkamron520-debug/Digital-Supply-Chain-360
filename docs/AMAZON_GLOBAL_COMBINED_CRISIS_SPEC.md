@@ -134,6 +134,8 @@ Selecting a posture creates enforceable supplier-mix limits across total ordered
 - Balanced: Supplier A must represent 40–70% of total ordered units.
 - Service-focused: at least 60% of total ordered units from Suppliers B and C combined.
 
+**Feasibility check:** B+C combined maximum capacity is 4,000 units against a 7,950-unit net replenishment gap (50.3%). Therefore the 60% Service-focused posture is infeasible under the agreed supplier capacity table and is disabled in the live UI. Cost-focused and Balanced remain selectable. A feasible Balanced mix at the 70% A limit can source 5,565 units from A, 2,300 from B and 85 from C for an estimated $153,702.50 procurement cost before freight/holding. This is a planning baseline; the timing and storage constraints still apply.
+
 The selected posture does not waive SKU-specific MOQ, supplier capacity, supplier lead time, budget, or storage limits. The system validates the actual order mix; it must not score an invalid plan as compliant.
 
 ### Strategic posture change — Approval-based
