@@ -62,3 +62,19 @@ Run this checklist with a dedicated teacher account and at least 20 test student
 ## Current verification boundary
 
 Database migrations, role-checked RPC definitions, RLS policies, view definitions, HTML element references, JavaScript syntax validation, and Cloudflare deployment have been checked. A full authenticated teacher-plus-20-student browser test still needs to be run against real test accounts.
+
+
+## 7. Amazon case and final financial report
+
+- [ ] Automatic setup creates 2–4 teams using the same active Amazon template (omnichannel-retail); it does not mix Toyota, IKEA or Coca-Cola into this case.
+- [ ] Every team receives the same starting capital, Amazon operating profile, initial inventory and customer-order structure.
+- [ ] Each team has exactly the five core roles: Procurement, Supplier Relations, Fulfilment Operations (database role manufacturer), Warehouse and Transport.
+- [ ] Manual team creation offers the Amazon case template for this first release.
+- [ ] During the competition, the final financial report is hidden.
+- [ ] The teacher can complete the competition only after all rounds and required evaluations are complete.
+- [ ] After completion, the final report is available to classroom members and contains values derived from the team's persisted ledger: revenue, recorded operating costs, operating surplus, profit margin, return on starting capital, closing cash, OTIF, inventory health, average delivery time and final score.
+- [ ] Operating surplus is calculated as recorded revenue minus recorded operating costs; profit margin is operating surplus divided by revenue; return on capital is operating surplus divided by starting capital.
+- [ ] Zero-revenue teams show an unavailable profit margin rather than a fabricated percentage.
+- [ ] Student final report shows only that student's assigned team; teacher report shows all teams.
+- [ ] The report endpoint rejects unauthenticated users, non-class members and competitions that are not completed.
+- [ ] Existing competitions and historical team assignments remain unchanged by the migration.
