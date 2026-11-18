@@ -1,0 +1,19 @@
+name: Validate pull request
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Validate JavaScript syntax
+        run: |
+          for file in ./*.js; do
+            node --input-type=module --check < "$file"
+          done
