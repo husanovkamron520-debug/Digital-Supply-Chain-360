@@ -76,5 +76,6 @@ Database migrations, role-checked RPC definitions, RLS policies, view definition
 - [ ] Operating surplus is calculated as recorded revenue minus recorded operating costs; profit margin is operating surplus divided by revenue; return on capital is operating surplus divided by starting capital.
 - [ ] Zero-revenue teams show an unavailable profit margin rather than a fabricated percentage.
 - [ ] Student final report shows only that student's assigned team; teacher report shows all teams.
+- [ ] A student calling the final-report RPC directly cannot retrieve another team's revenue, costs, cash balance or ROI.
 - [ ] The report endpoint rejects unauthenticated users, non-class members and competitions that are not completed.
 - [ ] Existing competitions and historical team assignments remain unchanged by the migration.
