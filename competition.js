@@ -674,6 +674,11 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   }
   if(activeRole==="transport"){
    const card=el("div","competition-task-card");card.append(el("h4","","Transport Manager · Dispatch & delivery"),el("p","","Economy: $1.75/unit · 3 kun · 2,500 dona/round | Standard: $2.50/unit · 2 kun · 2,200 dona/round | Express: $4.25/unit · 1 kun · 1,000 dona/round."));
+   const inbound=el("div","competition-task-card");inbound.append(el("b","","Inbound supply monitoring"));
+   const inboundOpen=pos.filter(p=>["placed","partially_received"].includes(p.status));
+   if(!inboundOpen.length)inbound.append(el("p","empty-state","Ochiq inbound PO yo‘q."));
+   for(const po of inboundOpen)inbound.append(el("p","",po.po_number+" · "+po.sku+" · "+(po.quantity-po.received_quantity)+" dona kutilmoqda · ETA "+new Date(po.available_at||po.expected_at).toLocaleDateString()));
+   card.append(inbound);
    const readyMap=new Map(fulfilment.map(x=>[x.order_id,Number(x.ready_quantity)]));
    for(const order of orders){
     const ready=readyMap.get(order.id)||0;if(ready<=0)continue;
