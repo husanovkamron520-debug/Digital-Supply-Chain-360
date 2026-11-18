@@ -435,9 +435,13 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   }
     const {data:clock,error:clockError}=await db.from("competition_simulation_clock").select("current_round,round_limit,virtual_now").eq("competition_id",activeCompetition.id).maybeSingle();
   if(clockError)throw clockError;
-  $("competitionRoundInfo").textContent=clock?(isAmazonCase()?"Round "+clock.current_round+" / 3 · Day "+((clock.current_round-1)*10+1)+"–"+(clock.current_round*10)+" · 10 min/round · "+new Date(clock.virtual_now).toLocaleDateString():"Round "+clock.current_round+" / "+clock.round_limit+" · Simulation date "+new Date(clock.virtual_now).toLocaleDateString()):"Rounds begin when the competition starts.";
+  let roundWindow=null;
+  if(clock&&isAmazonCase()){const rw=await db.from("competition_rounds").select("ends_at").eq("competition_id",activeCompetition.id).eq("round_number",clock.current_round).maybeSingle();if(rw.error)throw rw.error;roundWindow=rw.data;}
+  const roundStillRunning=!!(roundWindow?.ends_at&&new Date(roundWindow.ends_at).getTime()>Date.now());
+  $("competitionRoundInfo").textContent=clock?(isAmazonCase()?"Round "+clock.current_round+" / 3 · Day "+((clock.current_round-1)*10+1)+"–"+(clock.current_round*10)+" · 10 min/round · "+(roundWindow?.ends_at?"Tugash vaqti "+new Date(roundWindow.ends_at).toLocaleTimeString():""):"Round "+clock.current_round+" / "+clock.round_limit+" · Simulation date "+new Date(clock.virtual_now).toLocaleDateString()):"Rounds begin when the competition starts.";
   setHidden("competitionAdvanceRound",activeCompetition.status!=="active");
-  $("competitionAdvanceRound").disabled=!clock||clock.current_round>=clock.round_limit;
+  $("competitionAdvanceRound").disabled=!clock||clock.current_round>=clock.round_limit||(isAmazonCase()&&roundStillRunning);
+  if(isAmazonCase()&&roundStillRunning)$("competitionAdvanceRound").title="Round 10 real minutes tugagach keyingi bosqich ochiladi.";
   const pendingDecisionCount=decisionRows.filter(d=>d.score===null).length;
   const studentsWithoutDecision=allMemberRows.filter(m=>!decisionRows.some(d=>d.student_id===m.student_id&&d.team_id===m.team_id&&d.score!==null)).length;
   const pendingTaskCount=taskRows.filter(task=>task.status!=="approved"||task.score===null||task.score===undefined).length;
