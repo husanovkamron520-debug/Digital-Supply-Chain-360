@@ -673,15 +673,16 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    host.append(card);
   }
   if(activeRole==="transport"){
-   const card=el("div","competition-task-card");card.append(el("h4","","Transport Manager · Dispatch & delivery"));
+   const card=el("div","competition-task-card");card.append(el("h4","","Transport Manager · Dispatch & delivery"),el("p","","Economy: $1.75/unit · 3 kun · 2,500 dona/round | Standard: $2.50/unit · 2 kun · 2,200 dona/round | Express: $4.25/unit · 1 kun · 1,000 dona/round."));
    const readyMap=new Map(fulfilment.map(x=>[x.order_id,Number(x.ready_quantity)]));
    for(const order of orders){
     const ready=readyMap.get(order.id)||0;if(ready<=0)continue;
     const line=el("div","competition-task-card");line.append(el("b","",order.order_number+" · "+order.item_name),el("p","",ready+" dona pick/pack qilingan, jo‘natishga tayyor."));
     const form=el("form","competition-inline-form"),q=el("input","");q.type="number";q.min="1";q.max=String(ready);q.value=String(ready);q.required=true;
     const carrier=el("input","");carrier.value="Regional carrier";carrier.placeholder="Carrier";
-    const btn=el("button","secondary-button","Jo‘natmani dispatch qilish");btn.type="submit";form.append(q,carrier,btn);
-    form.addEventListener("submit",async e=>{e.preventDefault();btn.disabled=true;try{const {error}=await db.rpc("amazon_dispatch_shipment",{p_order_id:order.id,p_quantity:Number(q.value),p_carrier:carrier.value});if(error)throw error;say("Jo‘natma yo‘lga chiqdi. ETA 2 virtual kun.",true);await loadTeamOperations();}catch(err){say(err.message);btn.disabled=false;}});
+    const service=el("select","");service.append(option("Economy · $1.75/unit · 3 days","economy"),option("Standard · $2.50/unit · 2 days","standard"),option("Express · $4.25/unit · 1 day","express"));service.value="standard";
+    const btn=el("button","secondary-button","Jo‘natmani dispatch qilish");btn.type="submit";form.append(q,carrier,service,btn);
+    form.addEventListener("submit",async e=>{e.preventDefault();btn.disabled=true;try{const {error}=await db.rpc("amazon_dispatch_shipment_v2",{p_order_id:order.id,p_quantity:Number(q.value),p_carrier:carrier.value,p_service_level:service.value});if(error)throw error;say("Jo‘natma yo‘lga chiqdi. Tanlangan xizmatga qarab ETA belgilandi.",true);await loadTeamOperations();}catch(err){say(err.message);btn.disabled=false;}});
     line.append(form);card.append(line);
    }
    if(!card.querySelector(".competition-task-card"))card.append(el("p","empty-state","Hozircha dispatch uchun tayyor pick/pack buyurtma yo‘q."));
