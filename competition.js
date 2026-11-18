@@ -657,6 +657,19 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    if(!card.querySelector(".competition-task-card"))card.append(el("p","empty-state","Hozircha dispatch uchun tayyor pick/pack buyurtma yo‘q."));
    host.append(card);
   }
+  if(shipments.length){
+   const shipCard=el("div","competition-task-card");shipCard.append(el("h4","","Shipment tracking & delivery confirmation"));
+   for(const shipment of shipments){
+    const line=el("div","competition-task-card");line.append(el("b","",shipment.destination+" · "+shipment.quantity+" dona"),el("p","",shipment.carrier+" · "+statusLabel(shipment.status)+" · ETA "+new Date(shipment.eta).toLocaleDateString()));
+    if(activeRole==="transport"&&["in_transit","delayed"].includes(shipment.status)&&new Date(shipment.eta)<=new Date(clock.virtual_now)&&activeCompetition.status==="active"){
+     const btn=el("button","secondary-button","Yetkazib berilganini tasdiqlash");btn.type="button";
+     btn.addEventListener("click",async()=>{btn.disabled=true;try{const {data,error}=await db.rpc("competition_deliver_shipment",{p_shipment_id:shipment.id});if(error)throw error;say(data.on_time?"Buyurtma vaqtida yetkazildi; tushum qayd etildi.":"Buyurtma kech yetkazildi; tushum qayd etildi.",true);await loadTeamOperations();}catch(err){say(err.message);btn.disabled=false;}});
+     line.append(btn);
+    }
+    shipCard.append(line);
+   }
+   host.append(shipCard);
+  }
   if(approvals.length){
    const card=el("div","competition-task-card");card.append(el("h4","","Jamoa tasdiqlari"));
    for(const a of approvals){
@@ -946,7 +959,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  });
  $("competitionTaskPackButton").addEventListener("click",async()=>{
   const btn=$("competitionTaskPackButton");btn.disabled=true;
-  try{const {data,error}=await db.rpc("create_competition_standard_task_pack",{p_competition_id:activeCompetition.id});if(error)throw error;say(data+" individual role case tasks created across all teams.",true);await loadCompetition();}catch(err){say(err.message);btn.disabled=false;}
+  try{const {data,error}=await db.rpc(isAmazonCase()?"amazon_create_role_tasks":"create_competition_standard_task_pack",{p_competition_id:activeCompetition.id});if(error)throw error;say(data+" individual role case tasks created across all teams.",true);await loadCompetition();}catch(err){say(err.message);btn.disabled=false;}
  });
  $("competitionTaskForm").addEventListener("submit",async e=>{
   e.preventDefault();const btn=$("competitionTaskButton");btn.disabled=true;
