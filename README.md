@@ -123,6 +123,7 @@ The database includes profiles, classrooms, memberships, scenarios, orders, ship
 - `supabase/competition_engine.sql` creates the competition foundation after the classroom/core schema.
 - `supabase/competition_operations.sql` contains the applied team operations, round clock, role workflows, live metrics, and leaderboard migrations in dependency order.
 - `supabase/amazon_final_financial_report.sql` locks automatic team setup to the Amazon model and adds the post-completion financial report RPC.
+- `supabase/amazon_final_report_team_scope.sql` restricts detailed financial results to teachers and each student's own team.
 - Other SQL files are incremental changes for modules, state transitions, indexes, RLS, grants, and security hardening.
 - For an existing project, apply only changes that have not already been applied, in their dependency order. Do not blindly rerun every file against a populated production database.
 
