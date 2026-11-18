@@ -15,6 +15,13 @@ const telegramConfirmPanel = document.querySelector("#telegramRegistrationConfir
 const telegramConfirmButton = document.querySelector("#telegramRegistrationConfirmButton");
 const telegramRegistrationToken = new URLSearchParams(window.location.search).get("tg_reg");
 if (telegramRegistrationToken) window.history.replaceState({}, document.title, window.location.pathname);
+const telegramRecoveryToken = new URLSearchParams(window.location.search).get("tg_reset");
+if (telegramRegistrationToken || telegramRecoveryToken) window.history.replaceState({}, document.title, window.location.pathname);
+const telegramRecoveryForm = document.querySelector("#telegramPasswordRecovery");
+const telegramRecoveryPassword = document.querySelector("#telegramRecoveryPassword");
+const telegramRecoveryConfirmPassword = document.querySelector("#telegramRecoveryConfirmPassword");
+const telegramRecoverySubmit = document.querySelector("#telegramRecoverySubmit");
+let telegramRecoveryBusy = false;
 let telegramRegistrationCompleted = false;
 let telegramConfirmationBusy = false;
 const submit = document.querySelector("#authSubmit");
@@ -126,6 +133,15 @@ async function handleSession(session) {
     gate.hidden = false;
     return;
   }
+  if (telegramRecoveryToken) {
+    gate.hidden = false;
+    appShell?.classList.add("auth-locked");
+    form.hidden = true;
+    document.querySelector(".auth-switch").hidden = true;
+    if (magicLinkButton) magicLinkButton.hidden = true;
+    if (telegramRecoveryForm) telegramRecoveryForm.hidden = false;
+    return;
+  }
   if (telegramRegistrationToken && !telegramRegistrationCompleted) {
     gate.hidden = false;
     appShell?.classList.add("auth-locked");
@@ -162,6 +178,13 @@ if (!SUPABASE_URL.startsWith("https://") || SUPABASE_ANON_KEY.startsWith("PASTE_
 
 switchButton.addEventListener("click", () => setMode(mode === "login" ? "register" : "login"));
 if (telegramRegistrationToken) setMode("register");
+if (telegramRecoveryToken) {
+  form.hidden = true;
+  document.querySelector(".auth-switch").hidden = true;
+  if (magicLinkButton) magicLinkButton.hidden = true;
+  if (telegramRecoveryForm) telegramRecoveryForm.hidden = false;
+  showMessage("");
+}
 
 if (magicLinkButton) {
   magicLinkButton.addEventListener("click", async () => {
@@ -215,6 +238,59 @@ if (telegramConfirmButton) {
     }
   });
 }
+if (telegramRecoveryForm) {
+  telegramRecoveryForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!supabase || !telegramRecoveryToken || telegramRecoveryBusy) return;
+    const newPassword = telegramRecoveryPassword.value;
+    if (newPassword.length < 8 || newPassword.length > 128) {
+      showMessage("Parol 8–128 belgidan iborat bo'lishi kerak.");
+      return;
+    }
+    if (newPassword !== telegramRecoveryConfirmPassword.value) {
+      showMessage("Parollar bir-biriga mos kelmadi.");
+      telegramRecoveryConfirmPassword.focus();
+      return;
+    }
+    telegramRecoveryBusy = true;
+    telegramRecoverySubmit.disabled = true;
+    telegramRecoverySubmit.textContent = "Parol yangilanmoqda…";
+    try {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/telegram-password-recovery`, {
+        method: "POST",
+        headers: { "apikey": SUPABASE_ANON_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({ token: telegramRecoveryToken, password: newPassword })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.success || !result.telegram_user_id) {
+        throw new Error(result.error || "Parolni tiklash amalga oshmadi. Telegram botdan yangi havola oling.");
+      }
+      const internalEmail = `tg_${result.telegram_user_id}@telegram.invalid`;
+      const {data: loginData, error: loginError} = await supabase.auth.signInWithPassword({
+        email: internalEmail, password: newPassword
+      });
+      if (loginError) {
+        emailInput.value = internalEmail;
+        passwordInput.value = "";
+        telegramRecoveryForm.hidden = true;
+        form.hidden = false;
+        switchButton.parentElement.hidden = true;
+        setMode("login");
+        showMessage("Parol muvaffaqiyatli yangilandi. Endi yangi parol bilan tizimga kiring.", true);
+        passwordInput.focus();
+        return;
+      }
+      await handleSession(loginData.session);
+    } catch (error) {
+      showMessage(error.message || "Parolni tiklash xizmati vaqtincha ishlamayapti.");
+    } finally {
+      telegramRecoveryBusy = false;
+      telegramRecoverySubmit.disabled = false;
+      telegramRecoverySubmit.textContent = "Parolni yangilash";
+    }
+  });
+}
+
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!supabase) return;
