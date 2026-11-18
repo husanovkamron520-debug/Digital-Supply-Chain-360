@@ -548,7 +548,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   let host=$("amazonCasePanel");
   if(!host){host=el("section","competition-setup");host.id="amazonCasePanel";$("competitionStudentPanel").append(host);}
   host.replaceChildren();
-  const state=caseData.state||{},skus=caseData.skus||[],offers=caseData.offers||[],fulfilment=caseData.fulfilment||[],approvals=caseData.approvals||[];
+  const state=caseData.state||{},skus=caseData.skus||[],offers=caseData.offers||[],fulfilment=caseData.fulfilment||[],approvals=caseData.approvals||[],commitments=caseData.commitments||[];
   const round=Number(clock.current_round),day=(round-1)*10+1;
   const header=el("div","competition-panel-heading");
   header.append(el("h3","","Amazon Global Combined Crisis"),el("p","","30 kunlik global e-commerce inqirozi · Round "+round+"/3 · Day "+day+"–"+(day+9)+" · 10 real minutes per round"));
@@ -558,7 +558,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    ["Asosiy xarid budjeti","$"+Number(state.main_budget||160000).toLocaleString()],
    ["Favqulodda rezerv","$"+Number(state.reserve_budget||30000).toLocaleString()+" · tasdiq $"+Number(state.reserve_approved||0).toLocaleString()],
    ["Majburiyatga olingan xarid","$"+Number(state.committed_spend||0).toLocaleString()],
-   ["Strategiya",statusLabel(state.strategic_posture)]
+   ["Strategiya",statusLabel(state.strategic_posture)],["Ombor sig‘imi · vaqtinchalik",Number(state.warehouse_capacity_units||8000).toLocaleString()+" dona"]
   ];
   for(const [label,value] of summaryValues){const card=el("div","competition-metric");card.append(el("span","",label),el("strong","",value));summary.append(card);}
   host.append(summary);
@@ -609,7 +609,23 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    card.append(el("h4","","Favqulodda rezerv"),reserveForm);host.append(card);
   }
   if(activeRole==="supplier"){
-   const card=el("div","competition-task-card");card.append(el("h4","","Supplier Relations Manager"),el("p","","Vazifa: uchta supplier bilan yetkazib berish majburiyatini tasdiqlash, A supplier kechikishi bo‘yicha eskalatsiya, B/C alternativ manbalar va SLA xavfini boshqarish. Narx, MOQ, SKU quvvati va lead time takliflari yuqoridagi jadvalda berilgan; Procurement Manager buyurtma taqsimotini boshqaradi."));
+   const card=el("div","competition-task-card");card.append(el("h4","","Supplier Relations Manager"),el("p","","Uchta supplier bilan yetkazib berish majburiyatini tasdiqlang, A supplier kechikishini eskalatsiya qiling va B/C alternativ manbalar bilan SLA xavfini boshqaring. Bu qaydlar procurement buyurtmasi yoki zaxira yaratmaydi; real PO’ni Procurement Manager beradi."));
+   const form=el("form","competition-inline-form"),supplier=el("select",""),skuSelect=el("select",""),qty=el("input",""),arrival=el("input",""),status=el("select",""),note=el("input","");
+   for(const code of ["SUP-A","SUP-B","SUP-C"])supplier.append(option(code+" · "+({"SUP-A":"China","SUP-B":"Germany","SUP-C":"USA"}[code]),code));
+   for(const sku of skus)skuSelect.append(option(sku.sku+" · "+sku.item_name,sku.sku));
+   qty.type="number";qty.min="1";qty.placeholder="Supplier tasdiqlagan miqdor";qty.required=true;
+   arrival.type="number";arrival.min="1";arrival.max="30";arrival.required=true;arrival.placeholder="Kutilayotgan yetib kelish kuni";
+   status.append(option("Confirmed","confirmed"),option("At risk","at_risk"),option("Escalated","escalated"));
+   note.placeholder="Supplier bilan muloqot, SLA yoki eskalatsiya tafsiloti";note.required=true;
+   const btn=el("button","secondary-button","Supplier commitment qayd etish");btn.type="submit";
+   form.append(supplier,skuSelect,qty,arrival,status,note,btn);
+   const setArrival=()=>{const offer=offers.find(o=>o.supplier_code===supplier.value&&o.sku===skuSelect.value);const earliest=(round-1)*10+1+Number(offer?.lead_time_days||1);arrival.min=String(earliest);arrival.value=String(Math.min(30,earliest));};
+   supplier.addEventListener("change",setArrival);skuSelect.addEventListener("change",setArrival);setArrival();
+   form.addEventListener("submit",async e=>{e.preventDefault();btn.disabled=true;try{const {error}=await db.rpc("amazon_record_supplier_commitment",{p_team_id:teamId,p_supplier_code:supplier.value,p_sku:skuSelect.value,p_quantity:Number(qty.value),p_expected_arrival_day:Number(arrival.value),p_status:status.value,p_note:note.value});if(error)throw error;say("Supplier commitment qayd etildi.",true);await loadTeamOperations();}catch(err){say(err.message);btn.disabled=false;}});
+   card.append(form);
+   card.append(el("h4","","Supplier commitments & escalations"));
+   if(!commitments.length)card.append(el("p","empty-state","Hozircha supplier commitment qayd etilmagan."));
+   for(const item of commitments)card.append(el("p","",item.supplier_code+" · "+item.sku+" · "+item.committed_quantity+" dona · Day "+item.expected_arrival_day+" · "+statusLabel(item.commitment_status)+" — "+item.note));
    host.append(card);
   }
   if(activeRole==="manufacturer"){
