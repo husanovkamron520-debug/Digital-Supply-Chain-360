@@ -1,4 +1,7 @@
 
+alter table public.amazon_case_quality_receipts add column if not exists competition_id uuid references public.competitions(id) on delete cascade;
+update public.amazon_case_quality_receipts qr set competition_id=t.competition_id from public.competition_teams t where t.id=qr.team_id and qr.competition_id is null;
+alter table public.amazon_case_quality_receipts alter column competition_id set not null;
 alter table public.amazon_case_quality_receipts
  add column if not exists disposed_quantity integer not null default 0
  check (disposed_quantity>=0 and disposed_quantity<=defective_quantity);
@@ -30,6 +33,11 @@ do $migration$
 declare v_def text;
 begin
  select pg_get_functiondef('public.amazon_receive_purchase_order(uuid,integer)'::regprocedure) into v_def;
+ v_def:=replace(v_def,
+  'insert into public.amazon_case_quality_receipts(purchase_order_id,team_id,supplier_code,sku,received_quantity,defective_quantity,usable_quantity,defect_rate_pct)
+ values(p_purchase_order_id,v_po.team_id,v_supplier_code,v_po.sku,p_quantity,v_defective,v_usable,coalesce(v_defect_rate,0));',
+  'insert into public.amazon_case_quality_receipts(purchase_order_id,competition_id,team_id,supplier_code,sku,received_quantity,defective_quantity,usable_quantity,defect_rate_pct)
+ values(p_purchase_order_id,v_po.competition_id,v_po.team_id,v_supplier_code,v_po.sku,p_quantity,v_defective,v_usable,coalesce(v_defect_rate,0));');
  v_def:=replace(v_def,
   'select sum(defective_quantity) from public.amazon_case_quality_receipts where team_id=v_po.team_id',
   'select sum(defective_quantity-disposed_quantity) from public.amazon_case_quality_receipts where team_id=v_po.team_id');
