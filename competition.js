@@ -685,7 +685,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    for(const qr of quarantine){
     const remaining=Number(qr.defective_quantity)-Number(qr.disposed_quantity||0);
     const line=el("div","competition-task-card");line.append(el("b","",qr.supplier_code+" · "+qr.sku),el("p","",remaining+" dona karantinda · defect rate "+qr.defect_rate_pct+"% · received "+qr.received_quantity));
-    const form=el("form","competition-inline-form"),qty=el("input",""),reason=el("input",""),btn=el("button","secondary-button","Defectni disposal / supplier return qilish");
+    const form=el("form","competition-inline-form"),qty=el("input",""),reason=el("input",""),btn=el("button","secondary-button","Defectni karantindan chiqarish");
     qty.type="number";qty.min="1";qty.max=String(remaining);qty.value=String(remaining);qty.required=true;
     reason.placeholder="Disposal yoki supplier return sababi";reason.required=true;btn.type="submit";form.append(qty,reason,btn);
     form.addEventListener("submit",async e=>{e.preventDefault();btn.disabled=true;try{const {data,error}=await db.rpc("amazon_dispose_defects",{p_quality_receipt_id:qr.id,p_quantity:Number(qty.value),p_reason:reason.value});if(error)throw error;say("Quarantine’dan "+qty.value+" dona chiqarildi. Qoldiq: "+data.remaining_quarantine,true);await loadTeamOperations();}catch(err){say(err.message);btn.disabled=false;}});
