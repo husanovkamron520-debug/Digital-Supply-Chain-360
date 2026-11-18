@@ -22,6 +22,7 @@ const telegramRecoveryPassword = document.querySelector("#telegramRecoveryPasswo
 const telegramRecoveryConfirmPassword = document.querySelector("#telegramRecoveryConfirmPassword");
 const telegramRecoverySubmit = document.querySelector("#telegramRecoverySubmit");
 let telegramRecoveryBusy = false;
+let telegramRecoveryCompleted = false;
 let telegramRegistrationCompleted = false;
 let telegramConfirmationBusy = false;
 const submit = document.querySelector("#authSubmit");
@@ -133,7 +134,7 @@ async function handleSession(session) {
     gate.hidden = false;
     return;
   }
-  if (telegramRecoveryToken) {
+  if (telegramRecoveryToken && !telegramRecoveryCompleted) {
     gate.hidden = false;
     appShell?.classList.add("auth-locked");
     form.hidden = true;
@@ -265,6 +266,8 @@ if (telegramRecoveryForm) {
       if (!response.ok || !result.success || !result.telegram_user_id) {
         throw new Error(result.error || "Parolni tiklash amalga oshmadi. Telegram botdan yangi havola oling.");
       }
+      telegramRecoveryCompleted = true;
+      if (telegramRecoveryForm) telegramRecoveryForm.hidden = true;
       const internalEmail = `tg_${result.telegram_user_id}@telegram.invalid`;
       const {data: loginData, error: loginError} = await supabase.auth.signInWithPassword({
         email: internalEmail, password: newPassword
