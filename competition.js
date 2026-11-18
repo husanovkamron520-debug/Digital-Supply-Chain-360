@@ -615,8 +615,10 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    }catch(err){say(err.message);submit.disabled=false;}});
    card.append(form);
    const postureForm=el("form","competition-inline-form");const posture=el("select","");
-   posture.append(option("Balanced · A ulushi 40–70%","balanced"),option("Cost-focused · A kamida 60%","cost_focused"),option("Service-focused · B+C kamida 60%","service_focused"));
+   posture.append(option("Balanced · A ulushi 40–70%","balanced"),option("Cost-focused · A kamida 60%","cost_focused"));
+   const servicePosture=option("Service-focused · B+C kamida 60% · mavjud quvvat bilan imkonsiz","service_focused");servicePosture.disabled=true;posture.append(servicePosture);
    posture.value=state.strategic_posture||"balanced";
+   card.append(el("p","form-hint","Service-focused hozircha yopiq: B+C supplierlari jami 4,000 dona bera oladi, net ehtiyoj 7,950 dona — maksimal 50.3%. 60% chegaraga yetmaydi."));
    const reason=el("input","");reason.placeholder="Strategiyani o‘zgartirish sababi";reason.required=true;
    const req=el("button","secondary-button","Strategiya o‘zgarishini tasdiqqa yuborish");req.type="submit";
    postureForm.append(posture,reason,req);
