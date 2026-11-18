@@ -8,10 +8,11 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
  const option=(label,value)=>{const n=el("option","",label);n.value=value;return n;};
  const roles=["procurement","manufacturer","warehouse","transport","operations","supplier","retailer","customer","finance","analyst"];
- let user=null,isTeacher=false,classrooms=[],templates=[],activeClassId=null,activeCompetition=null,activeTeam=null,activeRole=null;
+ let user=null,isTeacher=false,classrooms=[],templates=[],activeClassId=null,activeCompetition=null,activeTeam=null,activeRole=null,amazonRoundTimerInterval=null;
 
  function say(message,success=false){$("competitionMessage").textContent=message;$("competitionMessage").classList.toggle("success",success);}
- function statusLabel(value){return (value||"").replaceAll("_"," ").toUpperCase();}
+ function statusLabel(value){if(value==="manufacturer")return "FULFILLMENT OPERATIONS MANAGER";return (value||"").replaceAll("_"," ").toUpperCase();}
+ const isAmazonCase=()=>activeCompetition?.settings?.case_code==="amazon-global-combined-crisis";
  async function requestAiGrade(taskId,button){
   if(button)button.disabled=true;
   try{
@@ -159,9 +160,9 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  }
 
  async function loadTemplates(){
-  const {data,error}=await db.from("company_templates").select("id,name,industry,business_model,case_study_note,source_urls").eq("slug","omnichannel-retail").order("name");
+  const {data,error}=await db.from("company_templates").select("id,name,industry,business_model,case_study_note,source_urls").in("slug",["omnichannel-retail","amazon-global-combined-crisis"]).order("name");
   if(error)throw error;templates=data||[];
-  $("competitionTemplateSelect").replaceChildren(...templates.map(t=>option(t.name+" · "+t.industry,t.id)));
+  $("competitionTemplateSelect").replaceChildren(...templates.map(t=>option((t.slug==="amazon-global-combined-crisis"?"Amazon Global Combined Crisis":"Amazon · Legacy case")+" · "+t.industry,t.id)));
  }
 
  async function loadCompetitions(){
@@ -206,6 +207,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   const {data:comp,error}=await db.from("competitions").select("id,title,status,settings,starts_at,completed_at")
    .eq("id",activeCompetition.id).single();
   if(error)throw error;activeCompetition={...activeCompetition,...comp};
+  if($("competitionTemplateSelect")){const desiredSlug=comp.settings?.case_code==="amazon-global-combined-crisis"?"amazon-global-combined-crisis":"omnichannel-retail";const template=templates.find(t=>t.slug===desiredSlug);if(template)$("competitionTemplateSelect").value=template.id;}
   setHidden("competitionManager",false);
   $("competitionCurrentTitle").textContent=comp.title;
   $("competitionCurrentStatus").textContent=statusLabel(comp.status);
@@ -225,6 +227,9 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   const teamRows=teams||[],studentRows=students||[],taskRows=tasks||[],decisionRows=decisions||[];
   const recommendedTeamCount=Math.max(2,Math.min(4,Math.floor(studentRows.length/5)));
   $("competitionTeamCount").value=String(recommendedTeamCount);
+  $("competitionTeamCount").dataset.studentCount=String(studentRows.length);
+  for(const opt of $("competitionTeamCount").options)opt.disabled=studentRows.length<Number(opt.value)*5;
+  $("competitionTeamCount").disabled=studentRows.length<10;
   $("competitionTeams").replaceChildren();
   let assignedStudentCount=0;const teamSizes=[];let allTeamsReady=teamRows.length>=2&&teamRows.length<=4;
   const coreRoles=["procurement","supplier","manufacturer","warehouse","transport"];
@@ -434,9 +439,22 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   }
     const {data:clock,error:clockError}=await db.from("competition_simulation_clock").select("current_round,round_limit,virtual_now").eq("competition_id",activeCompetition.id).maybeSingle();
   if(clockError)throw clockError;
-  $("competitionRoundInfo").textContent=clock?"Round "+clock.current_round+" / "+clock.round_limit+" · Simulation date "+new Date(clock.virtual_now).toLocaleDateString():"Rounds begin when the competition starts.";
+  let roundWindow=null;
+  if(clock&&isAmazonCase()){const rw=await db.from("competition_rounds").select("ends_at").eq("competition_id",activeCompetition.id).eq("round_number",clock.current_round).maybeSingle();if(rw.error)throw rw.error;roundWindow=rw.data;}
+  const roundStillRunning=!!(roundWindow?.ends_at&&new Date(roundWindow.ends_at).getTime()>Date.now());
+  $("competitionRoundInfo").textContent=clock?(isAmazonCase()?"Round "+clock.current_round+" / 3 · Day "+((clock.current_round-1)*10+1)+"–"+(clock.current_round*10)+" · 10 min/round · "+(roundWindow?.ends_at?"Tugash vaqti "+new Date(roundWindow.ends_at).toLocaleTimeString():""):"Round "+clock.current_round+" / "+clock.round_limit+" · Simulation date "+new Date(clock.virtual_now).toLocaleDateString()):"Rounds begin when the competition starts.";
   setHidden("competitionAdvanceRound",activeCompetition.status!=="active");
-  $("competitionAdvanceRound").disabled=!clock||clock.current_round>=clock.round_limit;
+  $("competitionAdvanceRound").disabled=!clock||clock.current_round>=clock.round_limit||(isAmazonCase()&&roundStillRunning);
+  if(amazonRoundTimerInterval){clearInterval(amazonRoundTimerInterval);amazonRoundTimerInterval=null;}
+  if(isAmazonCase()&&roundWindow?.ends_at){
+   const endsAt=new Date(roundWindow.ends_at).getTime();
+   const updateRoundTimer=()=>{const remaining=Math.max(0,endsAt-Date.now());const mm=String(Math.floor(remaining/60000)).padStart(2,"0");const ss=String(Math.floor((remaining%60000)/1000)).padStart(2,"0");
+    $("competitionRoundInfo").textContent="Round "+clock.current_round+" / 3 · Day "+((clock.current_round-1)*10+1)+"–"+(clock.current_round*10)+" · Qolgan vaqt "+mm+":"+ss;
+    $("competitionAdvanceRound").disabled=remaining>0||clock.current_round>=3;
+    if(remaining===0&&amazonRoundTimerInterval){clearInterval(amazonRoundTimerInterval);amazonRoundTimerInterval=null;}
+   };
+   updateRoundTimer();if(roundStillRunning)amazonRoundTimerInterval=setInterval(updateRoundTimer,1000);
+  }
   const pendingDecisionCount=decisionRows.filter(d=>d.score===null).length;
   const studentsWithoutDecision=allMemberRows.filter(m=>!decisionRows.some(d=>d.student_id===m.student_id&&d.team_id===m.team_id&&d.score!==null)).length;
   const pendingTaskCount=taskRows.filter(task=>task.status!=="approved"||task.score===null||task.score===undefined).length;
@@ -468,9 +486,13 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   $("competitionAutoSetupButton").disabled=!draft||teamRows.length>0||studentRows.length<10;
   setHidden("competitionManualTeamForm",!draft||teamRows.length>=4);
   if(!draft){$("competitionSetupNote").textContent="Teams are locked after the competition starts."; }
-  else $("competitionSetupNote").textContent=studentRows.length<10
-   ?"Only "+studentRows.length+" students are enrolled. At least 10 are required to create two valid teams."
-   :"Recommended setup: "+recommendedTeamCount+" teams for "+studentRows.length+" enrolled students. Each team needs at least 5 students and all 5 core roles.";
+  else $("competitionSetupNote").textContent=isAmazonCase()
+   ?(studentRows.length<10
+    ?"Amazon case uchun kamida 10 o‘quvchi kerak (2 jamoa × 5 rol). Hozir: "+studentRows.length+"."
+    :"Amazon case: "+recommendedTeamCount+" jamoa tavsiya etiladi. Har bir jamoada 5 ta alohida rol bo‘ladi.")
+   :(studentRows.length<10
+    ?"Only "+studentRows.length+" students are enrolled. At least 10 are required to create two valid teams."
+    :"Recommended setup: "+recommendedTeamCount+" teams for "+studentRows.length+" enrolled students. Each team needs at least 5 students and all 5 core roles.");
  }
 
  async function renderStudentCompetition(){
@@ -532,6 +554,194 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   setHidden("competitionDecisionForm",activeCompetition.status!=="active");
  }
 
+
+
+ async function renderAmazonCasePanel(teamId,clock){
+  const {data:caseData,error:caseError}=await db.rpc("amazon_get_case_data",{p_team_id:teamId});
+  if(caseError)throw caseError;
+  const [{data:orders,error:ordersError},{data:inventory,error:inventoryError},{data:pos,error:poError},{data:shipments,error:shipError}]=await Promise.all([
+   db.from("competition_customer_orders").select("id,order_number,sku,item_name,quantity,unit_price,status,due_at").eq("team_id",teamId).order("due_at"),
+   db.from("competition_inventory").select("sku,item_name,quantity,item_type").eq("team_id",teamId).order("sku"),
+   db.from("competition_purchase_orders").select("id,po_number,sku,item_name,quantity,received_quantity,unit_cost,status,expected_at,available_at,supplier_id").eq("team_id",teamId).order("created_at",{ascending:false}),
+   db.from("competition_shipments").select("id,order_id,quantity,status,eta,destination,carrier").eq("team_id",teamId).order("dispatched_at",{ascending:false})
+  ]);
+  for(const e of [ordersError,inventoryError,poError,shipError])if(e)throw e;
+  let host=$("amazonCasePanel");
+  if(!host){host=el("section","competition-setup");host.id="amazonCasePanel";$("competitionStudentPanel").append(host);}
+  host.replaceChildren();
+  const state=caseData.state||{},skus=caseData.skus||[],offers=caseData.offers||[],fulfilment=caseData.fulfilment||[],approvals=caseData.approvals||[],commitments=caseData.commitments||[],qualityReceipts=caseData.quality_receipts||[];
+  const round=Number(clock.current_round),day=(round-1)*10+1;
+  const header=el("div","competition-panel-heading");
+  header.append(el("h3","","Amazon Global Combined Crisis"),el("p","","30 kunlik global e-commerce inqirozi · Round "+round+"/3 · Day "+day+"–"+(day+9)+" · 10 real minutes per round"));
+  host.append(header);
+  const summary=el("div","competition-metric-grid");
+  const summaryValues=[
+   ["Asosiy xarid budjeti","$"+Number(state.main_budget||160000).toLocaleString()],
+   ["Favqulodda rezerv","$"+Number(state.reserve_budget||30000).toLocaleString()+" · tasdiq $"+Number(state.reserve_approved||0).toLocaleString()],
+   ["Majburiyatga olingan xarid","$"+Number(state.committed_spend||0).toLocaleString()],
+   ["Strategiya",statusLabel(state.strategic_posture)],["Ombor sig‘imi · vaqtinchalik",Number(state.warehouse_capacity_units||8000).toLocaleString()+" dona"]
+  ];
+  for(const [label,value] of summaryValues){const card=el("div","competition-metric");card.append(el("span","",label),el("strong","",value));summary.append(card);}
+  host.append(summary);
+  const demand=el("div","competition-task-card");
+  demand.append(el("b","","Inqiroz ko‘rsatkichlari"),el("p","","Talab +40% · Supplier A (Xitoy) 22 kun · Supplier B (Germaniya) 8 kun · Supplier C (AQSH) 5 kun · 5 ta SKU · 9,800 dona jami talab"));
+  host.append(demand);
+  const stock=el("div","competition-task-card");stock.append(el("b","","Inventar holati"));
+  for(const sku of skus){const item=(inventory||[]).find(x=>x.sku===sku.sku);stock.append(el("p","",sku.sku+" · "+sku.item_name+" — "+Number(item?.quantity||0).toLocaleString()+" dona / boshlang‘ich "+Number(sku.opening_stock).toLocaleString()+" · talab "+Number(sku.crisis_demand).toLocaleString()));}
+  host.append(stock);
+
+  const offersCard=el("div","competition-task-card");offersCard.append(el("b","","Supplier takliflari · MOQ · 30 kunlik quvvat"));
+  for(const sku of skus){
+   const line=el("p","");
+   const detail=offers.filter(o=>o.sku===sku.sku).map(o=>o.supplier_code+" $"+Number(o.unit_price).toFixed(2)+" · MOQ "+o.moq+" · cap "+Number(o.max_capacity).toLocaleString()+" · "+o.lead_time_days+" kun · OTIF "+o.otif_pct+"% · defect "+o.defect_rate_pct+"%").join(" | ");
+   line.textContent=sku.sku+" "+sku.item_name+": "+detail;offersCard.append(line);
+  }
+  host.append(offersCard);
+
+  if(activeRole==="procurement"){
+   const card=el("div","competition-task-card");card.append(el("h4","","Procurement Manager · Xarid rejasi"));
+   const form=el("form","competition-inline-form");
+   const supplier=el("select","");supplier.required=true;
+   for(const code of ["SUP-A","SUP-B","SUP-C"])supplier.append(option(code+" · "+({ "SUP-A":"China","SUP-B":"Germany","SUP-C":"USA"}[code]),code));
+   const skuSelect=el("select","");skuSelect.required=true;
+   for(const sku of skus)skuSelect.append(option(sku.sku+" · "+sku.item_name,sku.sku));
+   const qty=el("input","");qty.type="number";qty.min="1";qty.required=true;qty.placeholder="Quantity";
+   const orderDay=el("input","");orderDay.type="number";orderDay.min=String(day);orderDay.max=String(day+9);orderDay.value=String(day);orderDay.required=true;
+   const submit=el("button","secondary-button","Xarid buyurtmasini yuborish");submit.type="submit";
+   form.append(supplier,skuSelect,qty,orderDay,submit);
+   form.addEventListener("submit",async e=>{e.preventDefault();submit.disabled=true;try{
+    const {error}=await db.rpc("amazon_place_purchase_order",{p_team_id:teamId,p_supplier_code:supplier.value,p_sku:skuSelect.value,p_quantity:Number(qty.value),p_order_day:Number(orderDay.value)});
+    if(error)throw error;say("Amazon xarid buyurtmasi qabul qilindi.",true);await loadTeamOperations();
+   }catch(err){say(err.message);submit.disabled=false;}});
+   card.append(form);
+   const postureForm=el("form","competition-inline-form");const posture=el("select","");
+   posture.append(option("Balanced · A ulushi 40–70%","balanced"),option("Cost-focused · A kamida 60%","cost_focused"));
+   const servicePosture=option("Service-focused · B+C kamida 60% · mavjud quvvat bilan imkonsiz","service_focused");servicePosture.disabled=true;posture.append(servicePosture);
+   posture.value=state.strategic_posture||"balanced";
+   card.append(el("p","form-hint","Service-focused hozircha yopiq: B+C supplierlari jami 4,000 dona bera oladi, net ehtiyoj 7,950 dona — maksimal 50.3%. 60% chegaraga yetmaydi."));
+   const reason=el("input","");reason.placeholder="Strategiyani o‘zgartirish sababi";reason.required=true;
+   const req=el("button","secondary-button","Strategiya o‘zgarishini tasdiqqa yuborish");req.type="submit";
+   postureForm.append(posture,reason,req);
+   postureForm.addEventListener("submit",async e=>{e.preventDefault();req.disabled=true;try{const {error}=await db.rpc("amazon_submit_approval",{p_team_id:teamId,p_approval_type:"strategy_change",p_reason:reason.value,p_payload:{posture:posture.value}});if(error)throw error;say("Strategiya o‘zgarishi jamoa tasdig‘iga yuborildi.",true);await loadTeamOperations();}catch(err){say(err.message);req.disabled=false;}});
+   card.append(el("h4","","Strategik xarid modeli"),postureForm);
+   const reserveForm=el("form","competition-inline-form");const amount=el("input","");amount.type="number";amount.min="1";amount.max="30000";amount.placeholder="Rezervdan summa (USD)";amount.required=true;
+   const reserveReason=el("input","");reserveReason.placeholder="Rezerv ishlatish sababi";reserveReason.required=true;
+   const reserveBtn=el("button","secondary-button","$30,000 rezervdan foydalanishga ruxsat so‘rash");reserveBtn.type="submit";
+   reserveForm.append(amount,reserveReason,reserveBtn);
+   reserveForm.addEventListener("submit",async e=>{e.preventDefault();reserveBtn.disabled=true;try{const {error}=await db.rpc("amazon_submit_approval",{p_team_id:teamId,p_approval_type:"reserve_draw",p_reason:reserveReason.value,p_payload:{amount:Number(amount.value)}});if(error)throw error;say("Favqulodda rezerv so‘rovi jamoaga yuborildi.",true);await loadTeamOperations();}catch(err){say(err.message);reserveBtn.disabled=false;}});
+   card.append(el("h4","","Favqulodda rezerv"),reserveForm);host.append(card);
+  }
+  if(activeRole==="supplier"){
+   const card=el("div","competition-task-card");card.append(el("h4","","Supplier Relations Manager"),el("p","","Uchta supplier bilan yetkazib berish majburiyatini tasdiqlang, A supplier kechikishini eskalatsiya qiling va B/C alternativ manbalar bilan SLA xavfini boshqaring. Bu qaydlar procurement buyurtmasi yoki zaxira yaratmaydi; real PO’ni Procurement Manager beradi."));
+   const form=el("form","competition-inline-form"),supplier=el("select",""),skuSelect=el("select",""),qty=el("input",""),arrival=el("input",""),status=el("select",""),note=el("input","");
+   for(const code of ["SUP-A","SUP-B","SUP-C"])supplier.append(option(code+" · "+({"SUP-A":"China","SUP-B":"Germany","SUP-C":"USA"}[code]),code));
+   for(const sku of skus)skuSelect.append(option(sku.sku+" · "+sku.item_name,sku.sku));
+   qty.type="number";qty.min="1";qty.placeholder="Supplier tasdiqlagan miqdor";qty.required=true;
+   arrival.type="number";arrival.min="1";arrival.max="30";arrival.required=true;arrival.placeholder="Kutilayotgan yetib kelish kuni";
+   status.append(option("Confirmed","confirmed"),option("At risk","at_risk"),option("Escalated","escalated"));
+   note.placeholder="Supplier bilan muloqot, SLA yoki eskalatsiya tafsiloti";note.required=true;
+   const btn=el("button","secondary-button","Supplier commitment qayd etish");btn.type="submit";
+   form.append(supplier,skuSelect,qty,arrival,status,note,btn);
+   const setArrival=()=>{const offer=offers.find(o=>o.supplier_code===supplier.value&&o.sku===skuSelect.value);const earliest=(round-1)*10+1+Number(offer?.lead_time_days||1);arrival.min=String(earliest);arrival.value=String(Math.min(30,earliest));};
+   supplier.addEventListener("change",setArrival);skuSelect.addEventListener("change",setArrival);setArrival();
+   form.addEventListener("submit",async e=>{e.preventDefault();btn.disabled=true;try{const {error}=await db.rpc("amazon_record_supplier_commitment",{p_team_id:teamId,p_supplier_code:supplier.value,p_sku:skuSelect.value,p_quantity:Number(qty.value),p_expected_arrival_day:Number(arrival.value),p_status:status.value,p_note:note.value});if(error)throw error;say("Supplier commitment qayd etildi.",true);await loadTeamOperations();}catch(err){say(err.message);btn.disabled=false;}});
+   card.append(form);
+   card.append(el("h4","","Supplier commitments & escalations"));
+   if(!commitments.length)card.append(el("p","empty-state","Hozircha supplier commitment qayd etilmagan."));
+   for(const item of commitments)card.append(el("p","",item.supplier_code+" · "+item.sku+" · "+item.committed_quantity+" dona · Day "+item.expected_arrival_day+" · "+statusLabel(item.commitment_status)+" — "+item.note));
+   host.append(card);
+  }
+  if(activeRole==="manufacturer"){
+   const card=el("div","competition-task-card");card.append(el("h4","","Fulfillment Operations Manager · Pick / Pack / Release"));
+   const readyMap=new Map(fulfilment.map(x=>[x.order_id,Number(x.ready_quantity)]));
+   for(const order of orders.filter(o=>!["delivered","cancelled"].includes(o.status))){
+    const shipped=shipments.filter(x=>x.order_id===order.id&&x.status!=="cancelled").reduce((n,x)=>n+Number(x.quantity),0);
+    const ready=readyMap.get(order.id)||0;const remaining=Math.max(0,Number(order.quantity)-shipped-ready);
+    const line=el("div","competition-task-card");line.append(el("b","",order.order_number+" · "+order.item_name),el("p","",order.quantity+" dona · tayyor "+ready+" · jo‘natilgan "+shipped+" · qolgan "+remaining));
+    if(remaining>0&&activeCompetition.status==="active"){
+     const form=el("form","competition-inline-form"),q=el("input","");q.type="number";q.min="1";q.max=String(remaining);q.value=String(remaining);q.required=true;
+     const btn=el("button","secondary-button","Pick / Pack qilib transportga chiqarish");btn.type="submit";form.append(q,btn);
+     form.addEventListener("submit",async e=>{e.preventDefault();btn.disabled=true;try{const {data,error}=await db.rpc("amazon_fulfill_order",{p_order_id:order.id,p_quantity:Number(q.value)});if(error)throw error;say("Fulfilment tayyor: "+data.ready_quantity+" dona transportga berildi.",true);await loadTeamOperations();}catch(err){say(err.message);btn.disabled=false;}});
+     line.append(form);
+    }
+    card.append(line);
+   }
+   host.append(card);
+  }
+  if(activeRole==="warehouse"){
+   const card=el("div","competition-task-card");card.append(el("h4","","Warehouse Manager · Inbound receiving"));
+   for(const po of pos.filter(p=>["placed","partially_received"].includes(p.status))){
+    const available=new Date(po.available_at||po.expected_at)<=new Date(clock.virtual_now);
+    const line=el("div","competition-task-card");line.append(el("b","",po.po_number+" · "+po.item_name),el("p","",po.received_quantity+"/"+po.quantity+" received · ETA "+new Date(po.available_at||po.expected_at).toLocaleDateString()));
+    if(available&&activeCompetition.status==="active"){
+     const btn=el("button","secondary-button","Tovarni qabul qilish");btn.type="button";btn.addEventListener("click",async()=>{btn.disabled=true;try{const {data,error}=await db.rpc("amazon_receive_purchase_order",{p_purchase_order_id:po.id,p_quantity:po.quantity-po.received_quantity});if(error)throw error;say("Omborga "+data.usable_quantity+" yaroqli dona qabul qilindi; "+data.defective_quantity+" dona defect sabab karantinga ajratildi.",true);await loadTeamOperations();}catch(err){say(err.message);btn.disabled=false;}});
+     line.append(btn);
+    }
+    card.append(line);
+   }
+   card.append(el("h4","","Quality quarantine · defect units"));
+   const quarantine=qualityReceipts.filter(q=>Number(q.defective_quantity)>Number(q.disposed_quantity||0));
+   if(!quarantine.length)card.append(el("p","empty-state","Quarantine’da defect mahsulot yo‘q."));
+   for(const qr of quarantine){
+    const remaining=Number(qr.defective_quantity)-Number(qr.disposed_quantity||0);
+    const line=el("div","competition-task-card");line.append(el("b","",qr.supplier_code+" · "+qr.sku),el("p","",remaining+" dona karantinda · defect rate "+qr.defect_rate_pct+"% · received "+qr.received_quantity));
+    const form=el("form","competition-inline-form"),qty=el("input",""),reason=el("input",""),btn=el("button","secondary-button","Defectni karantindan chiqarish");
+    qty.type="number";qty.min="1";qty.max=String(remaining);qty.value=String(remaining);qty.required=true;
+    reason.placeholder="Disposal yoki supplier return sababi";reason.required=true;btn.type="submit";form.append(qty,reason,btn);
+    form.addEventListener("submit",async e=>{e.preventDefault();btn.disabled=true;try{const {data,error}=await db.rpc("amazon_dispose_defects",{p_quality_receipt_id:qr.id,p_quantity:Number(qty.value),p_reason:reason.value});if(error)throw error;say("Quarantine’dan "+qty.value+" dona chiqarildi. Qoldiq: "+data.remaining_quarantine,true);await loadTeamOperations();}catch(err){say(err.message);btn.disabled=false;}});
+    line.append(form);card.append(line);
+   }
+   host.append(card);
+  }
+  if(activeRole==="transport"){
+   const card=el("div","competition-task-card");card.append(el("h4","","Transport Manager · Dispatch & delivery"),el("p","","Economy: $1.75/unit · 3 kun · 2,500 dona/round | Standard: $2.50/unit · 2 kun · 2,200 dona/round | Express: $4.25/unit · 1 kun · 1,000 dona/round."));
+   const inbound=el("div","competition-task-card");inbound.append(el("b","","Inbound supply monitoring"));
+   const inboundOpen=pos.filter(p=>["placed","partially_received"].includes(p.status));
+   if(!inboundOpen.length)inbound.append(el("p","empty-state","Ochiq inbound PO yo‘q."));
+   for(const po of inboundOpen)inbound.append(el("p","",po.po_number+" · "+po.sku+" · "+(po.quantity-po.received_quantity)+" dona kutilmoqda · ETA "+new Date(po.available_at||po.expected_at).toLocaleDateString()));
+   card.append(inbound);
+   const readyMap=new Map(fulfilment.map(x=>[x.order_id,Number(x.ready_quantity)]));
+   for(const order of orders){
+    const ready=readyMap.get(order.id)||0;if(ready<=0)continue;
+    const line=el("div","competition-task-card");line.append(el("b","",order.order_number+" · "+order.item_name),el("p","",ready+" dona pick/pack qilingan, jo‘natishga tayyor."));
+    const form=el("form","competition-inline-form"),q=el("input","");q.type="number";q.min="1";q.max=String(ready);q.value=String(ready);q.required=true;
+    const carrier=el("input","");carrier.value="Regional carrier";carrier.placeholder="Carrier";
+    const service=el("select","");service.append(option("Economy · $1.75/unit · 3 days","economy"),option("Standard · $2.50/unit · 2 days","standard"),option("Express · $4.25/unit · 1 day","express"));service.value="standard";
+    const btn=el("button","secondary-button","Jo‘natmani dispatch qilish");btn.type="submit";form.append(q,carrier,service,btn);
+    form.addEventListener("submit",async e=>{e.preventDefault();btn.disabled=true;try{const {error}=await db.rpc("amazon_dispatch_shipment_v2",{p_order_id:order.id,p_quantity:Number(q.value),p_carrier:carrier.value,p_service_level:service.value});if(error)throw error;say("Jo‘natma yo‘lga chiqdi. Tanlangan xizmatga qarab ETA belgilandi.",true);await loadTeamOperations();}catch(err){say(err.message);btn.disabled=false;}});
+    line.append(form);card.append(line);
+   }
+   if(!card.querySelector(".competition-task-card"))card.append(el("p","empty-state","Hozircha dispatch uchun tayyor pick/pack buyurtma yo‘q."));
+   host.append(card);
+  }
+  if(shipments.length){
+   const shipCard=el("div","competition-task-card");shipCard.append(el("h4","","Shipment tracking & delivery confirmation"));
+   for(const shipment of shipments){
+    const line=el("div","competition-task-card");line.append(el("b","",shipment.destination+" · "+shipment.quantity+" dona"),el("p","",shipment.carrier+" · "+statusLabel(shipment.status)+" · ETA "+new Date(shipment.eta).toLocaleDateString()));
+    if(activeRole==="transport"&&["in_transit","delayed"].includes(shipment.status)&&new Date(shipment.eta)<=new Date(clock.virtual_now)&&activeCompetition.status==="active"){
+     const btn=el("button","secondary-button","Yetkazib berilganini tasdiqlash");btn.type="button";
+     btn.addEventListener("click",async()=>{btn.disabled=true;try{const {data,error}=await db.rpc("competition_deliver_shipment",{p_shipment_id:shipment.id});if(error)throw error;say(data.on_time?"Buyurtma vaqtida yetkazildi; tushum qayd etildi.":"Buyurtma kech yetkazildi; tushum qayd etildi.",true);await loadTeamOperations();}catch(err){say(err.message);btn.disabled=false;}});
+     line.append(btn);
+    }
+    shipCard.append(line);
+   }
+   host.append(shipCard);
+  }
+  if(approvals.length){
+   const card=el("div","competition-task-card");card.append(el("h4","","Jamoa tasdiqlari"));
+   for(const a of approvals){
+    const row=el("div","competition-task-card");row.append(el("b","",statusLabel(a.approval_type)),el("p","",a.reason),el("small","", "Affected roles: "+(a.payload?.affected_roles||[]).join(", ")),el("small","", "Ha: "+a.approve_votes+" · Yo‘q: "+a.reject_votes));
+    if(a.requested_by!==user.id){
+     for(const [label,vote] of [["Tasdiqlash","approve"],["Rad etish","reject"]]){
+      const btn=el("button","secondary-button",label);btn.type="button";btn.addEventListener("click",async()=>{btn.disabled=true;try{const {data,error}=await db.rpc("amazon_vote_approval",{p_approval_id:a.id,p_vote:vote});if(error)throw error;say("Ovoz qayd etildi: "+data.status,true);await loadTeamOperations();}catch(err){say(err.message);btn.disabled=false;}});row.append(btn);
+     }
+    }
+    card.append(row);
+   }
+   host.append(card);
+  }
+  host.append(el("small","form-hint","Eslatma: bu Amazon’dan ilhomlangan, barcha raqam va supplier shartlari sun’iy bo‘lgan o‘quv simulyatsiyasi."));
+ }
 
  async function loadTeamOperations(){
   const teamId=activeTeam;
@@ -672,7 +882,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    const supplierAvailable=new Date(clockResult.data.virtual_now)>=new Date(po.available_at||po.expected_at);
    if(activeCompetition.status==="active"&&activeRole==="warehouse"&&supplierAvailable){const form=el("form","competition-inline-form"),qty=el("input","");qty.type="number";qty.min="1";qty.max=String(po.quantity-po.received_quantity);qty.value=qty.max;qty.required=true;
    const btn=el("button","secondary-button","Receive stock");btn.type="submit";form.append(qty,btn);
-   form.addEventListener("submit",async e=>{e.preventDefault();btn.disabled=true;try{const {data,error}=await db.rpc("competition_receive_purchase_order",{p_purchase_order_id:po.id,p_quantity:Number(qty.value)});if(error)throw error;say("Received "+data.received_quantity+" units; stock and cash updated.",true);await loadTeamOperations();}catch(err){say(err.message);btn.disabled=false;}});
+   form.addEventListener("submit",async e=>{e.preventDefault();btn.disabled=true;try{const {data,error}=await db.rpc(isAmazonCase()?"amazon_receive_purchase_order":"competition_receive_purchase_order",{p_purchase_order_id:po.id,p_quantity:Number(qty.value)});if(error)throw error;say("Received "+data.received_quantity+" units; stock and cash updated.",true);await loadTeamOperations();}catch(err){say(err.message);btn.disabled=false;}});
    card.append(form);}else if(activeCompetition.status==="active"&&activeRole==="warehouse"){card.append(el("small","", "Awaiting supplier availability · "+new Date(po.available_at||po.expected_at).toLocaleDateString()));}
    $("competitionPurchaseOrderList").append(card);
   }
@@ -715,13 +925,14 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    }
    $("competitionShipmentList").append(card);
   }
-  setHidden("competitionSupplierPanel",!["supplier","procurement"].includes(activeRole));
-  setHidden("competitionSupplierTermsForm",activeRole!=="supplier"||!canPlan);
-  setHidden("competitionProcurementPanel",activeRole!=="procurement");
-  setHidden("competitionWarehousePanel",activeRole!=="warehouse");
-  setHidden("competitionManufacturerPanel",activeRole!=="manufacturer");
-  setHidden("competitionCustomerPanel",!["customer","retailer","operations"].includes(activeRole));
-  setHidden("competitionTransportPanel",activeRole!=="transport");
+  setHidden("competitionSupplierPanel",isAmazonCase()||!["supplier","procurement"].includes(activeRole));
+  setHidden("competitionSupplierTermsForm",isAmazonCase()||activeRole!=="supplier"||!canPlan);
+  setHidden("competitionProcurementPanel",isAmazonCase()||activeRole!=="procurement");
+  setHidden("competitionWarehousePanel",isAmazonCase()||activeRole!=="warehouse");
+  setHidden("competitionManufacturerPanel",isAmazonCase()||activeRole!=="manufacturer");
+  setHidden("competitionCustomerPanel",isAmazonCase()||!["customer","retailer","operations"].includes(activeRole));
+  setHidden("competitionTransportPanel",isAmazonCase()||activeRole!=="transport");
+  if(isAmazonCase())await renderAmazonCasePanel(teamId,clockResult.data);
  }
 
 
@@ -786,7 +997,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  $("competitionSelect").addEventListener("change",async()=>{activeCompetition={id:$("competitionSelect").value};try{await loadCompetition();say("");}catch(err){say(err.message);}});
  $("competitionCreateForm").addEventListener("submit",async e=>{
   e.preventDefault();const btn=$("competitionCreateButton");btn.disabled=true;
-  try{const {data,error}=await db.rpc("create_competition",{p_classroom_id:activeClassId,p_title:$("competitionTitle").value.trim(),p_settings:{round_count:5,round_duration_minutes:20,scoring_version:"v1"}});if(error)throw error;
+  try{const {data,error}=await db.rpc("create_competition",{p_classroom_id:activeClassId,p_title:$("competitionTitle").value.trim(),p_settings:{case_code:"amazon-global-combined-crisis",round_count:3,round_duration_minutes:10,horizon_days:30,demand_shock_pct:40,main_supplier_delay_days:10,scoring_version:"amazon-global-v1"}});if(error)throw error;
    $("competitionTitle").value="";say("Competition created. Configure teams next.",true);await loadCompetitions();$("competitionSelect").value=data;activeCompetition={id:data};await loadCompetition();
   }catch(err){say(err.message);}finally{btn.disabled=false;}
  });
@@ -798,13 +1009,14 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  });
  $("competitionManualTeamForm").addEventListener("submit",async e=>{
   e.preventDefault();const btn=$("competitionManualTeamButton");btn.disabled=true;
-  try{const {error}=await db.rpc("create_competition_team",{p_competition_id:activeCompetition.id,p_team_name:$("competitionManualTeamName").value.trim(),p_company_template_id:$("competitionTemplateSelect").value});if(error)throw error;
+  try{const {data:teamId,error}=await db.rpc("create_competition_team",{p_competition_id:activeCompetition.id,p_team_name:$("competitionManualTeamName").value.trim(),p_company_template_id:$("competitionTemplateSelect").value});if(error)throw error;
+   if(isAmazonCase()){const init=await db.rpc("amazon_initialize_team",{p_team_id:teamId});if(init.error)throw init.error;}
    $("competitionManualTeamName").value="";say("Team created. Assign its students below.",true);await loadCompetition();
   }catch(err){say(err.message);}finally{btn.disabled=false;}
  });
  $("competitionTaskPackButton").addEventListener("click",async()=>{
   const btn=$("competitionTaskPackButton");btn.disabled=true;
-  try{const {data,error}=await db.rpc("create_competition_standard_task_pack",{p_competition_id:activeCompetition.id});if(error)throw error;say(data+" individual role case tasks created across all teams.",true);await loadCompetition();}catch(err){say(err.message);btn.disabled=false;}
+  try{const {data,error}=await db.rpc(isAmazonCase()?"amazon_create_role_tasks":"create_competition_standard_task_pack",{p_competition_id:activeCompetition.id});if(error)throw error;say(data+" individual role case tasks created across all teams.",true);await loadCompetition();}catch(err){say(err.message);btn.disabled=false;}
  });
  $("competitionTaskForm").addEventListener("submit",async e=>{
   e.preventDefault();const btn=$("competitionTaskButton");btn.disabled=true;
@@ -832,7 +1044,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  });
  $("competitionPurchaseOrderForm").addEventListener("submit",async e=>{
   e.preventDefault();const btn=$("competitionPurchaseOrderForm").querySelector("button");btn.disabled=true;
-  try{const {error}=await db.rpc("competition_create_purchase_order",{p_team_id:activeTeam,p_supplier_id:$("competitionPOSupplier").value,p_sku:$("competitionPOSku").value.trim(),p_item_name:$("competitionPOItemName").value.trim(),p_quantity:Number($("competitionPOQuantity").value)});if(error)throw error;say("Purchase order placed. Lead time and supplier reliability determine availability.",true);await loadTeamOperations();}catch(err){say(err.message);}finally{btn.disabled=false;}
+  try{let error=null;if(isAmazonCase()){const supplier=await db.from("competition_suppliers").select("supplier_code").eq("id",$("competitionPOSupplier").value).single();if(supplier.error)throw supplier.error;const result=await db.rpc("amazon_place_purchase_order",{p_team_id:activeTeam,p_supplier_code:supplier.data.supplier_code,p_sku:$("competitionPOSku").value.trim(),p_quantity:Number($("competitionPOQuantity").value),p_order_day:null});error=result.error;}else{const result=await db.rpc("competition_create_purchase_order",{p_team_id:activeTeam,p_supplier_id:$("competitionPOSupplier").value,p_sku:$("competitionPOSku").value.trim(),p_item_name:$("competitionPOItemName").value.trim(),p_quantity:Number($("competitionPOQuantity").value)});error=result.error;}if(error)throw error;say("Purchase order placed. Supplier capacity, MOQ, budget and ETA validated.",true);await loadTeamOperations();}catch(err){say(err.message);}finally{btn.disabled=false;}
  });
  $("competitionProductionForm").addEventListener("submit",async e=>{
   e.preventDefault();const btn=$("competitionProductionForm").querySelector("button");btn.disabled=true;
@@ -848,7 +1060,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  });
  $("competitionAdvanceRound").addEventListener("click",async()=>{
   const btn=$("competitionAdvanceRound");btn.disabled=true;
-  try{const {data,error}=await db.rpc("competition_advance_round",{p_competition_id:activeCompetition.id});if(error)throw error;say("Advanced to round "+data.current_round+". Simulation time moved forward seven days.",true);await loadCompetition();}catch(err){say(err.message);btn.disabled=false;}
+  try{const {data,error}=await db.rpc(isAmazonCase()?"amazon_advance_round":"competition_advance_round",{p_competition_id:activeCompetition.id});if(error)throw error;say("Advanced to round "+data.current_round+". Simulation time moved forward "+(data.days_advanced||7)+" days.",true);await loadCompetition();}catch(err){say(err.message);btn.disabled=false;}
  });
  $("competitionCalculateScores").addEventListener("click",async()=>{
   const btn=$("competitionCalculateScores");btn.disabled=true;
