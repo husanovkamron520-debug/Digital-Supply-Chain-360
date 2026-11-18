@@ -674,7 +674,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
     const available=new Date(po.available_at||po.expected_at)<=new Date(clock.virtual_now);
     const line=el("div","competition-task-card");line.append(el("b","",po.po_number+" · "+po.item_name),el("p","",po.received_quantity+"/"+po.quantity+" received · ETA "+new Date(po.available_at||po.expected_at).toLocaleDateString()));
     if(available&&activeCompetition.status==="active"){
-     const btn=el("button","secondary-button","Tovarni qabul qilish");btn.type="button";btn.addEventListener("click",async()=>{btn.disabled=true;try{const {data,error}=await db.rpc("amazon_receive_purchase_order",{p_purchase_order_id:po.id,p_quantity:po.quantity-po.received_quantity});if(error)throw error;say("Omborga "+data.received_quantity+" dona qabul qilindi.",true);await loadTeamOperations();}catch(err){say(err.message);btn.disabled=false;}});
+     const btn=el("button","secondary-button","Tovarni qabul qilish");btn.type="button";btn.addEventListener("click",async()=>{btn.disabled=true;try{const {data,error}=await db.rpc("amazon_receive_purchase_order",{p_purchase_order_id:po.id,p_quantity:po.quantity-po.received_quantity});if(error)throw error;say("Omborga "+data.usable_quantity+" yaroqli dona qabul qilindi; "+data.defective_quantity+" dona defect sabab karantinga ajratildi.",true);await loadTeamOperations();}catch(err){say(err.message);btn.disabled=false;}});
      line.append(btn);
     }
     card.append(line);
