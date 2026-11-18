@@ -1,0 +1,2 @@
+[functions.telegram-password-recovery]
+verify_jwt = false
