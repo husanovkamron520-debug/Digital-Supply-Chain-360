@@ -24,7 +24,7 @@ begin
  if v_comp_status<>'active' or v_clock.current_round>3 then raise exception 'Amazon case is not accepting fulfilment actions'; end if;
  if p_quantity is null or p_quantity<1 then raise exception 'Quantity must be positive'; end if;
  select coalesce(sum(quantity),0) into v_shipped from public.competition_shipments where order_id=p_order_id and status<>'cancelled';
- select coalesce(ready_quantity,0) into v_ready from public.amazon_case_fulfillment where order_id=p_order_id;
+ select coalesce((select ready_quantity from public.amazon_case_fulfillment where order_id=p_order_id),0) into v_ready;
  if v_shipped+v_ready+p_quantity>v_order.quantity then raise exception 'Fulfilment quantity exceeds the outstanding order quantity'; end if;
  select quantity into v_stock from public.competition_inventory where team_id=v_order.team_id and sku=v_order.sku and item_type='finished_goods' for update;
  if not found or v_stock < (select coalesce(sum(ready_quantity),0) from public.amazon_case_fulfillment where team_id=v_order.team_id)+p_quantity then
@@ -55,7 +55,7 @@ begin
  if not public.is_competition_role(v_order.competition_id,v_order.team_id,array['transport']) then raise exception 'Only Transport Manager can dispatch'; end if;
  select * into v_clock from public.competition_simulation_clock where competition_id=v_order.competition_id for update;
  if not exists(select 1 from public.competitions where id=v_order.competition_id and status='active') then raise exception 'Amazon case is not active'; end if;
- select coalesce(ready_quantity,0) into v_ready from public.amazon_case_fulfillment where order_id=p_order_id for update;
+ select coalesce((select ready_quantity from public.amazon_case_fulfillment where order_id=p_order_id for update),0) into v_ready;
  if p_quantity is null or p_quantity<1 or p_quantity>v_ready then raise exception 'Dispatch quantity exceeds packed and released quantity'; end if;
  select quantity into v_stock from public.competition_inventory where team_id=v_order.team_id and sku=v_order.sku and item_type='finished_goods' for update;
  if not found or v_stock<p_quantity then raise exception 'Insufficient finished-goods stock'; end if;
