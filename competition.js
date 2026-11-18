@@ -586,7 +586,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   const offersCard=el("div","competition-task-card");offersCard.append(el("b","","Supplier takliflari · MOQ · 30 kunlik quvvat"));
   for(const sku of skus){
    const line=el("p","");
-   const detail=offers.filter(o=>o.sku===sku.sku).map(o=>o.supplier_code+" $"+Number(o.unit_price).toFixed(2)+" · MOQ "+o.moq+" · cap "+Number(o.max_capacity).toLocaleString()+" · "+o.lead_time_days+" kun").join(" | ");
+   const detail=offers.filter(o=>o.sku===sku.sku).map(o=>o.supplier_code+" $"+Number(o.unit_price).toFixed(2)+" · MOQ "+o.moq+" · cap "+Number(o.max_capacity).toLocaleString()+" · "+o.lead_time_days+" kun · OTIF "+o.otif_pct+"% · defect "+o.defect_rate_pct+"%").join(" | ");
    line.textContent=sku.sku+" "+sku.item_name+": "+detail;offersCard.append(line);
   }
   host.append(offersCard);
