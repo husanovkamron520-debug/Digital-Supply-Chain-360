@@ -730,7 +730,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   if(approvals.length){
    const card=el("div","competition-task-card");card.append(el("h4","","Jamoa tasdiqlari"));
    for(const a of approvals){
-    const row=el("div","competition-task-card");row.append(el("b","",statusLabel(a.approval_type)),el("p","",a.reason),el("small","", "Ha: "+a.approve_votes+" · Yo‘q: "+a.reject_votes));
+    const row=el("div","competition-task-card");row.append(el("b","",statusLabel(a.approval_type)),el("p","",a.reason),el("small","", "Affected roles: "+(a.payload?.affected_roles||[]).join(", ")),el("small","", "Ha: "+a.approve_votes+" · Yo‘q: "+a.reject_votes));
     if(a.requested_by!==user.id){
      for(const [label,vote] of [["Tasdiqlash","approve"],["Rad etish","reject"]]){
       const btn=el("button","secondary-button",label);btn.type="button";btn.addEventListener("click",async()=>{btn.disabled=true;try{const {data,error}=await db.rpc("amazon_vote_approval",{p_approval_id:a.id,p_vote:vote});if(error)throw error;say("Ovoz qayd etildi: "+data.status,true);await loadTeamOperations();}catch(err){say(err.message);btn.disabled=false;}});row.append(btn);
