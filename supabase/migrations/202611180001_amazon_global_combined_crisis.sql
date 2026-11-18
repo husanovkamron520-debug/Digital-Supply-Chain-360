@@ -104,8 +104,7 @@ begin
  values
  (v_team.competition_id,p_team_id,v_team.classroom_id,'SUP-A','Supplier A · China',22,12,90,12,12,90),
  (v_team.competition_id,p_team_id,v_team.classroom_id,'SUP-B','Supplier B · Germany',8,13.8,96,8,13.8,96),
- (v_team.competition_id,p_team_id,v_team.classroom_id,'SUP-C','Supplier C · USA',5,15,98,5,15,98)
- returning id into v_supplier_a;
+ (v_team.competition_id,p_team_id,v_team.classroom_id,'SUP-C','Supplier C · USA',5,15,98,5,15,98);
  select id into v_supplier_a from public.competition_suppliers where team_id=p_team_id and supplier_code='SUP-A';
  select id into v_supplier_b from public.competition_suppliers where team_id=p_team_id and supplier_code='SUP-B';
  select id into v_supplier_c from public.competition_suppliers where team_id=p_team_id and supplier_code='SUP-C';
@@ -169,22 +168,10 @@ begin
  if v_total+p_quantity>v_offer.max_capacity then raise exception 'Supplier capacity exceeded for this SKU'; end if;
  v_day:=coalesce(p_order_day,(v_clock.current_round-1)*10+1);
  if v_day<((v_clock.current_round-1)*10+1) or v_day>v_clock.current_round*10 then raise exception 'Order day must be inside the current 10-day round'; end if;
- v_arrival:=v_clock.virtual_now+make_interval(days=>v_offer.lead_time_days);
+ v_arrival:=v_clock.virtual_now+make_interval(days=>(v_day-((v_clock.current_round-1)*10+1))+v_offer.lead_time_days);
  if v_arrival>v_clock.virtual_now+make_interval(days=>greatest(0,3-v_clock.current_round)*10+10) then raise exception 'Arrival is outside the 30-day case horizon'; end if;
  v_spend:=p_quantity*v_offer.unit_price;
  if v_state.committed_spend+v_spend>v_state.main_budget+v_state.reserve_approved then raise exception 'Procurement budget exceeded. Main budget is $160,000; reserve requires team approval'; end if;
- select coalesce(sum(quantity),0),coalesce(sum(quantity) filter(where supplier_id in (select supplier_id from public.amazon_case_supplier_offers where team_id=p_team_id and supplier_code='SUP-A')),0),
- coalesce(sum(quantity) filter(where supplier_id in (select supplier_id from public.amazon_case_supplier_offers where team_id=p_team_id and supplier_code in ('SUP-B','SUP-C'))),0)
- into v_total,v_a,v_bc from public.competition_purchase_orders where team_id=p_team_id and status<>'cancelled';
- if v_total+p_quantity>0 then
-  if v_state.strategic_posture='cost_focused' and (v_a+case when p_supplier_code='SUP-A' then p_quantity else 0 end)::numeric/(v_total+p_quantity)<0.60 then
-    raise exception 'Cost-focused posture requires at least 60% from Supplier A';
-  elsif v_state.strategic_posture='service_focused' and (v_bc+case when p_supplier_code in ('SUP-B','SUP-C') then p_quantity else 0 end)::numeric/(v_total+p_quantity)<0.60 then
-    raise exception 'Service-focused posture requires at least 60% from Suppliers B+C';
-  elsif v_state.strategic_posture='balanced' and (v_a+case when p_supplier_code='SUP-A' then p_quantity else 0 end)::numeric/(v_total+p_quantity) not between 0.40 and 0.70 then
-    raise exception 'Balanced posture requires Supplier A share between 40% and 70%';
-  end if;
- end if;
  insert into public.competition_purchase_orders(competition_id,team_id,classroom_id,supplier_id,po_number,sku,item_name,quantity,unit_cost,expected_at,available_at)
  select v_team.competition_id,p_team_id,v_team.classroom_id,v_offer.supplier_id,
   'AMZ-PO-'||upper(substr(replace(gen_random_uuid()::text,'-',''),1,10)),v_offer.sku,s.item_name,p_quantity,v_offer.unit_price,v_arrival,v_arrival
