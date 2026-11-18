@@ -76,6 +76,7 @@ These are educational simulations based on publicly known business models, not o
 - Supplier reliability adds a risk buffer to the availability date; round progression unlocks receipts and deliveries.
 - OTIF uses delivered quantities against on-time quantities, including orders already due but still undelivered.
 - Team score uses weighted service (25%), cost (20%), inventory health (15%), lead time (15%), productivity (10%), and evaluated decision quality (15%). Score coverage is shown; a live total is withheld until delivery, production, and evaluated decision evidence exists. Finalisation records zero for a team with insufficient evidence rather than inventing performance.
+- After the teacher completes the competition, a locked final financial report shows revenue, recorded operating costs, operating surplus, profit margin, return on starting capital, closing cash, OTIF, inventory health and final score. The report is calculated from the saved simulation ledger; it is not audited company financial data.
 - Individual rankings use teacher-evaluated decision scores. The public leaderboard exposes aggregate team and individual results, not other teams' operational records or decision rationales.
 
 Competition writes are performed through role-validated database RPCs. RLS isolates operational records by team; teachers can review the whole classroom. Direct client writes to competition tables are revoked.
@@ -121,6 +122,7 @@ The database includes profiles, classrooms, memberships, scenarios, orders, ship
 - `supabase/schema.sql` is the baseline schema.
 - `supabase/competition_engine.sql` creates the competition foundation after the classroom/core schema.
 - `supabase/competition_operations.sql` contains the applied team operations, round clock, role workflows, live metrics, and leaderboard migrations in dependency order.
+- `supabase/amazon_final_financial_report.sql` locks automatic team setup to the Amazon model and adds the post-completion financial report RPC.
 - Other SQL files are incremental changes for modules, state transitions, indexes, RLS, grants, and security hardening.
 - For an existing project, apply only changes that have not already been applied, in their dependency order. Do not blindly rerun every file against a populated production database.
 

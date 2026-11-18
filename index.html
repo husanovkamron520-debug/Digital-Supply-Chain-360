@@ -187,7 +187,8 @@
             <div class="competition-auto-setup" id="competitionAutoSetup">
               <label for="competitionTeamCount">Jamoalar soni</label>
               <select id="competitionTeamCount"><option value="2" selected>2 ta jamoa</option><option value="3">3 ta jamoa</option><option value="4">4 ta jamoa</option></select>
-              <button class="primary-button" id="competitionAutoSetupButton" type="button">Jamoalarni teng taqsimlash</button>
+              <button class="primary-button" id="competitionAutoSetupButton" type="button">Amazon jamoalarini teng taqsimlash</button>
+              <p class="form-hint">Barcha jamoalar bir xil Amazon biznes modeli bilan ishlaydi — natijalar o‘zaro adolatli taqqoslanadi.</p>
             </div>
             <form class="competition-inline-form" id="competitionManualTeamForm" hidden>
               <input id="competitionManualTeamName" maxlength="80" minlength="2" placeholder="Team name" required>
@@ -223,6 +224,11 @@
                         <div class="competition-section-head"><h3>Jamoalarning jonli natijalari</h3><p>Calculated from this competition's saved operations, not sample dashboard figures.</p></div>
                         <div class="competition-round-controls"><span id="competitionRoundInfo">Round 1 / 5 · Virtual time</span><button class="secondary-button" id="competitionAdvanceRound" type="button">Keyingi bosqichga o‘tish (+7 kun)</button><button class="secondary-button" id="competitionCompleteButton" type="button" hidden>Musobaqani yakunlash va natijalarni tasdiqlash</button><button class="secondary-button" id="competitionCalculateScores" type="button">Rasmiy bosqich ballarini hisoblash</button></div>
                         <div id="competitionLeaderboard" class="competition-record-list"><p class="empty-state">Hozircha operatsion ballar yo‘q.</p></div>
+                        <div class="competition-setup" id="competitionFinalReportsWrap" hidden>
+                          <h3>Amazon — yakuniy moliyaviy hisobot</h3>
+                          <p class="form-hint">Foyda, tushum va xarajatlar faqat yakunlangan simulyatsiyadagi real operatsion yozuvlardan hisoblanadi.</p>
+                          <div id="competitionFinalReports" class="competition-record-list"></div>
+                        </div>
                       </div>
                       <div class="competition-setup">
                         <h3>Shaxsiy hissalar reytingi</h3>
@@ -252,6 +258,10 @@
                       <div class="competition-setup">
                         <h3>Your team's live operating metrics</h3>
                         <div id="competitionLiveMetrics" class="competition-metric-grid"><p class="empty-state">Loading company performance…</p></div>
+                        <div class="competition-setup" id="competitionStudentFinalReportWrap" hidden>
+                          <h3>Amazon — jamoangizning yakuniy natijasi</h3>
+                          <div id="competitionStudentFinalReport" class="competition-record-list"></div>
+                        </div>
                       </div>
           </details>
           <div class="competition-setup" id="competitionSupplierPanel" hidden>
