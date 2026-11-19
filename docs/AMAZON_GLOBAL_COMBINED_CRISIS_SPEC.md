@@ -168,11 +168,11 @@ The role score must be calculated from actual outcomes and constraints, not mere
 
 
 ### Supplier Relations Manager
-- Own supplier communication, commitment confirmation, negotiation, escalation, and supplier risk monitoring.
-- May propose changes to lead time, price, reliability, partial delivery, and recovery commitments only within server-enforced negotiation bounds.
-- Cannot unilaterally alter Procurement's approved supplier allocation or exceed supplier capacity.
-- Must communicate the consequences of any negotiated term change to Procurement and affected Warehouse/Transport roles.
-- Round outputs: confirmed supplier commitments, revised ETAs, risk register, and recovery recommendation.
+- Own supplier communication, confirmation checkpoints, escalation, and supplier risk monitoring.
+- Supplier commitment entries are non-binding communication logs only. They do not reserve supplier capacity or change a purchase-order ETA.
+- Supplier offer prices, lead times, OTIF assumptions, defects, MOQ, and SKU capacities are fixed case inputs. Only Procurement's valid purchase orders reserve supplier capacity and determine inventory arrival.
+- Cannot alter Procurement's approved supplier allocation or exceed supplier capacity.
+- Round outputs: supplier communication log, risk register, escalation record, and recovery recommendation.
 
 ### Fulfillment Operations Manager
 - Student-facing name replaces legacy Manufacturer label; no manufacturing of the five finished consumer products is implied.
