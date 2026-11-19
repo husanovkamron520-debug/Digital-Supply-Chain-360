@@ -18,6 +18,7 @@
   <script type="module" src="./auth.js?v=20261119-profile-null-2"></script>
   <script type="module" src="./classroom.js"></script>
   <script type="module" src="./competition.js?v=20261119-amazon-fix-1"></script>
+  <script type="module" src="./warehouse-3d.js?v=20261119-1"></script>
   <script type="module" src="./localization.js"></script>
 </head>
 <body>
@@ -159,6 +160,7 @@
           <div><label for="competitionSelect">Musobaqa</label><select id="competitionSelect"></select></div>
         </div>
         <button class="secondary-button" id="competitionRefreshButton" type="button" hidden>Musobaqa ma’lumotlarini yangilash</button>
+        <div class="warehouse3d-entry"><div><b>3D OMBOR</b><span>Tokchalar, mahsulotlar va jamoangiz zaxirasini fazoviy ko‘rinishda kuzating.</span></div><button class="primary-button" id="warehouse3dOpenButton" type="button">◈ 3D omborga kirish</button></div>
         <div class="competition-current">
           <div><div class="section-kicker">TANLANGAN MUSOBAQA</div><h3 id="competitionCurrentTitle">Musobaqa tanlanmagan</h3></div>
           <span class="competition-status" id="competitionCurrentStatus">—</span>
@@ -450,6 +452,29 @@
         <p class="analytics-note" id="analyticsNote">Loading classroom analytics…</p>
       </section>
 
+      <!-- Interactive 3D warehouse. Inventory is read from the selected team's live competition_inventory rows. -->
+      <section class="panel warehouse3d-workspace" id="warehouse3dWorkspace" hidden aria-label="3D ombor">
+        <div class="warehouse3d-heading">
+          <div><div class="section-kicker">SUPPLYCHAIN14 · WAREHOUSE DIGITAL TWIN</div><h2>3D ombor</h2><p id="warehouse3dStatus">Jamoa ombori yuklanmoqda…</p></div>
+          <div class="warehouse3d-actions"><button class="secondary-button" id="warehouse3dResetButton" type="button">Kamerani tiklash</button><button class="primary-button" id="warehouse3dBackButton" type="button">← Keysga qaytish</button></div>
+        </div>
+        <div class="warehouse3d-layout">
+          <div class="warehouse3d-view">
+            <div id="warehouse3dScene" role="img" aria-label="Aylantirish va yaqinlashtirish mumkin bo‘lgan 3D ombor sahnasi"></div>
+            <div class="warehouse3d-controls-hint">Sichqoncha yoki barmoq bilan aylantiring · ikki barmoq bilan yaqinlashtiring · tokchadagi qutini bosing</div>
+          </div>
+          <aside class="warehouse3d-sidebar">
+            <div class="warehouse3d-stats">
+              <div><span>Jami zaxira</span><strong id="warehouse3dTotalUnits">—</strong></div>
+              <div><span>SKU turlari</span><strong id="warehouse3dSkuCount">—</strong></div>
+              <div><span>Qayta buyurtma</span><strong id="warehouse3dLowCount">—</strong></div>
+            </div>
+            <div class="warehouse3d-detail" id="warehouse3dDetail"><span class="warehouse3d-eyebrow">TANLANGAN TOKCHA</span><h3>Mahsulotni tanlang</h3><p>3D sahnadagi rangli qutilardan birini bosing.</p></div>
+            <div class="warehouse3d-list-wrap"><div class="warehouse3d-list-title">OMBOR ZAXIRALARI</div><div id="warehouse3dInventoryList"></div></div>
+            <div class="warehouse3d-legend"><span><i class="stock-dot healthy"></i> Yetarli</span><span><i class="stock-dot warning"></i> Kamaymoqda</span><span><i class="stock-dot critical"></i> Qayta buyurtma</span></div>
+          </aside>
+        </div>
+      </section>
       <!-- Sample dashboard content removed: role workspaces are the primary home view. -->
     </main>
   </div>
