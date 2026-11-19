@@ -1,8 +1,8 @@
--- Amazon Global Combined Crisis: operational, financial and team-data audit fixes
--- Safe to apply repeatedly. No competition/team rows are modified.
+-- Amazon Global Combined Crisis: operational, financial and team-data audit fixes.
+-- Idempotent DDL/function replacements. Existing competitions and team data are not modified.
 ALTER TABLE public.competitions ADD COLUMN IF NOT EXISTS paused_at timestamptz;
 
-CREATE OR REPLACE FUNCTION public.amazon_assert_round_open(p_competition_id uuid)
+CREATE OR REPLACE FUNCTION private.amazon_assert_round_open(p_competition_id uuid)
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path TO ''
 AS $$
 DECLARE v_status text; v_round integer; v_ends timestamptz;
@@ -13,18 +13,21 @@ BEGIN
  SELECT ends_at INTO v_ends FROM public.competition_rounds WHERE competition_id=p_competition_id AND round_number=v_round AND status='active';
  IF v_ends IS NULL OR now()>=v_ends THEN RAISE EXCEPTION 'This round has closed. Ask the teacher to advance or resume the simulation.'; END IF;
 END; $$;
-REVOKE ALL ON FUNCTION public.amazon_assert_round_open(uuid) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.amazon_assert_round_open(uuid) TO authenticated;
 
-CREATE OR REPLACE FUNCTION public.is_competition_team_member(p_team_id uuid)
+CREATE OR REPLACE FUNCTION private.is_competition_team_member(p_team_id uuid)
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO ''
 AS $$ SELECT EXISTS (SELECT 1 FROM public.competition_team_members m WHERE m.team_id=p_team_id AND m.student_id=(select auth.uid())) $$;
-REVOKE ALL ON FUNCTION public.is_competition_team_member(uuid) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.is_competition_team_member(uuid) TO authenticated;
+
+REVOKE ALL ON FUNCTION private.amazon_assert_round_open(uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION private.is_competition_team_member(uuid) FROM PUBLIC, anon;
+GRANT USAGE ON SCHEMA private TO authenticated;
+GRANT EXECUTE ON FUNCTION private.is_competition_team_member(uuid) TO authenticated;
 
 DROP POLICY IF EXISTS competition_teams_read_competition ON public.competition_teams;
+DROP FUNCTION IF EXISTS public.amazon_assert_round_open(uuid);
+DROP FUNCTION IF EXISTS public.is_competition_team_member(uuid);
 CREATE POLICY competition_teams_read_competition ON public.competition_teams FOR SELECT TO authenticated
-USING (public.is_class_teacher(classroom_id) OR public.is_competition_team_member(id));
+USING (public.is_class_teacher(classroom_id) OR private.is_competition_team_member(id));
 ALTER VIEW public.competition_team_live_metrics SET (security_invoker=true);
 
 CREATE OR REPLACE FUNCTION public.amazon_place_purchase_order(p_team_id uuid, p_supplier_code text, p_sku text, p_quantity integer, p_order_day integer DEFAULT NULL::integer)
@@ -45,7 +48,7 @@ begin
  if v_comp.status<>'active' or coalesce(v_comp.settings->>'case_code','')<>'amazon-global-combined-crisis' then raise exception 'Amazon competition is not active'; end if;
  if not public.is_competition_role(v_team.competition_id,p_team_id,array['procurement']) then raise exception 'Only Procurement Manager can place orders'; end if;
  select * into v_clock from public.competition_simulation_clock where competition_id=v_team.competition_id for update;
- perform public.amazon_assert_round_open(v_team.competition_id);
+ perform private.amazon_assert_round_open(v_team.competition_id);
  select * into v_state from public.amazon_case_team_state where team_id=p_team_id for update;
  if v_clock.current_round>3 then raise exception '30-day horizon has ended'; end if;
  select * into v_offer from public.amazon_case_supplier_offers where team_id=p_team_id and supplier_code=p_supplier_code and sku=upper(p_sku);
@@ -87,7 +90,7 @@ begin
  if v_po.status in ('cancelled','received') then raise exception 'This purchase order cannot be received'; end if;
  if not public.is_competition_role(v_po.competition_id,v_po.team_id,array['warehouse']) then raise exception 'Only Warehouse Manager can receive stock'; end if;
  select * into v_clock from public.competition_simulation_clock where competition_id=v_po.competition_id for update;
- perform public.amazon_assert_round_open(v_po.competition_id);
+ perform private.amazon_assert_round_open(v_po.competition_id);
  if coalesce(v_po.available_at,v_po.expected_at)>v_clock.virtual_now+interval '9 days' then raise exception 'Supplier ETA is outside the current 10-day round window'; end if;
  if p_quantity is null or p_quantity<1 or v_po.received_quantity+p_quantity>v_po.quantity then raise exception 'Invalid receipt quantity'; end if;
  select item_name into v_item from public.amazon_case_skus where sku=v_po.sku;
@@ -138,7 +141,7 @@ begin
  if not public.is_competition_role(v_order.competition_id,v_order.team_id,array['manufacturer']) then
   raise exception 'Only Fulfillment Operations Manager can release an order for fulfilment'; end if;
  select * into v_clock from public.competition_simulation_clock where competition_id=v_order.competition_id for update;
- perform public.amazon_assert_round_open(v_order.competition_id);
+ perform private.amazon_assert_round_open(v_order.competition_id);
  select status into v_comp_status from public.competitions where id=v_order.competition_id;
  if not exists(select 1 from public.competitions c where c.id=v_order.competition_id and c.settings->>'case_code'='amazon-global-combined-crisis') then raise exception 'This is not an Amazon case order'; end if;
  if v_comp_status<>'active' or v_clock.current_round>3 then raise exception 'Amazon case is not accepting fulfilment actions'; end if;
@@ -181,7 +184,7 @@ begin
  if not exists(select 1 from public.competitions c where c.id=v_order.competition_id and c.settings->>'case_code'='amazon-global-combined-crisis' and c.status='active') then raise exception 'Amazon case is not active'; end if;
  if not public.is_competition_role(v_order.competition_id,v_order.team_id,array['transport']) then raise exception 'Only Transport Manager can dispatch'; end if;
  select * into v_clock from public.competition_simulation_clock where competition_id=v_order.competition_id for update;
- perform public.amazon_assert_round_open(v_order.competition_id);
+ perform private.amazon_assert_round_open(v_order.competition_id);
  select coalesce((select ready_quantity from public.amazon_case_fulfillment where order_id=p_order_id for update),0) into v_ready;
  if p_quantity is null or p_quantity<1 or p_quantity>v_ready then raise exception 'Dispatch quantity exceeds packed and released quantity'; end if;
  if p_service_level not in ('economy','standard','express') then raise exception 'Choose Economy, Standard or Express service'; end if;
@@ -229,7 +232,7 @@ begin
  if p_vote not in ('approve','reject') then raise exception 'Vote must be approve or reject'; end if;
  select * into v_a from public.amazon_case_approvals where id=p_approval_id for update;
  if not found or v_a.status<>'pending' then raise exception 'Pending approval not found'; end if;
- perform public.amazon_assert_round_open(v_a.competition_id);
+ perform private.amazon_assert_round_open(v_a.competition_id);
  if v_a.requested_by=(select auth.uid()) then raise exception 'Requester cannot approve their own request'; end if;
  select * into v_member from public.competition_team_members where team_id=v_a.team_id and student_id=(select auth.uid());
  if not found then raise exception 'Only team members can vote'; end if;
@@ -294,7 +297,7 @@ begin
  if v_ship.status='delivered' then raise exception 'Shipment is already delivered'; end if;
  if v_ship.status='cancelled' then raise exception 'Cancelled shipment cannot be delivered'; end if;
  if exists(select 1 from public.competitions c where c.id=v_ship.competition_id and c.settings->>'case_code'='amazon-global-combined-crisis') then
-  perform public.amazon_assert_round_open(v_ship.competition_id);
+  perform private.amazon_assert_round_open(v_ship.competition_id);
   if v_ship.eta>v_clock.virtual_now+interval '9 days' then raise exception 'Shipment ETA is outside the current 10-day round window'; end if;
  else
   if v_clock.virtual_now<v_ship.eta then raise exception 'Shipment is still in transit. Estimated arrival: %',v_ship.eta; end if;
@@ -536,7 +539,7 @@ begin
  if not public.is_competition_role(v_team.competition_id,p_team_id,array['supplier']) then raise exception 'Only Supplier Relations Manager can record supplier commitments'; end if;
  if not exists(select 1 from public.competitions c where c.id=v_team.competition_id and c.settings->>'case_code'='amazon-global-combined-crisis' and c.status='active') then raise exception 'Amazon case is not active'; end if;
  select * into v_clock from public.competition_simulation_clock where competition_id=v_team.competition_id for update;
- perform public.amazon_assert_round_open(v_team.competition_id);
+ perform private.amazon_assert_round_open(v_team.competition_id);
  select * into v_offer from public.amazon_case_supplier_offers where team_id=p_team_id and supplier_code=p_supplier_code and sku=upper(p_sku);
  if not found then raise exception 'Supplier offer for this SKU was not found'; end if;
  if p_quantity is null or p_quantity<1 then raise exception 'Commitment quantity must be positive'; end if;
@@ -569,7 +572,7 @@ begin
  if (select auth.uid()) is null then raise exception 'Sign in is required'; end if;
  select * into v_team from public.competition_teams where id=p_team_id;
  if not found then raise exception 'Team not found'; end if;
- perform public.amazon_assert_round_open(v_team.competition_id);
+ perform private.amazon_assert_round_open(v_team.competition_id);
  if not exists(select 1 from public.competitions c where c.id=v_team.competition_id and c.settings->>'case_code'='amazon-global-combined-crisis' and c.status='active') then raise exception 'Amazon case is not active'; end if;
  if p_approval_type not in ('reserve_draw','strategy_change','cross_functional') then raise exception 'Invalid approval type'; end if;
  if p_approval_type in ('reserve_draw','strategy_change') and not public.is_competition_role(v_team.competition_id,p_team_id,array['procurement']) then
@@ -604,7 +607,7 @@ begin
  select * into v_receipt from public.amazon_case_quality_receipts where id=p_quality_receipt_id for update;
  if not found then raise exception 'Quality receipt not found'; end if;
  if not exists(select 1 from public.competitions c where c.id=v_receipt.competition_id and c.settings->>'case_code'='amazon-global-combined-crisis' and c.status='active') then raise exception 'Amazon case is not active'; end if;
- perform public.amazon_assert_round_open(v_receipt.competition_id);
+ perform private.amazon_assert_round_open(v_receipt.competition_id);
  if not public.is_competition_role(v_receipt.competition_id,v_receipt.team_id,array['warehouse']) then raise exception 'Only Warehouse Manager can clear quarantine stock'; end if;
  v_remaining:=v_receipt.defective_quantity-v_receipt.disposed_quantity;
  if p_quantity is null or p_quantity<1 or p_quantity>v_remaining then raise exception 'Disposal quantity exceeds remaining quarantine stock'; end if;
