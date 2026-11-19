@@ -160,7 +160,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  }
 
  async function loadTemplates(){
-  const {data,error}=await db.from("company_templates").select("id,name,industry,business_model,case_study_note,source_urls").in("slug",["omnichannel-retail","amazon-global-combined-crisis"]).order("name");
+  const {data,error}=await db.from("company_templates").select("id,slug,name,industry,business_model,case_study_note,source_urls").in("slug",["omnichannel-retail","amazon-global-combined-crisis"]).order("name");
   if(error)throw error;templates=data||[];
   $("competitionTemplateSelect").replaceChildren(...templates.map(t=>option((t.slug==="amazon-global-combined-crisis"?"Amazon Global Combined Crisis":"Amazon · Legacy case")+" · "+t.industry,t.id)));
  }
