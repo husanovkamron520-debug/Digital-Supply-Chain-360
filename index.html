@@ -14,13 +14,13 @@
   <script type="importmap">
     {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js"}}
   </script>
-  <script type="module" src="./app.js"></script>
+  <script type="module" src="./app.js?v=20261119-clean-home-1"></script>
   <script type="module" src="./auth.js"></script>
   <script type="module" src="./classroom.js"></script>
   <script type="module" src="./inventory.js"></script>
   <script type="module" src="./operations.js"></script>
   <script type="module" src="./scenarios.js"></script>
-  <script type="module" src="./procurement.js"></script>
+  <script type="module" src="./procurement.js?v=20261119-procurement-null-fix-1"></script>
   <script type="module" src="./analytics.js"></script>
   <script type="module" src="./competition.js?v=20261119-amazon-fix-1"></script>
   <script type="module" src="./localization.js"></script>
@@ -78,14 +78,12 @@
       <div class="side-label">ISH MAYDONI</div>
       <nav class="side-nav" aria-label="Asosiy navigatsiya">
         <a class="nav-link active" href="#overview"><span class="nav-icon">◫</span> Umumiy ko‘rinish</a>
-        <a class="nav-link" href="#network"><span class="nav-icon">⌘</span> Tarmoq xaritasi</a>
         <a class="nav-link" href="#operationsWorkspace" hidden><span class="nav-icon">▤</span> Buyurtmalar va yuklar</a>
         <a class="nav-link" href="#inventoryWorkspace" hidden><span class="nav-icon">▦</span> Ombor zaxiralari</a>
         <a class="nav-link" href="#scenarioWorkspace"><span class="nav-icon">⚡</span> Ssenariy laboratoriyasi</a>
         <a class="nav-link" id="competitionNavLink" href="#competitionWorkspace" hidden><span class="nav-icon">🏆</span> Jamoaviy musobaqa</a>
         <a class="nav-link" href="#procurementWorkspace" hidden><span class="nav-icon">⌂</span> Xaridlar</a>
         <a class="nav-link" id="analyticsNavLink" href="#teacherTahlillar" hidden><span class="nav-icon">▥</span> Tahlillar</a>
-        <a class="nav-link" href="#intelligence"><span class="nav-icon">✳</span> Tahliliy markaz</a>
       </nav>
       <div class="side-bottom">
         <div class="live-card"><span class="live-dot"></span><div><b>Simulyatsiya faol</b><small>Namoyish muhiti</small></div></div>
@@ -95,14 +93,12 @@
 
     <nav class="mobile-nav" aria-label="Mobil navigatsiya">
       <a class="nav-link mobile-nav-link active" href="#overview"><span class="nav-icon">⌂</span><span>Bosh sahifa</span></a>
-      <a class="nav-link mobile-nav-link" href="#network"><span class="nav-icon">⌘</span><span>Tarmoq</span></a>
       <a class="nav-link mobile-nav-link" href="#operationsWorkspace" hidden><span class="nav-icon">▤</span><span>Yuklar</span></a>
       <a class="nav-link mobile-nav-link" href="#inventoryWorkspace" hidden><span class="nav-icon">▦</span><span>Ombor zaxiralari</span></a>
       <a class="nav-link mobile-nav-link" href="#scenarioWorkspace"><span class="nav-icon">⚡</span><span>Ssenariy</span></a>
       <a class="nav-link mobile-nav-link" id="mobileMusobaqaNavLink" href="#competitionWorkspace" hidden><span class="nav-icon">🏆</span><span>Jamoalar</span></a>
       <a class="nav-link mobile-nav-link" href="#procurementWorkspace" hidden><span class="nav-icon">⌂</span><span>Xaridlar</span></a>
       <a class="nav-link mobile-nav-link" id="mobileTahlillarNavLink" href="#teacherTahlillar" hidden><span class="nav-icon">▥</span><span>Tahlillar</span></a>
-      <a class="nav-link mobile-nav-link" href="#intelligence"><span class="nav-icon">✳</span><span>Yana</span></a>
     </nav>
 
     <main class="main-content" id="overview">
@@ -117,7 +113,7 @@
         </div>
         <div class="workspace-switch" role="group" aria-label="Panel ko‘rinishi">
           <button type="button" class="workspace-switch-button" id="myWorkspaceBtn" aria-pressed="false">Mening ish maydonim</button>
-          <button type="button" class="workspace-switch-button active" id="overallUmumiy ko‘rinishBtn" aria-pressed="true">Umumiy ko‘rinish</button>
+          <button type="button" class="workspace-switch-button active" id="overallOverviewBtn" aria-pressed="true">Umumiy ko‘rinish</button>
         </div>
       </div>
 
@@ -507,7 +503,7 @@
         </div>
         <div class="procurement-records">
           <div class="procurement-record-panel"><h3>Supplier register</h3><div id="suppliersList"><p class="empty-state">Loading suppliers…</p></div></div>
-          <div class="procurement-record-panel"><h3>Purchase orders & receipts</h3><div id="purchaseYuklarList"><p class="empty-state">Loading purchase orders…</p></div></div>
+          <div class="procurement-record-panel"><h3>Purchase orders & receipts</h3><div id="purchaseOrdersList"><p class="empty-state">Loading purchase orders…</p></div></div>
         </div>
         <p class="procurement-message" id="procurementMessage" role="status" aria-live="polite"></p>
       </section>
@@ -526,60 +522,7 @@
         <p class="analytics-note" id="analyticsNote">Loading classroom analytics…</p>
       </section>
 
-      <section class="welcome-row">
-        <div><div class="eyebrow"><span id="todayLabel">CLASSROOM ISH MAYDONI</span> <span class="eyebrow-line"></span> DEMO SIMULATION</div><h1>Supply chain <em>overview</em></h1><p class="subtitle">One connected view from raw material to final delivery.</p></div>
-        <button class="primary-button" id="scenarioBtn"><span>＋</span> Run disruption scenario</button>
-      </section>
-
-      <section class="kpi-grid" aria-label="Key performance indicators">
-        <article class="kpi-card"><div class="kpi-top"><span>On-time delivery</span><span class="kpi-symbol">↗</span></div><div class="kpi-value" id="otd">94.2<span>%</span></div><div class="kpi-foot"><span class="trend positive">↑ 2.4%</span><span>vs. last period</span></div><div class="mini-bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></article>
-        <article class="kpi-card"><div class="kpi-top"><span>Ombor zaxiralari health</span><span class="kpi-symbol">▦</span></div><div class="kpi-value" id="inventory">1,240</div><div class="kpi-foot"><span class="trend positive">● Stable</span><span>units in stock</span></div><div class="progress-track"><i style="width:76%"></i></div></article>
-        <article class="kpi-card"><div class="kpi-top"><span>Production output</span><span class="kpi-symbol">⌁</span></div><div class="kpi-value" id="production">950</div><div class="kpi-foot"><span class="trend positive">↑ 5.1%</span><span>units / day</span></div><div class="progress-track"><i style="width:84%"></i></div></article>
-        <article class="kpi-card"><div class="kpi-top"><span>Average lead time</span><span class="kpi-symbol">◷</span></div><div class="kpi-value" id="leadtime">6.4<span class="unit"> days</span></div><div class="kpi-foot"><span class="trend positive">↓ 0.8 days</span><span>order to delivery</span></div><div class="progress-track"><i style="width:61%"></i></div></article>
-      </section>
-
-      <section class="content-grid">
-        <article class="panel network-panel" id="network">
-          <div class="panel-heading"><div><div class="section-kicker">END-TO-END VISIBILITY</div><h2>Supply chain network</h2></div><div class="scene-controls"><button class="view-chip active" data-view="flow">Flow view</button><button class="view-chip" data-view="systems">Digital layer</button><button class="expand-button" id="focusBtn" title="Focus view">⛶</button></div></div>
-          <div class="scene-wrap"><div id="scene" aria-label="Interactive three-dimensional supply chain network"></div><div class="scene-overlay"><span class="scene-live"><i></i> INTERACTIVE DEMO</span><span class="scene-hint">DRAG TO ROTATE · SCROLL TO ZOOM</span></div><div class="scene-tooltip" id="sceneTooltip">Select a stage to inspect it</div></div>
-          <div class="flow-legend"><span><i class="legend-dot goods"></i> Physical goods</span><span><i class="legend-line data"></i> Digital information</span><span><i class="legend-dot active-dot"></i> Active node</span></div>
-          <div class="stage-strip" id="stageStrip">
-            <button class="stage active" data-stage="0"><span class="stage-number">01</span><b>Supplier</b><small>Raw materials</small></button>
-            <button class="stage" data-stage="1"><span class="stage-number">02</span><b>Factory</b><small>Production</small></button>
-            <button class="stage" data-stage="2"><span class="stage-number">03</span><b>Warehouse</b><small>Storage</small></button>
-            <button class="stage" data-stage="3"><span class="stage-number">04</span><b>Transport</b><small>In transit</small></button>
-            <button class="stage" data-stage="4"><span class="stage-number">05</span><b>Customer</b><small>Delivery</small></button>
-          </div>
-        </article>
-
-        <article class="panel events-panel" id="operations">
-          <div class="panel-heading"><div><div class="section-kicker">SAMPLE EVENT STREAM</div><h2>Event stream</h2></div><span class="event-count" id="eventCount">04 EVENTS</span></div>
-          <div class="event-list" id="eventList">
-            <div class="event"><span class="event-icon green">↗</span><div><b>Shipment departed</b><p>TRK-204 · Central warehouse</p><small>2 minutes ago</small></div><span class="event-status ok">ON TRACK</span></div>
-            <div class="event"><span class="event-icon blue">▦</span><div><b>Ombor zaxiralari replenished</b><p>SKU-8821 · Warehouse 03</p><small>18 minutes ago</small></div><span class="event-status ok">COMPLETED</span></div>
-            <div class="event"><span class="event-icon amber">⌁</span><div><b>Production target reached</b><p>Plant A · Shift 1</p><small>41 minutes ago</small></div><span class="event-status ok">COMPLETED</span></div>
-            <div class="event"><span class="event-icon violet">✳</span><div><b>Demand forecast updated</b><p>AI planning engine</p><small>1 hour ago</small></div><span class="event-status info">INFO</span></div>
-          </div>
-          <div class="event-footer"><span><i class="live-dot"></i> 5 illustrative supply stages</span><button id="clearEvents">Clear view</button></div>
-        </article>
-      </section>
-
-      <section class="bottom-grid" id="intelligence">
-        <article class="panel process-panel"><div class="panel-heading"><div><div class="section-kicker">PROCESS EXPLORER</div><h2>How the system connects</h2></div><span class="muted-label">5 CORE STAGES</span></div><div class="process-list">
-          <div class="process-item"><span class="process-icon">⌂</span><div><b>Source & procure</b><small>Yetkazib beruvchilarni boshqarish · Purchase orders</small></div><span class="system-tag">ERP</span></div>
-          <div class="process-item"><span class="process-icon">⚙</span><div><b>Make & manufacture</b><small>Capacity · Quality · Production planning</small></div><span class="system-tag">MES</span></div>
-          <div class="process-item"><span class="process-icon">▤</span><div><b>Store & fulfil</b><small>Stock visibility · Picking · Packing</small></div><span class="system-tag">WMS</span></div>
-          <div class="process-item"><span class="process-icon">⇢</span><div><b>Move & deliver</b><small>Fleet · Routes · Proof of delivery</small></div><span class="system-tag">TMS</span></div>
-          <div class="process-item"><span class="process-icon">◎</span><div><b>Serve & learn</b><small>Customer experience · Returns · Feedback</small></div><span class="system-tag">CRM</span></div>
-        </div></article>
-        <article class="panel intelligence-panel"><div class="panel-heading"><div><div class="section-kicker">CONNECTED INTELLIGENCE</div><h2>Digital capabilities</h2></div><span class="spark">✳</span></div><div class="capability-grid">
-          <div class="capability"><span class="cap-icon iot">⌁</span><div><b>IoT sensors</b><small>Example asset signals</small></div><span class="cap-state"></span></div>
-          <div class="capability"><span class="cap-icon twin">◇</span><div><b>Digital twin</b><small>Conceptual operations</small></div><span class="cap-state"></span></div>
-          <div class="capability"><span class="cap-icon ai">✳</span><div><b>AI analytics</b><small>Illustrative insights</small></div><span class="cap-state"></span></div>
-          <div class="capability"><span class="cap-icon cloud">☁</span><div><b>Cloud platform</b><small>Unified demo layer</small></div><span class="cap-state"></span></div>
-        </div><div class="insight-box"><span class="insight-mark">✦</span><div><b>Control tower insight</b><p id="insightText">Your network is balanced. All major flows are operating within expected parameters.</p></div></div></article>
-      </section>
-      <footer><span>SUPPLYCHAIN14 <b>·</b> RAQAMLI TA’MINOT ZANJIRI LABORATORIYASI</span><span>Educational simulation <b>·</b> Not connected to live operations</span></footer>
+      <!-- Sample dashboard content removed: role workspaces are the primary home view. -->
     </main>
   </div>
 </body>
