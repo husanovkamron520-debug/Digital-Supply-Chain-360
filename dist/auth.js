@@ -74,7 +74,8 @@ function showApp(user, profile) {
   document.querySelector("#userAvatar").textContent = fullName.trim().charAt(0).toUpperCase();
   document.querySelector("#sidebarUserName").textContent = fullName;
   document.querySelector("#sidebarUserRole").textContent = role === "teacher" ? "Teacher workspace" : "Student workspace";
-  document.querySelector("#todayLabel").textContent = new Intl.DateTimeFormat("en", {weekday:"long", day:"numeric", month:"long", year:"numeric"}).format(new Date()).toUpperCase();
+  const todayLabel = document.querySelector("#todayLabel");
+  if (todayLabel) todayLabel.textContent = new Intl.DateTimeFormat("en", {weekday:"long", day:"numeric", month:"long", year:"numeric"}).format(new Date()).toUpperCase();
   document.body.dataset.platformRole = role;
 }
 function setWorkspaceNavVisible(href, visible) {
