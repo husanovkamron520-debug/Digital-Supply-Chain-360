@@ -782,6 +782,10 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   const productionSubmit=$("competitionProductionForm").querySelector("button");
   if(productionSubmit)productionSubmit.disabled=remainingProductionCapacity===0||!canPlan;
   const m=metricResult.data,suppliers=supplierResult.data||[],inventory=inventoryResult.data||[],pos=poResult.data||[],orders=orderResult.data||[],shipments=shipmentResult.data||[];
+  // Share the currently selected team inventory with the optional 3D warehouse view.
+  window.supplyChainWarehouseInventory=inventory;
+  window.supplyChainWarehouseTeamId=teamId;
+  window.supplyChainWarehouseTeamName=teamResult.data?.name||"Jamoa ombori";
   const virtualNow=new Date(clockResult.data.virtual_now);
   const liveChallenges=[];
   const addChallenge=(severity,title,domain,prompt,evidence)=>liveChallenges.push({severity,title,domain,prompt,evidence,rank:severity==="CRITICAL"?3:severity==="HIGH"?2:1});
