@@ -636,7 +636,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    card.append(el("h4","","Favqulodda rezerv"),reserveForm);host.append(card);
   }
   if(activeRole==="supplier"){
-   const card=el("div","competition-task-card");card.append(el("h4","","Supplier Relations Manager"),el("p","","Uchta supplier bilan yetkazib berish majburiyatini tasdiqlang, A supplier kechikishini eskalatsiya qiling va B/C alternativ manbalar bilan SLA xavfini boshqaring. Bu qaydlar procurement buyurtmasi yoki zaxira yaratmaydi; real PO’ni Procurement Manager beradi."));
+   const card=el("div","competition-task-card");card.append(el("h4","","Supplier Relations Manager"),el("p","","Uchta supplier bilan yetkazib berish majburiyatini tasdiqlang, A supplier kechikishini eskalatsiya qiling va B/C alternativ manbalar bilan SLA xavfini boshqaring. Bu qaydlar majburiy bo‘lmagan muloqot jurnali: supplier quvvatini band qilmaydi va PO ETA’sini o‘zgartirmaydi; haqiqiy quvvat va ETA faqat Procurement Manager joylashtirgan PO’dan olinadi."));
    const form=el("form","competition-inline-form"),supplier=el("select",""),skuSelect=el("select",""),qty=el("input",""),arrival=el("input",""),status=el("select",""),note=el("input","");
    for(const code of ["SUP-A","SUP-B","SUP-C"])supplier.append(option(code+" · "+({"SUP-A":"China","SUP-B":"Germany","SUP-C":"USA"}[code]),code));
    for(const sku of skus)skuSelect.append(option(sku.sku+" · "+sku.item_name,sku.sku));
