@@ -744,6 +744,10 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    }
    host.append(card);
   }
+  if(!roundOpen){
+   host.querySelectorAll("button,input,select,textarea").forEach(control=>control.disabled=true);
+   host.append(el("small","form-hint","Raund vaqti tugagan. Operatsion tugmalar o‘chirildi; o‘qituvchi keyingi raundni boshlashi yoki simulyatsiyani davom ettirishi kerak."));
+  }
   host.append(el("small","form-hint","Eslatma: bu Amazon’dan ilhomlangan, barcha raqam va supplier shartlari sun’iy bo‘lgan o‘quv simulyatsiyasi."));
  }
 
