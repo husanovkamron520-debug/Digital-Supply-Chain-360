@@ -294,7 +294,7 @@ Deno.serve(async (req) => {
 
   const score = Math.round(normalized.reduce((sum, x) => sum + x.awarded_points, 0) * 100) / 100;
   const submissionText = collectSubmissionText(task.submission);
-  const aiWordCount = (submissionText.match(/[\\p{L}\\p{N}]+/gu) ?? []).length;
+  const aiWordCount = (submissionText.match(/[\p{L}\p{N}]+/gu) ?? []).length;
   const aiLikelihoodRaw = Number(grade.ai_likelihood);
   const aiLikelihood = Number.isFinite(aiLikelihoodRaw)
     ? Math.max(0, Math.min(100, Math.round(aiLikelihoodRaw)))
