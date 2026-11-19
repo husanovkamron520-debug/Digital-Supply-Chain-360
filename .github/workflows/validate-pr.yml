@@ -17,6 +17,15 @@ jobs:
           for file in ./*.js; do
             node --input-type=module --check < "$file"
           done
+      - name: Verify committed Cloudflare assets match source
+        run: |
+          for file in ./*.html ./*.css ./*.js; do
+            target="dist/${file#./}"
+            if [ ! -f "$target" ] || ! cmp -s "$file" "$target"; then
+              echo "::error::Cloudflare asset copy is missing or stale: $target. Update dist/ alongside source."
+              exit 1
+            fi
+          done
       - name: Validate SQL migration syntax
         run: |
           python -m pip install --quiet pglast
