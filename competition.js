@@ -13,6 +13,8 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  function say(message,success=false){$("competitionMessage").textContent=message;$("competitionMessage").classList.toggle("success",success);}
  function statusLabel(value){if(value==="manufacturer")return "FULFILLMENT OPERATIONS MANAGER";return (value||"").replaceAll("_"," ").toUpperCase();}
  const isAmazonCase=()=>activeCompetition?.settings?.case_code==="amazon-global-combined-crisis";
+ const isSupermarketCase=()=>activeCompetition?.settings?.case_code==="supermarket-crisis-7day";
+ const requiredRoles=()=>isSupermarketCase()?["procurement","supplier","manufacturer","warehouse","transport","retailer"]:["procurement","supplier","manufacturer","warehouse","transport"];
  async function requestAiGrade(taskId,button){
   if(button)button.disabled=true;
   try{
@@ -207,7 +209,8 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   const {data:comp,error}=await db.from("competitions").select("id,title,status,settings,starts_at,completed_at")
    .eq("id",activeCompetition.id).single();
   if(error)throw error;activeCompetition={...activeCompetition,...comp};
-  if($("competitionTemplateSelect")){const desiredSlug=comp.settings?.case_code==="amazon-global-combined-crisis"?"amazon-global-combined-crisis":"omnichannel-retail";const template=templates.find(t=>t.slug===desiredSlug);if(template)$("competitionTemplateSelect").value=template.id;}
+  if($("competitionCaseSelect"))$("competitionCaseSelect").value=comp.settings?.case_code==="supermarket-crisis-7day"?"supermarket-crisis-7day":"amazon-global-combined-crisis";
+   if($("competitionTemplateSelect")){const desiredSlug=comp.settings?.case_code==="amazon-global-combined-crisis"?"amazon-global-combined-crisis":comp.settings?.case_code==="supermarket-crisis-7day"?"supermarket-crisis-7day":"omnichannel-retail";const template=templates.find(t=>t.slug===desiredSlug);if(template)$("competitionTemplateSelect").value=template.id;}
   setHidden("competitionManager",false);
   $("competitionCurrentTitle").textContent=comp.title;
   $("competitionCurrentStatus").textContent=statusLabel(comp.status);
@@ -225,16 +228,17 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   ]);
   for(const e of [teamError,studentError,taskError,decisionError,memberError])if(e)throw e;
   const teamRows=teams||[],studentRows=students||[],taskRows=tasks||[],decisionRows=decisions||[];
-  const recommendedTeamCount=Math.max(2,Math.min(4,Math.floor(studentRows.length/5)));
+  const teamSize=isSupermarketCase()?6:5;
+   const recommendedTeamCount=Math.max(2,Math.min(4,Math.floor(studentRows.length/teamSize)));
   $("competitionTeamCount").value=String(recommendedTeamCount);
   $("competitionTeamCount").dataset.studentCount=String(studentRows.length);
-  for(const opt of $("competitionTeamCount").options)opt.disabled=studentRows.length<Number(opt.value)*5;
+  for(const opt of $("competitionTeamCount").options)opt.disabled=studentRows.length<Number(opt.value)*teamSize;
   $("competitionTeamCount").disabled=studentRows.length<10;
   $("competitionTeams").replaceChildren();
   let assignedStudentCount=0;const teamSizes=[];let allTeamsReady=teamRows.length>=2&&teamRows.length<=4;
-  const coreRoles=["procurement","supplier","manufacturer","warehouse","transport"];
+  const coreRoles=requiredRoles();
   if(!teamRows.length){
-   addEmpty($("competitionTeams"),"Create a balanced 4-team setup to assign students and company models.");
+   addEmpty($("competitionTeams"),"Create balanced teams to assign students and company models.");
   }else{
    for(const team of teamRows){
     const card=el("article","competition-team-card");
@@ -251,12 +255,12 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
     const teamMembers=members||[];assignedStudentCount+=teamMembers.length;teamSizes.push(teamMembers.length);
     const presentRoles=new Set(teamMembers.map(member=>member.operational_role));
     const missingRoles=coreRoles.filter(role=>!presentRoles.has(role));
-    const teamReady=teamMembers.length>=5&&missingRoles.length===0;
+    const teamReady=teamMembers.length>=coreRoles.length&&missingRoles.length===0;
     if(!teamReady)allTeamsReady=false;
-    head.lastChild.textContent=presentRoles.size+"/5 core roles";
+    head.lastChild.textContent=presentRoles.size+"/"+coreRoles.length+" core roles";
     const readiness=el("small","competition-readiness",teamReady
       ?"Ready · "+teamMembers.length+" students"
-      :"Needs "+(missingRoles.length?missingRoles.map(statusLabel).join(", "):"")+" "+(teamMembers.length<5?"· "+(5-teamMembers.length)+" more student(s)":""));
+      :"Needs "+(missingRoles.length?missingRoles.map(statusLabel).join(", "):"")+" "+(teamMembers.length<coreRoles.length?"· "+(coreRoles.length-teamMembers.length)+" more student(s)":""));
     const list=el("div","competition-member-list");
     for(const member of teamMembers){
      const line=el("div","competition-member-line");
@@ -1039,7 +1043,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  $("competitionSelect").addEventListener("change",async()=>{activeCompetition={id:$("competitionSelect").value};try{await loadCompetition();say("");}catch(err){say(err.message);}});
  $("competitionCreateForm").addEventListener("submit",async e=>{
   e.preventDefault();const btn=$("competitionCreateButton");btn.disabled=true;
-  try{const {data,error}=await db.rpc("create_competition",{p_classroom_id:activeClassId,p_title:$("competitionTitle").value.trim(),p_settings:{case_code:"amazon-global-combined-crisis",round_count:3,round_duration_minutes:10,horizon_days:30,demand_shock_pct:40,main_supplier_delay_days:10,scoring_version:"amazon-global-v1"}});if(error)throw error;
+  try{const {data,error}=await db.rpc("create_competition",{p_classroom_id:activeClassId,p_title:$("competitionTitle").value.trim(),p_settings:$("competitionCaseSelect").value==="supermarket-crisis-7day"?{case_code:"supermarket-crisis-7day",round_count:3,round_duration_minutes:8,horizon_days:7,demand_shock_pct:35,scoring_version:"supermarket-v1"}:{case_code:"amazon-global-combined-crisis",round_count:3,round_duration_minutes:10,horizon_days:30,demand_shock_pct:40,main_supplier_delay_days:10,scoring_version:"amazon-global-v1"}});if(error)throw error;
    $("competitionTitle").value="";say("Competition created. Configure teams next.",true);await loadCompetitions();$("competitionSelect").value=data;activeCompetition={id:data};await loadCompetition();
   }catch(err){say(err.message);}finally{btn.disabled=false;}
  });
