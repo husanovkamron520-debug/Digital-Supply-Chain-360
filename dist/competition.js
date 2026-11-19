@@ -41,7 +41,16 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   if(!task.ai_grade)return;
   const grade=task.ai_grade;
   const panel=el("section","competition-review-note");
-  panel.append(el("b","","🤖 AI dastlabki bahosi: "+Number(grade.score??task.score??0).toFixed(1)+"/100"));
+  panel.append(el("b","","🤖 AI dastlabki akademik bahosi: "+Number(grade.score??task.score??0).toFixed(1)+"/100"));
+  if(Number.isFinite(Number(grade.ai_likelihood))){
+   panel.append(el("p","","AI mualliflik taxmini: "+Number(grade.ai_likelihood).toFixed(0)+"% · ishonchlilik: "+String(grade.ai_confidence||"low")));
+   if(grade.ai_reason)panel.append(el("small","",String(grade.ai_reason)));
+   if(grade.penalty_deferred){
+    panel.append(el("small","","Avtomatik chegirma qo‘llanmadi: javob qisqa yoki detector ishonchliligi past. O‘qituvchi mustaqil tekshiradi."));
+   }else if(Number(grade.penalty_percent)>0){
+    panel.append(el("strong","","Tavsiya etilgan chegirma: "+Number(grade.penalty_percent)+"% · tavsiya etilgan ball: "+Number(grade.suggested_score).toFixed(1)+"/100"));
+   }
+  }
   if(grade.summary)panel.append(el("p","",grade.summary));
   if(Array.isArray(grade.criteria)){
    const list=el("ul","competition-ai-criteria");
@@ -51,7 +60,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    }
    panel.append(list);
   }
-  if(grade.status==="ai_graded_pending_teacher_review")panel.append(el("small","","AI natijasi hali yakuniy emas — o‘qituvchi tasdiqlashi yoki o‘zgartirishi mumkin."));
+  if(grade.status==="ai_graded_pending_teacher_review")panel.append(el("small","","AI natijasi yakuniy emas. Tavsiya etilgan chegirma ham avtomatik yakuniy baho emas — o‘qituvchi ballni tasdiqlashi yoki istalgancha o‘zgartirishi mumkin."));
   card.append(panel);
  }
  function localDateTimeValue(value){const d=new Date(value);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);}
@@ -336,7 +345,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    if(task.score!==null&&task.score!==undefined)card.append(el("p","competition-review-note","Teacher score: "+Number(task.score).toFixed(1)+"/100 · "+(task.feedback||task.review_note||"")));
    if(task.status==="submitted"){
     const review=el("form","competition-review");
-    const score=el("input","");score.type="number";score.min="0";score.max="100";score.step="1";score.required=true;score.placeholder="Task score /100";if(task.ai_grade)score.value=String(task.ai_grade.score??task.score??"");
+    const score=el("input","");score.type="number";score.min="0";score.max="100";score.step="1";score.required=true;score.placeholder="Final score /100 — edit suggestion if needed";if(task.ai_grade)score.value=String(task.ai_grade.suggested_score??task.ai_grade.score??task.score??"");
     const note=el("textarea","");note.rows=2;note.maxLength=2000;note.placeholder="Feedback: strengths, calculation errors and improvement advice";if(task.ai_grade)note.value=String(task.ai_grade.summary||"AI dastlabki bahosi: "+task.ai_grade.score+"/100");
     const approve=el("button","secondary-button","Save score & approve");approve.type="submit";
     const reject=el("button","secondary-button","Request changes");reject.type="button";
