@@ -162,9 +162,9 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  }
 
  async function loadTemplates(){
-  const {data,error}=await db.from("company_templates").select("id,slug,name,industry,business_model,case_study_note,source_urls").in("slug",["omnichannel-retail","amazon-global-combined-crisis"]).order("name");
+  const {data,error}=await db.from("company_templates").select("id,slug,name,industry,business_model,case_study_note,source_urls").in("slug",["omnichannel-retail","amazon-global-combined-crisis","supermarket-crisis-7day"]).order("name");
   if(error)throw error;templates=data||[];
-  $("competitionTemplateSelect").replaceChildren(...templates.map(t=>option((t.slug==="amazon-global-combined-crisis"?"Amazon Global Combined Crisis":"Amazon · Legacy case")+" · "+t.industry,t.id)));
+  $("competitionTemplateSelect").replaceChildren(...templates.map(t=>option((t.slug==="amazon-global-combined-crisis"?"Amazon Global Combined Crisis":t.slug==="supermarket-crisis-7day"?"Supermarket Crisis":"Amazon · Legacy case")+" · "+t.industry,t.id)));
  }
 
  async function loadCompetitions(){
@@ -230,6 +230,9 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   const teamRows=teams||[],studentRows=students||[],taskRows=tasks||[],decisionRows=decisions||[];
   const teamSize=isSupermarketCase()?6:5;
    const recommendedTeamCount=Math.max(2,Math.min(4,Math.floor(studentRows.length/teamSize)));
+   $("competitionSetupNote").textContent=isSupermarketCase()?"Supermarket Crisis: 3 ta jamoa × 6 menejer. 18 talaba kerak; barcha jamoalar bir xil sharoitda ishlaydi.":"Amazon case: 5 ta asosiy rol. Jamoalar bir xil sharoitda ishlaydi.";
+   $("competitionAutoSetupButton").textContent=isSupermarketCase()?"3 ta 6 kishilik jamoani teng taqsimlash":"Jamoalarni teng taqsimlash";
+   $("competitionTaskPackButton").textContent=isSupermarketCase()?"6 menejer uchun keys savollarini yaratish":"Har bir jamoa uchun menejer keyslarini yaratish";
   $("competitionTeamCount").value=String(recommendedTeamCount);
   $("competitionTeamCount").dataset.studentCount=String(studentRows.length);
   for(const opt of $("competitionTeamCount").options)opt.disabled=studentRows.length<Number(opt.value)*teamSize;
