@@ -187,30 +187,44 @@ Deno.serve(async (req) => {
     student_submission: task.submission,
   });
 
-  let modelResponse: Response;
-  try {
-    modelResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": geminiKey },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: systemPrompt }] },
-          contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-          generationConfig: {
-            temperature: 0.1,
-            responseMimeType: "application/json",
-          },
-        }),
-      },
-    );
-  } catch {
-    return await failAfterClaim("AI provider could not be reached. Please retry later.", 502);
+  let modelResponse: Response | null = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-goog-api-key": geminiKey },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: systemPrompt }] },
+            contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+            generationConfig: {
+              temperature: 0.1,
+              responseMimeType: "application/json",
+            },
+          }),
+        },
+      );
+      if (response.ok) {
+        modelResponse = response;
+        break;
+      }
+      const providerBody = await response.text();
+      console.error("Gemini grading attempt failed", attempt + 1, response.status, providerBody.slice(0, 1200));
+      const retryable = [429, 500, 502, 503, 504].includes(response.status);
+      if (!retryable || attempt === 2) {
+        return await failAfterClaim("AI grading provider returned an error after " + (attempt + 1) + " attempt(s). No grade was saved.", 502);
+      }
+    } catch (error) {
+      console.error("Gemini grading network attempt failed", attempt + 1, error);
+      if (attempt === 2) {
+        return await failAfterClaim("AI provider could not be reached after 3 attempts. Please retry later.", 502);
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
   }
-  if (!modelResponse.ok) {
-    const providerBody = await modelResponse.text();
-    console.error("Gemini grading error", modelResponse.status, providerBody.slice(0, 1200));
-    return await failAfterClaim("AI grading provider returned an error. No grade was saved.", 502);
+  if (!modelResponse) {
+    return await failAfterClaim("AI provider did not return a usable response. No grade was saved.", 502);
   }
 
   let generatedText = "";
