@@ -37,7 +37,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   say("AI baholash amalga oshmadi. 3 urinishdan keyin ham xatolik: "+(lastError?.message||"Noma’lum xatolik")+". Javob saqlangan — keyin qayta urinib ko‘ring.");
   if(button)button.disabled=false;
 }
-function appendAiGrade(card,task){
+ function appendAiGrade(card,task){
   if(!task.ai_grade)return;
   const grade=task.ai_grade;
   const panel=el("section","competition-review-note");
@@ -476,7 +476,7 @@ function appendAiGrade(card,task){
    };
    updateRoundTimer();if(roundStillRunning&&activeCompetition.status==="active")amazonRoundTimerInterval=setInterval(updateRoundTimer,1000);
   }
-const pendingDecisionCount=decisionRows.filter(d=>d.score===null).length;
+  const pendingDecisionCount=decisionRows.filter(d=>d.score===null).length;
   const studentsWithoutDecision=allMemberRows.filter(m=>!decisionRows.some(d=>d.student_id===m.student_id&&d.team_id===m.team_id&&d.score!==null)).length;
   const pendingTaskCount=taskRows.filter(task=>task.status!=="approved"||task.score===null||task.score===undefined).length;
   const studentsWithoutTask=allMemberRows.filter(m=>!taskRows.some(task=>task.assigned_to===m.student_id&&task.team_id===m.team_id&&task.score!==null&&task.score!==undefined)).length;
