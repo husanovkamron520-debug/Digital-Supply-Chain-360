@@ -64,6 +64,27 @@ function parseModelJson(text: string): Record<string, unknown> {
   return parsed as Record<string, unknown>;
 }
 
+function collectSubmissionText(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (Array.isArray(value)) return value.map(collectSubmissionText).join(" ");
+  if (value && typeof value === "object") {
+    return Object.entries(value as Record<string, unknown>)
+      .map(([key, item]) => key + " " + collectSubmissionText(item))
+      .join(" ");
+  }
+  return "";
+}
+
+function penaltyRateForLikelihood(likelihood: number): number {
+  if (likelihood >= 90) return 0.80;
+  if (likelihood >= 80) return 0.65;
+  if (likelihood >= 70) return 0.45;
+  if (likelihood >= 60) return 0.30;
+  if (likelihood >= 50) return 0.15;
+  return 0;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Method not allowed." }, 405);
@@ -175,7 +196,9 @@ Deno.serve(async (req) => {
     "Check arithmetic independently. Distinguish deterministic lateness caused by transit time exceeding a due date from probabilistic on-time performance.",
     "Accept a different recommendation when its calculations and trade-offs are defensible. Do not require exact wording.",
     "Do not reward unsupported claims. Give zero for a criterion only when there is no relevant evidence.",
-    "Return valid JSON only, with fields: criteria (array), summary (string), strengths (array of strings), improvements (array of strings), flags (array of strings).",
+    "Return valid JSON only, with fields: criteria (array), summary (string), strengths (array of strings), improvements (array of strings), flags (array of strings), ai_likelihood (integer 0..100), ai_confidence (low|medium|high), ai_reason (string).",
+    "Estimate possible AI authorship cautiously. This estimate is NOT proof and must never affect academic rubric points. Do not treat fluent writing, good grammar, formatting, punctuation, or non-native language patterns as evidence by themselves. Evaluate the actual submission language; do not assume English.",
+    "Use low confidence when evidence is weak or the text is too short. Explain uncertainty. Never infer AI use solely because the answer is polished, structured, or uses standard supply-chain terminology.",
     "Each criteria item must contain name, max_points, awarded_points, evidence, feedback. Use exactly the criterion names and max_points from the rubric.",
     "Awarded points must be numeric and between 0 and max_points. Keep feedback concise and specific.",
   ].join("\n");
@@ -270,10 +293,33 @@ Deno.serve(async (req) => {
   }
 
   const score = Math.round(normalized.reduce((sum, x) => sum + x.awarded_points, 0) * 100) / 100;
+  const submissionText = collectSubmissionText(task.submission);
+  const aiWordCount = (submissionText.match(/[\\p{L}\\p{N}]+/gu) ?? []).length;
+  const aiLikelihoodRaw = Number(grade.ai_likelihood);
+  const aiLikelihood = Number.isFinite(aiLikelihoodRaw)
+    ? Math.max(0, Math.min(100, Math.round(aiLikelihoodRaw)))
+    : 0;
+  const confidenceValue = String(grade.ai_confidence ?? "low").toLowerCase();
+  const aiConfidence = ["low", "medium", "high"].includes(confidenceValue)
+    ? confidenceValue
+    : "low";
+  const aiReason = typeof grade.ai_reason === "string" ? grade.ai_reason.slice(0, 1000) : "No reliable authorship signal was provided.";
+  const penaltyDeferred = aiWordCount < 100 || submissionText.trim().length < 600 || aiConfidence === "low";
+  const penaltyRate = penaltyDeferred ? 0 : penaltyRateForLikelihood(aiLikelihood);
+  const penaltyPercent = Math.round(penaltyRate * 100);
+  const suggestedScore = Math.round(score * (1 - penaltyRate) * 100) / 100;
   const savedGrade = {
-    version: "supplychain14-ai-v1",
+    version: "supplychain14-ai-v2",
     model,
     score,
+    ai_likelihood: aiLikelihood,
+    ai_confidence: aiConfidence,
+    ai_reason: aiReason,
+    ai_word_count: aiWordCount,
+    penalty_percent: penaltyPercent,
+    penalty_rate: penaltyRate,
+    penalty_deferred: penaltyDeferred,
+    suggested_score: suggestedScore,
     criteria: normalized,
     summary: grade.summary.slice(0, 2000),
     strengths: (grade.strengths as unknown[]).filter((x): x is string => typeof x === "string").slice(0, 8),
