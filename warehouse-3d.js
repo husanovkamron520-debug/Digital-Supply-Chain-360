@@ -80,7 +80,6 @@ function buildScene(inventory){
   const roofBeam=material(0x3b566a,0.5);
   for(let z=-12;z<=12;z+=6)addBox(scene,[0,9.5,z],[38,0.22,0.22],roofBeam,false);
   // Five rack rows, each representing one SKU in the selected case.
-  inventory.slice(0,5).forEach((item,index)=>addRack(-14+index*7,index,item));
   // Receiving and dispatch docks.
   const dock=material(0x254b62,0.55);
   for(let i=0;i<3;i++){
@@ -161,8 +160,8 @@ function openWarehouse(){
     ?"LIVE TEAM INVENTORY · "+(window.supplyChainWarehouseTeamName||"Jamoa")+(window.supplyChainWarehouseTeamId?" · "+String(window.supplyChainWarehouseTeamId).slice(0,8):"")
     :"NAMUNAVIY KO‘RINISH · Hozircha jamoa zaxirasi ulanmagan";
   document.body.classList.add("warehouse3d-open");workspace.hidden=false;
-  if(!renderer)buildScene(currentInventory);
-  else updateStats(currentInventory);
+  if(renderer)destroyScene();
+  buildScene(currentInventory);
   if(currentInventory[0])showItem(currentInventory[0],0);
 }
 function closeWarehouse(){
