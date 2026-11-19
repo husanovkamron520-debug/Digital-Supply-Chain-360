@@ -17,7 +17,7 @@
   <script type="module" src="./app.js?v=20261119-clean-home-1"></script>
   <script type="module" src="./auth.js?v=20261119-profile-null-2"></script>
   <script type="module" src="./classroom.js"></script>
-  <script type="module" src="./competition.js?v=20261119-warehouse-real-ops-1"></script>
+  <script type="module" src="./competition.js?v=20261119-supermarket-six-role-1"></script>
   <script type="module" src="./warehouse-3d.js?v=20261119-warehouse-real-ops-1"></script>
   <script type="module" src="./localization.js"></script>
 </head>
@@ -170,7 +170,8 @@
         <div id="competitionTeacherPanel" hidden>
           <form class="competition-form" id="competitionCreateForm">
             <h3>Musobaqa yaratish</h3>
-            <label for="competitionTitle">Musobaqa nomi</label>
+            <label for="competitionCaseSelect">Keys turi</label><select id="competitionCaseSelect"><option value="supermarket-crisis-7day">Supermarket Crisis · 3 hafta / 6 rol · Oson va realistik</option><option value="amazon-global-combined-crisis">Amazon Global Combined Crisis · 5 rol</option></select>
+             <label for="competitionTitle">Musobaqa nomi</label>
             <input id="competitionTitle" maxlength="140" minlength="3" placeholder="e.g. LOG-324 Supply Chain Challenge" required>
             <button class="primary-button" id="competitionCreateButton" type="submit">＋ Musobaqa yaratish</button>
           </form>
@@ -180,8 +181,8 @@
             <div class="competition-auto-setup" id="competitionAutoSetup">
               <label for="competitionTeamCount">Jamoalar soni</label>
               <select id="competitionTeamCount"><option value="2" selected>2 ta jamoa</option><option value="3">3 ta jamoa</option><option value="4">4 ta jamoa</option></select>
-              <button class="primary-button" id="competitionAutoSetupButton" type="button">Amazon jamoalarini teng taqsimlash</button>
-              <p class="form-hint">Barcha jamoalar bir xil Amazon biznes modeli bilan ishlaydi — natijalar o‘zaro adolatli taqqoslanadi.</p>
+              <button class="primary-button" id="competitionAutoSetupButton" type="button">Jamoalarni teng taqsimlash</button>
+              <p class="form-hint">Barcha jamoalar bir xil keys, budjet, talab va inqiroz sharoitida ishlaydi — natijalar adolatli taqqoslanadi.</p>
             </div>
             <form class="competition-inline-form" id="competitionManualTeamForm" hidden>
               <input id="competitionManualTeamName" maxlength="80" minlength="2" placeholder="Team name" required>
@@ -195,7 +196,7 @@
             <summary>Jamoa topshiriqlari va maxsus vazifalar</summary>
                       <div class="competition-setup">
                         <h3>Jamoaga topshiriq berish</h3>
-                        <button class="secondary-button" id="competitionTaskPackButton" type="button">Har bir jamoa uchun 5 rolli keys yaratish</button>
+                        <button class="secondary-button" id="competitionTaskPackButton" type="button">Har bir jamoa uchun menejer keyslarini yaratish</button>
                         <p class="form-hint">Each student receives an individual quantitative case for their role. Duplicate role holders get separate submissions; each case includes constraints, calculations and a 100-point marking rubric.</p>
                         <form class="competition-form" id="competitionTaskForm">
                           <label for="competitionTaskTeam">Team</label><select id="competitionTaskTeam" required></select>
