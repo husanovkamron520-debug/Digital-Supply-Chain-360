@@ -11,7 +11,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  let user=null,isTeacher=false,classrooms=[],templates=[],activeClassId=null,activeCompetition=null,activeTeam=null,activeRole=null,amazonRoundTimerInterval=null;
 
  function say(message,success=false){$("competitionMessage").textContent=message;$("competitionMessage").classList.toggle("success",success);}
- function statusLabel(value){if(value==="manufacturer")return "FULFILLMENT OPERATIONS MANAGER";return (value||"").replaceAll("_"," ").toUpperCase();}
+ function statusLabel(value){if(value==="manufacturer")return "FULFILLMENT OPERATIONS MANAGER";if(value==="retailer")return "STORE & DEMAND MANAGER";return (value||"").replaceAll("_"," ").toUpperCase();}
  const isAmazonCase=()=>activeCompetition?.settings?.case_code==="amazon-global-combined-crisis";
  const isSupermarketCase=()=>activeCompetition?.settings?.case_code==="supermarket-crisis-7day";
  const requiredRoles=()=>isSupermarketCase()?["procurement","supplier","manufacturer","warehouse","transport","retailer"]:["procurement","supplier","manufacturer","warehouse","transport"];
@@ -1062,7 +1062,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  });
  $("competitionTaskPackButton").addEventListener("click",async()=>{
   const btn=$("competitionTaskPackButton");btn.disabled=true;
-  try{const {data,error}=await db.rpc(isAmazonCase()?"amazon_create_role_tasks":"create_competition_standard_task_pack",{p_competition_id:activeCompetition.id});if(error)throw error;say(data+" individual role case tasks created across all teams.",true);await loadCompetition();}catch(err){say(err.message);btn.disabled=false;}
+  try{const taskRpc=isAmazonCase()?"amazon_create_role_tasks":isSupermarketCase()?"create_supermarket_role_tasks":"create_competition_standard_task_pack";const {data,error}=await db.rpc(taskRpc,{p_competition_id:activeCompetition.id});if(error)throw error;say(data+" individual role case tasks created across all teams.",true);await loadCompetition();}catch(err){say(err.message);btn.disabled=false;}
  });
  $("competitionTaskForm").addEventListener("submit",async e=>{
   e.preventDefault();const btn=$("competitionTaskButton");btn.disabled=true;
