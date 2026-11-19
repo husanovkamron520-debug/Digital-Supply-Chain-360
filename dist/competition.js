@@ -559,13 +559,14 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  async function renderAmazonCasePanel(teamId,clock){
   const {data:caseData,error:caseError}=await db.rpc("amazon_get_case_data",{p_team_id:teamId});
   if(caseError)throw caseError;
-  const [{data:orders,error:ordersError},{data:inventory,error:inventoryError},{data:pos,error:poError},{data:shipments,error:shipError}]=await Promise.all([
+  const [{data:orders,error:ordersError},{data:inventory,error:inventoryError},{data:pos,error:poError},{data:shipments,error:shipError},{data:warehouseEvents,error:warehouseEventsError}]=await Promise.all([
    db.from("competition_customer_orders").select("id,order_number,sku,item_name,quantity,unit_price,status,due_at").eq("team_id",teamId).order("due_at"),
    db.from("competition_inventory").select("sku,item_name,quantity,item_type").eq("team_id",teamId).order("sku"),
    db.from("competition_purchase_orders").select("id,po_number,sku,item_name,quantity,received_quantity,unit_cost,status,expected_at,available_at,supplier_id").eq("team_id",teamId).order("created_at",{ascending:false}),
-   db.from("competition_shipments").select("id,order_id,quantity,status,eta,destination,carrier").eq("team_id",teamId).order("dispatched_at",{ascending:false})
+   db.from("competition_shipments").select("id,order_id,quantity,status,eta,destination,carrier").eq("team_id",teamId).order("dispatched_at",{ascending:false}),
+   db.from("competition_operational_events").select("id,event_type,metadata,created_at").eq("team_id",teamId).eq("event_type","amazon_warehouse_putaway").order("created_at",{ascending:false})
   ]);
-  for(const e of [ordersError,inventoryError,poError,shipError])if(e)throw e;
+  for(const e of [ordersError,inventoryError,poError,shipError,warehouseEventsError])if(e)throw e;
   let host=$("amazonCasePanel");
   if(!host){host=el("section","competition-setup");host.id="amazonCasePanel";$("competitionStudentPanel").append(host);}
   host.replaceChildren();
@@ -575,6 +576,35 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   if(roundWindowError)throw roundWindowError;
   const roundOpen=activeCompetition.status==="active"&&!!roundWindow?.ends_at&&new Date(roundWindow.ends_at)>new Date();
   const roundVirtualEnd=new Date(new Date(clock.virtual_now).getTime()+9*86400000);
+  const warehouseBridgeState={
+   teamId,teamName:window.supplyChainWarehouseTeamName||"Jamoa ombori",role:activeRole,
+   caseActive:activeCompetition.status==="active",canAct:roundOpen&&activeCompetition.status==="active",
+   currentRound:Number(clock.current_round),virtualNow:clock.virtual_now,roundVirtualEnd:roundVirtualEnd.toISOString(),
+   inventory:window.supplyChainWarehouseInventory||inventory||[],purchaseOrders:pos||[],orders:orders||[],
+   shipments:shipments||[],fulfilment:fulfilment||[],qualityReceipts:qualityReceipts||[],
+   putawayEvents:warehouseEvents||[]
+  };
+  const assertWarehouseRole=role=>{
+   if(activeCompetition.status!=="active"||!roundOpen)throw new Error("Raund yopilgan yoki musobaqa faol emas.");
+   if(activeRole!==role)throw new Error("Bu operatsiya "+statusLabel(role)+" roliga tegishli.");
+  };
+  const runWarehouseRpc=async(role,name,args)=>{
+   assertWarehouseRole(role);
+   const {data,error}=await db.rpc(name,args);
+   if(error)throw error;
+   await loadTeamOperations();
+   return data;
+  };
+  window.supplyChainWarehouseBridge={
+   getState:()=>warehouseBridgeState,
+   refresh:async()=>{await loadTeamOperations();return window.supplyChainWarehouseBridge?.getState?.();},
+   receive:(purchaseOrderId,quantity)=>runWarehouseRpc("warehouse","amazon_receive_purchase_order",{p_purchase_order_id:purchaseOrderId,p_quantity:quantity}),
+   disposeDefects:(receiptId,quantity,reason)=>runWarehouseRpc("warehouse","amazon_dispose_defects",{p_quality_receipt_id:receiptId,p_quantity:quantity,p_reason:reason}),
+   putaway:(receiptId,quantity,location)=>runWarehouseRpc("warehouse","amazon_record_putaway",{p_quality_receipt_id:receiptId,p_quantity:quantity,p_location_code:location}),
+   fulfill:(orderId,quantity)=>runWarehouseRpc("manufacturer","amazon_fulfill_order",{p_order_id:orderId,p_quantity:quantity}),
+   dispatch:(orderId,quantity,carrier,service)=>runWarehouseRpc("transport","amazon_dispatch_shipment_v2",{p_order_id:orderId,p_quantity:quantity,p_carrier:carrier,p_service_level:service}),
+   deliver:shipmentId=>runWarehouseRpc("transport","competition_deliver_shipment",{p_shipment_id:shipmentId})
+  };
   const header=el("div","competition-panel-heading");
   header.append(el("h3","","Amazon Global Combined Crisis"),el("p","","30 kunlik global e-commerce inqirozi · Round "+round+"/3 · Day "+day+"–"+(day+9)+" · 10 real minutes per round"));
   host.append(header);
