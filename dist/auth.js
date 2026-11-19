@@ -85,43 +85,22 @@ function setWorkspaceNavVisible(href, visible) {
 }
 
 async function syncWorkspaceNavigation(user, profile) {
-  const teacher = profile?.platform_role === "teacher";
-  if (teacher) {
-    document.body.dataset.myWorkspaceTargets = JSON.stringify(["#competitionWorkspace", "#teacherAnalytics", "#inventoryWorkspace", "#operationsWorkspace", "#procurementWorkspace", "#scenarioWorkspace"]);
-    document.body.dataset.myWorkspaceTarget = "#teacherAnalytics";
-    setWorkspaceNavVisible("#competitionWorkspace", true);
-    setWorkspaceNavVisible("#operationsWorkspace", true);
-    setWorkspaceNavVisible("#inventoryWorkspace", true);
-    setWorkspaceNavVisible("#procurementWorkspace", true);
-    return;
-  }
-
-  const {data, error} = await supabase.from("classroom_members")
-    .select("operational_role").eq("student_id", user.id);
-  if (error) {
-    document.body.dataset.myWorkspaceTargets = JSON.stringify(["#competitionWorkspace", "#scenarioWorkspace"]);
-    document.body.dataset.myWorkspaceTarget = "#scenarioWorkspace";
-    setWorkspaceNavVisible("#operationsWorkspace", false);
-    setWorkspaceNavVisible("#procurementWorkspace", false);
-    return;
-  }
-
-  const roles = new Set((data || []).map(row => row.operational_role));
+  // This release is intentionally focused on classroom cases and team competitions.
+  // Standalone inventory, operations, procurement, analytics and scenario workspaces
+  // remain in the repository for possible later restoration, but are not exposed.
   const targets = ["#competitionWorkspace"];
-  if (roles.has("warehouse")) targets.push("#inventoryWorkspace", "#procurementWorkspace");
-  if (["supplier", "manufacturer"].some(role => roles.has(role))) {
-    if (!targets.includes("#procurementWorkspace")) targets.push("#procurementWorkspace");
-  }
-  if (["customer", "retailer", "transport"].some(role => roles.has(role))) targets.push("#operationsWorkspace");
-  if (targets.length === 1) targets.push("#scenarioWorkspace");
-  setWorkspaceNavVisible("#competitionWorkspace", true);
   document.body.dataset.myWorkspaceTargets = JSON.stringify(targets);
-  document.body.dataset.myWorkspaceTarget = targets[0];
-  setWorkspaceNavVisible("#operationsWorkspace",
-    ["customer", "retailer", "transport"].some(role => roles.has(role)));
-  setWorkspaceNavVisible("#inventoryWorkspace", roles.has("warehouse"));
-  setWorkspaceNavVisible("#procurementWorkspace",
-    ["supplier", "manufacturer", "warehouse"].some(role => roles.has(role)));
+  document.body.dataset.myWorkspaceTarget = "#competitionWorkspace";
+  setWorkspaceNavVisible("#competitionWorkspace", true);
+  for (const href of [
+    "#operationsWorkspace",
+    "#inventoryWorkspace",
+    "#teacherTahlillar",
+    "#procurementWorkspace",
+    "#scenarioWorkspace"
+  ]) {
+    setWorkspaceNavVisible(href, false);
+  }
 }
 
 async function loadProfile(user) {

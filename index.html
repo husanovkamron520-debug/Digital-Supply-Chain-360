@@ -17,10 +17,6 @@
   <script type="module" src="./app.js?v=20261119-clean-home-1"></script>
   <script type="module" src="./auth.js?v=20261119-profile-null-2"></script>
   <script type="module" src="./classroom.js"></script>
-  <script type="module" src="./inventory.js"></script>
-  <script type="module" src="./operations.js"></script>
-
-  <script type="module" src="./analytics.js"></script>
   <script type="module" src="./competition.js?v=20261119-amazon-fix-1"></script>
   <script type="module" src="./localization.js"></script>
 </head>
@@ -357,7 +353,7 @@
         </div>
         <p class="competition-message" id="competitionMessage" role="status" aria-live="polite"></p>
       </section>
-      <section class="panel inventory-workspace" id="inventoryWorkspace" hidden>
+      <section class="panel inventory-workspace" id="inventoryWorkspace" hidden hidden>
         <div class="panel-heading">
           <div><div class="section-kicker">OMBOR BOSHQARUVI</div><h2>Ombor zaxiralari workspace</h2></div>
           <span class="muted-label">WMS · ZAXIRALAR NAZORATI</span>
@@ -392,7 +388,7 @@
         <p class="inventory-message" id="inventoryMessage" role="status" aria-live="polite"></p>
       </section>
 
-      <section class="panel operations-workspace" id="operationsWorkspace" hidden>
+      <section class="panel operations-workspace" id="operationsWorkspace" hidden hidden>
         <div class="panel-heading">
           <div><div class="section-kicker">BUYURTMADAN YETKAZIB BERISHGACHA</div><h2>Buyurtmalar va yuklar</h2></div>
           <span class="muted-label">OMS · TMS</span>
@@ -439,7 +435,7 @@
 
       <!-- Standalone scenario and procurement workspaces are temporarily hidden; source modules remain available for later restoration. -->
 
-      <section class="panel teacher-analytics" id="teacherTahlillar" hidden>
+      <section class="panel teacher-analytics" id="teacherTahlillar" hidden hidden>
         <div class="panel-heading">
           <div><div class="section-kicker">CLASSROOM PERFORMANCE</div><h2>Operational analytics</h2></div>
           <span class="muted-label">LIVE CLASS RECORDS</span>
