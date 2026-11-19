@@ -17,17 +17,26 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  const requiredRoles=()=>isSupermarketCase()?["procurement","supplier","manufacturer","warehouse","transport","retailer"]:["procurement","supplier","manufacturer","warehouse","transport"];
  async function requestAiGrade(taskId,button){
   if(button)button.disabled=true;
-  try{
-   const {data,error}=await db.functions.invoke("competition-ai-grade",{body:{task_id:taskId}});
-   if(error)throw error;
-   if(data?.error)throw new Error(data.error);
-   say("AI dastlabki bahosi: "+Number(data.score).toFixed(1)+"/100. O‘qituvchi tasdig‘ini kutmoqda.",true);
-   await loadCompetition();
-  }catch(err){
-   say("AI baholash: "+(err.message||"Noma’lum xatolik"));
-   if(button)button.disabled=false;
+  let lastError=null;
+  for(let attempt=0;attempt<3;attempt++){
+   try{
+    const {data,error}=await db.functions.invoke("competition-ai-grade",{body:{task_id:taskId}});
+    if(error)throw error;
+    if(data?.error)throw new Error(data.error);
+    say("AI dastlabki bahosi: "+Number(data.score).toFixed(1)+"/100. O‘qituvchi tasdig‘ini kutmoqda.",true);
+    await loadCompetition();
+    return;
+   }catch(err){
+    lastError=err;
+    const status=Number(err?.context?.status||err?.status||0);
+    const retryable=!status||[429,500,502,503,504].includes(status);
+    if(!retryable||attempt===2)break;
+    await new Promise(resolve=>setTimeout(resolve,700*(attempt+1)));
+   }
   }
- }
+  say("AI baholash amalga oshmadi. 3 urinishdan keyin ham xatolik: "+(lastError?.message||"Noma’lum xatolik")+". Javob saqlangan — keyin qayta urinib ko‘ring.");
+  if(button)button.disabled=false;
+}
  function appendAiGrade(card,task){
   if(!task.ai_grade)return;
   const grade=task.ai_grade;
@@ -447,27 +456,32 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
     const {data:clock,error:clockError}=await db.from("competition_simulation_clock").select("current_round,round_limit,virtual_now").eq("competition_id",activeCompetition.id).maybeSingle();
   if(clockError)throw clockError;
   let roundWindow=null;
-  if(clock&&isAmazonCase()){const rw=await db.from("competition_rounds").select("ends_at").eq("competition_id",activeCompetition.id).eq("round_number",clock.current_round).maybeSingle();if(rw.error)throw rw.error;roundWindow=rw.data;}
+  const isTimedRound=isAmazonCase()||isSupermarketCase();
+  if(clock&&isTimedRound){const rw=await db.from("competition_rounds").select("ends_at").eq("competition_id",activeCompetition.id).eq("round_number",clock.current_round).maybeSingle();if(rw.error)throw rw.error;roundWindow=rw.data;}
   const roundStillRunning=!!(roundWindow?.ends_at&&new Date(roundWindow.ends_at).getTime()>Date.now());
-  $("competitionRoundInfo").textContent=clock?(isAmazonCase()?"Round "+clock.current_round+" / 3 · Day "+((clock.current_round-1)*10+1)+"–"+(clock.current_round*10)+" · 10 min/round · "+(roundWindow?.ends_at?"Tugash vaqti "+new Date(roundWindow.ends_at).toLocaleTimeString():""):"Round "+clock.current_round+" / "+clock.round_limit+" · Simulation date "+new Date(clock.virtual_now).toLocaleDateString()):"Rounds begin when the competition starts.";
+  const roundDuration=Number(activeCompetition.settings?.round_duration_minutes)||(isAmazonCase()?10:8);
+  const daysPerRound=isAmazonCase()?10:7;
+  const dayStart=(clock?.current_round-1)*daysPerRound+1;
+  const dayEnd=clock?.current_round*daysPerRound;
+  $("competitionRoundInfo").textContent=clock?(isTimedRound?"Round "+clock.current_round+" / "+clock.round_limit+" · Day "+dayStart+"–"+dayEnd+" · "+roundDuration+" min/round · "+(roundWindow?.ends_at?"Tugash vaqti "+new Date(roundWindow.ends_at).toLocaleTimeString():""):"Round "+clock.current_round+" / "+clock.round_limit+" · Simulation date "+new Date(clock.virtual_now).toLocaleDateString()):"Rounds begin when the competition starts.";
   setHidden("competitionAdvanceRound",activeCompetition.status!=="active");
-  $("competitionAdvanceRound").disabled=!clock||clock.current_round>=clock.round_limit||(isAmazonCase()&&roundStillRunning);
+  $("competitionAdvanceRound").disabled=!clock||clock.current_round>=clock.round_limit||(isTimedRound&&roundStillRunning);
   if(amazonRoundTimerInterval){clearInterval(amazonRoundTimerInterval);amazonRoundTimerInterval=null;}
-  if(isAmazonCase()&&roundWindow?.ends_at){
+  if(isTimedRound&&roundWindow?.ends_at){
    const endsAt=new Date(roundWindow.ends_at).getTime();
    const updateRoundTimer=()=>{const remaining=Math.max(0,endsAt-Date.now());const mm=String(Math.floor(remaining/60000)).padStart(2,"0");const ss=String(Math.floor((remaining%60000)/1000)).padStart(2,"0");
-    $("competitionRoundInfo").textContent="Round "+clock.current_round+" / 3 · Day "+((clock.current_round-1)*10+1)+"–"+(clock.current_round*10)+" · Qolgan vaqt "+mm+":"+ss;
-    $("competitionAdvanceRound").disabled=remaining>0||clock.current_round>=3;
-    if(remaining===0&&amazonRoundTimerInterval){clearInterval(amazonRoundTimerInterval);amazonRoundTimerInterval=null;}
+    $("competitionRoundInfo").textContent=activeCompetition.status==="paused"?"Round "+clock.current_round+" · PAUSED":"Round "+clock.current_round+" / "+clock.round_limit+" · Day "+dayStart+"–"+dayEnd+" · Qolgan vaqt "+mm+":"+ss;
+    $("competitionAdvanceRound").disabled=activeCompetition.status!=="active"||remaining>0||clock.current_round>=clock.round_limit;
+    if((remaining===0||activeCompetition.status!=="active")&&amazonRoundTimerInterval){clearInterval(amazonRoundTimerInterval);amazonRoundTimerInterval=null;}
    };
-   updateRoundTimer();if(roundStillRunning)amazonRoundTimerInterval=setInterval(updateRoundTimer,1000);
+   updateRoundTimer();if(roundStillRunning&&activeCompetition.status==="active")amazonRoundTimerInterval=setInterval(updateRoundTimer,1000);
   }
   const pendingDecisionCount=decisionRows.filter(d=>d.score===null).length;
   const studentsWithoutDecision=allMemberRows.filter(m=>!decisionRows.some(d=>d.student_id===m.student_id&&d.team_id===m.team_id&&d.score!==null)).length;
   const pendingTaskCount=taskRows.filter(task=>task.status!=="approved"||task.score===null||task.score===undefined).length;
   const studentsWithoutTask=allMemberRows.filter(m=>!taskRows.some(task=>task.assigned_to===m.student_id&&task.team_id===m.team_id&&task.score!==null&&task.score!==undefined)).length;
   setHidden("competitionCompleteButton",activeCompetition.status!=="active"||!clock||clock.current_round<clock.round_limit);
-  $("competitionCompleteButton").disabled=pendingDecisionCount>0||studentsWithoutDecision>0||pendingTaskCount>0||studentsWithoutTask>0||taskRows.length===0;
+  $("competitionCompleteButton").disabled=pendingDecisionCount>0||studentsWithoutDecision>0||pendingTaskCount>0||studentsWithoutTask>0||taskRows.length===0||(isTimedRound&&roundStillRunning);
   $("competitionCompleteButton").textContent=taskRows.length===0
    ?"Generate role case tasks first"
    :pendingDecisionCount>0
@@ -526,12 +540,26 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    if(task.review_note)card.append(el("p","competition-review-note",task.review_note));
    appendAiGrade(card,task);
    if(["pending","in_progress","rejected"].includes(task.status)&&activeCompetition.status==="active"){
-    const form=el("form","competition-submit-form");
-    const answer=el("textarea","");answer.rows=3;answer.maxLength=10000;answer.placeholder="Describe your work, calculations and evidence…";answer.required=true;
-    const btn=el("button","primary-button","Submit task");btn.type="submit";
-    form.append(answer,btn);
-    form.addEventListener("submit",async e=>{e.preventDefault();btn.disabled=true;try{const {error}=await db.rpc("submit_competition_task",{p_task_id:task.id,p_submission:{response:answer.value.trim(),role:activeRole,submitted_at:new Date().toISOString()}});if(error)throw error;say("Javob yuborildi. AI baholashi boshlanmoqda…",true);await loadCompetition();await requestAiGrade(task.id,null);}catch(err){say(err.message);btn.disabled=false;}});
-    card.append(form);
+     const form=el("form","competition-submit-form");
+     const answer=el("textarea","");answer.rows=3;answer.maxLength=10000;answer.placeholder="Describe your work, calculations and evidence…";answer.required=true;
+     const draftKey="supplychain14:task-draft:"+user.id+":"+task.id;
+     try{const savedDraft=localStorage.getItem(draftKey);if(savedDraft!==null)answer.value=savedDraft;}catch(_){}
+     answer.addEventListener("input",()=>{try{localStorage.setItem(draftKey,answer.value);}catch(_){}});
+     const btn=el("button","primary-button","Submit task");btn.type="submit";
+     form.append(answer,btn);
+     form.addEventListener("submit",async e=>{
+      e.preventDefault();btn.disabled=true;
+      const response=answer.value.trim();
+      if(!response){say("Javobni kiriting.");btn.disabled=false;return;}
+      if(!navigator.onLine){say("Internet yo‘q. Javob ushbu qurilmada saqlandi; internet qaytgach Submit tugmasini bosing.");btn.disabled=false;return;}
+      try{
+       const {error}=await db.rpc("submit_competition_task",{p_task_id:task.id,p_submission:{response,role:activeRole,submitted_at:new Date().toISOString()}});
+       if(error)throw error;
+       try{localStorage.removeItem(draftKey);}catch(_){}
+       say("Javob yuborildi. AI baholashi boshlanmoqda…",true);await loadCompetition();await requestAiGrade(task.id,null);
+      }catch(err){say("Yuborish amalga oshmadi. Javob saqlandi; qayta urinib ko‘ring. "+(err.message||""));btn.disabled=false;}
+     });
+     card.append(form);
    }else if(task.submission){
     card.append(el("pre","competition-submission",JSON.stringify(task.submission,null,2)));
     if(task.status==="submitted"&&!task.ai_graded_at){
@@ -1122,6 +1150,8 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   }catch(err){say(err.message);}finally{btn.disabled=false;}
  });
  window.addEventListener("classroom-updated",async()=>{try{await loadClassrooms();say("Classroom list refreshed.",true);}catch(err){say(err.message);}});
- db.auth.getSession().then(({data})=>initialize(data.session));
- db.auth.onAuthStateChange((_event,session)=>{if(session)setTimeout(()=>initialize(session),0);else{root.hidden=true;user=null;activeCompetition=null;}});
+ window.addEventListener("offline",()=>say("Internet uzildi. Yozilayotgan case javobi qurilmada avtomatik saqlanadi."));
+  window.addEventListener("online",()=>say("Internet qaytdi. Saqlangan javobni yuborish uchun Submit tugmasini bosing.",true));
+  db.auth.getSession().then(({data})=>initialize(data.session));
+  db.auth.onAuthStateChange((_event,session)=>{if(session)setTimeout(()=>initialize(session),0);else{root.hidden=true;user=null;activeCompetition=null;}});
 }
