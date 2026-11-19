@@ -481,7 +481,7 @@ const pendingDecisionCount=decisionRows.filter(d=>d.score===null).length;
   const pendingTaskCount=taskRows.filter(task=>task.status!=="approved"||task.score===null||task.score===undefined).length;
   const studentsWithoutTask=allMemberRows.filter(m=>!taskRows.some(task=>task.assigned_to===m.student_id&&task.team_id===m.team_id&&task.score!==null&&task.score!==undefined)).length;
   setHidden("competitionCompleteButton",activeCompetition.status!=="active"||!clock||clock.current_round<clock.round_limit);
-  $("competitionCompleteButton").disabled=pendingDecisionCount>0||studentsWithoutDecision>0||pendingTaskCount>0||studentsWithoutTask>0||taskRows.length===0;
+  $("competitionCompleteButton").disabled=pendingDecisionCount>0||studentsWithoutDecision>0||pendingTaskCount>0||studentsWithoutTask>0||taskRows.length===0||(isTimedRound&&roundStillRunning);
   $("competitionCompleteButton").textContent=taskRows.length===0
    ?"Generate role case tasks first"
    :pendingDecisionCount>0
