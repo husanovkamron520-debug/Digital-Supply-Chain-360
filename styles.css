@@ -710,3 +710,22 @@ body.warehouse3d-open #warehouse3dWorkspace{display:block!important}
 .warehouse3d-process-actions button{width:100%;justify-content:center;font-size:9px}
 .warehouse3d-simulation-note{margin:10px 0 0;font-size:9px;line-height:1.55;color:#839bb0}
 @media(max-width:850px){.warehouse3d-process-panel{grid-column:1/-1}}
+
+
+/* Live role-based warehouse operations */
+.warehouse3d-process-panel{max-height:640px;overflow-y:auto;overscroll-behavior:contain}
+.warehouse3d-live-summary{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:8px 10px;margin:8px 0 10px;border:1px solid rgba(91,198,193,.22);border-radius:8px;background:rgba(14,55,65,.28)}
+.warehouse3d-live-summary b{font-size:9px;color:#c7e6ed}
+.warehouse3d-live-summary span{font:9px 'DM Mono',monospace;color:#86c8c8}
+.warehouse3d-op-card{padding:11px;margin:8px 0;border:1px solid rgba(103,168,211,.17);border-radius:9px;background:#0b1d2e}
+.warehouse3d-op-head b{font-size:10px;letter-spacing:.2px;color:#dcebf5}
+.warehouse3d-op-card>p{margin:5px 0 9px;font-size:9px;line-height:1.5;color:#91a8bc}
+.warehouse3d-op-card>small{display:block;margin:5px 0;font-size:9px;color:#9bb0c2}
+.warehouse3d-op-record{display:flex;flex-direction:column;gap:3px;padding:8px 0;border-top:1px solid rgba(110,153,184,.13)}
+.warehouse3d-op-record span{font-size:9px;color:#d1e1ed;line-height:1.4}
+.warehouse3d-op-record small{font-size:8px;color:#8da7bc;line-height:1.4}
+.warehouse3d-op-form{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:7px 0 10px}
+.warehouse3d-op-form input,.warehouse3d-op-form select{min-width:0;width:100%;height:32px;padding:0 8px;border:1px solid #29465e;border-radius:6px;background:#10283c;color:#d9e8f3;font-size:9px}
+.warehouse3d-op-form button{grid-column:1/-1;width:100%;min-height:32px;justify-content:center;font-size:9px}
+.warehouse3d-op-form button:disabled{opacity:.45;cursor:not-allowed}
+@media(max-width:850px){.warehouse3d-process-panel{max-height:none}.warehouse3d-op-form{grid-template-columns:1fr 1fr}}
