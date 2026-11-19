@@ -39,6 +39,7 @@ begin
   v_roles:=array['procurement','supplier','manufacturer','warehouse','transport']; v_required:=5; v_company_name:='Amazon';
  end if;
  select count(*) into v_student_count from public.classroom_members where classroom_id=v_classroom_id;
+ if v_case_code='supermarket-crisis-7day' and v_student_count<>p_team_count*v_required then raise exception 'Supermarket case requires exactly % students for % teams of six',p_team_count*v_required,p_team_count; end if;
  if v_student_count<p_team_count*v_required then raise exception 'At least % students are required for % teams with % roles each',p_team_count*v_required,p_team_count,v_required; end if;
  select id,name into v_template from public.company_templates
  where slug=case when v_case_code='amazon-global-combined-crisis' then 'amazon-global-combined-crisis'
