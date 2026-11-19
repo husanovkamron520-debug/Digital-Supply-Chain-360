@@ -19,7 +19,7 @@
   <script type="module" src="./classroom.js"></script>
   <script type="module" src="./inventory.js"></script>
   <script type="module" src="./operations.js"></script>
-  <script type="module" src="./scenarios.js"></script>
+
   <script type="module" src="./procurement.js?v=20261119-procurement-null-fix-1"></script>
   <script type="module" src="./analytics.js"></script>
   <script type="module" src="./competition.js?v=20261119-amazon-fix-1"></script>
@@ -80,9 +80,9 @@
         <a class="nav-link active" href="#overview"><span class="nav-icon">◫</span> Umumiy ko‘rinish</a>
         <a class="nav-link" href="#operationsWorkspace" hidden><span class="nav-icon">▤</span> Buyurtmalar va yuklar</a>
         <a class="nav-link" href="#inventoryWorkspace" hidden><span class="nav-icon">▦</span> Ombor zaxiralari</a>
-        <a class="nav-link" href="#scenarioWorkspace"><span class="nav-icon">⚡</span> Ssenariy laboratoriyasi</a>
+
         <a class="nav-link" id="competitionNavLink" href="#competitionWorkspace" hidden><span class="nav-icon">🏆</span> Jamoaviy musobaqa</a>
-        <a class="nav-link" href="#procurementWorkspace" hidden><span class="nav-icon">⌂</span> Xaridlar</a>
+
         <a class="nav-link" id="analyticsNavLink" href="#teacherTahlillar" hidden><span class="nav-icon">▥</span> Tahlillar</a>
       </nav>
       <div class="side-bottom">
@@ -95,9 +95,9 @@
       <a class="nav-link mobile-nav-link active" href="#overview"><span class="nav-icon">⌂</span><span>Bosh sahifa</span></a>
       <a class="nav-link mobile-nav-link" href="#operationsWorkspace" hidden><span class="nav-icon">▤</span><span>Yuklar</span></a>
       <a class="nav-link mobile-nav-link" href="#inventoryWorkspace" hidden><span class="nav-icon">▦</span><span>Ombor zaxiralari</span></a>
-      <a class="nav-link mobile-nav-link" href="#scenarioWorkspace"><span class="nav-icon">⚡</span><span>Ssenariy</span></a>
+
       <a class="nav-link mobile-nav-link" id="mobileMusobaqaNavLink" href="#competitionWorkspace" hidden><span class="nav-icon">🏆</span><span>Jamoalar</span></a>
-      <a class="nav-link mobile-nav-link" href="#procurementWorkspace" hidden><span class="nav-icon">⌂</span><span>Xaridlar</span></a>
+
       <a class="nav-link mobile-nav-link" id="mobileTahlillarNavLink" href="#teacherTahlillar" hidden><span class="nav-icon">▥</span><span>Tahlillar</span></a>
     </nav>
 
@@ -438,75 +438,8 @@
         <p class="operations-message" id="operationsMessage" role="status" aria-live="polite"></p>
       </section>
 
-      <section class="panel scenario-workspace" id="scenarioWorkspace" hidden>
-        <div class="panel-heading">
-          <div><div class="section-kicker">QARORLAR ASOSIDA TA’LIM</div><h2>Ssenariy simulyatsiyasi laboratoriyasi</h2></div>
-          <span class="muted-label">SSENARIY TIZIMI · BAHOLASH</span>
-        </div>
-        <p class="scenario-access-note" id="scenarioAccessNote">Loading scenario permissions…</p>
-        <div class="scenario-class-picker">
-          <label for="scenarioClassSelect">O‘quv guruhi</label>
-          <select id="scenarioClassSelect" aria-label="Select classroom"></select>
-        </div>
-        <form class="scenario-launch-form" id="scenarioLaunchForm" hidden>
-          <label for="scenarioType">Uzilish ssenariysini boshlash</label>
-          <select id="scenarioType">
-            <option value="supplier_delay">Yetkazib beruvchi kechikishi</option>
-            <option value="demand_spike">Talabning keskin oshishi</option>
-            <option value="route_disruption">Transport yo‘nalishidagi uzilish</option>
-          </select>
-          <button class="primary-button" type="submit">＋ Launch scenario</button>
-        </form>
-        <div id="scenarioList" class="scenario-list"><p class="empty-state">Loading scenarios…</p></div>
-        <p class="scenario-message" id="scenarioMessage" role="status" aria-live="polite"></p>
-      </section>
+      <!-- Standalone scenario and procurement workspaces are temporarily hidden; source modules remain available for later restoration. -->
 
-      <section class="panel procurement-workspace" id="procurementWorkspace" hidden>
-        <div class="panel-heading">
-          <div><div class="section-kicker">XARIDDAN TO‘LOVGACHA</div><h2>Xaridlar va yetkazib beruvchilar</h2></div>
-          <span class="muted-label">SRM · XARIDLAR</span>
-        </div>
-        <p class="procurement-note" id="procurementAccessNote">Loading procurement permissions…</p>
-        <div class="procurement-class-picker">
-          <label for="procurementClassSelect">O‘quv guruhi</label>
-          <select id="procurementClassSelect" aria-label="Select classroom"></select>
-        </div>
-        <div class="procurement-forms">
-          <form class="procurement-form" id="createSupplierForm" hidden>
-            <h3>Yetkazib beruvchini ro‘yxatdan o‘tkazish</h3>
-            <label for="supplierCode">Yetkazib beruvchi kodi</label>
-            <input id="supplierCode" maxlength="30" minlength="2" placeholder="SUP-001" required>
-            <label for="supplierName">Yetkazib beruvchi nomi</label>
-            <input id="supplierName" maxlength="120" minlength="2" placeholder="Regional packaging supplier" required>
-            <label for="supplierLeadTime">Lead time (days)</label>
-            <input id="supplierLeadTime" type="number" min="0" max="365" value="7" required>
-            <button class="primary-button" type="submit">＋ Add supplier</button>
-          </form>
-          <form class="procurement-form" id="createPurchaseOrderForm" hidden>
-            <h3>Create purchase order</h3>
-            <label for="poSupplier">Supplier</label>
-            <select id="poSupplier" required></select>
-            <label for="poNumber">PO number</label>
-            <input id="poNumber" maxlength="40" minlength="3" placeholder="PO-1001" required>
-            <div class="procurement-two-col">
-              <div><label for="poSku">SKU</label><input id="poSku" maxlength="40" minlength="2" placeholder="SKU-1001" required></div>
-              <div><label for="poQuantity">Quantity</label><input id="poQuantity" type="number" min="1" max="1000000" value="100" required></div>
-            </div>
-            <label for="poItemName">Item name</label>
-            <input id="poItemName" maxlength="120" minlength="2" placeholder="Packaging material" required>
-            <div class="procurement-two-col">
-              <div><label for="poUnitCost">Birlik narxi</label><input id="poUnitCost" type="number" min="0" step="0.01" value="0" required></div>
-              <div><label for="poExpectedAt">Expected date</label><input id="poExpectedAt" type="datetime-local"></div>
-            </div>
-            <button class="primary-button" type="submit">＋ Create purchase order</button>
-          </form>
-        </div>
-        <div class="procurement-records">
-          <div class="procurement-record-panel"><h3>Supplier register</h3><div id="suppliersList"><p class="empty-state">Loading suppliers…</p></div></div>
-          <div class="procurement-record-panel"><h3>Purchase orders & receipts</h3><div id="purchaseOrdersList"><p class="empty-state">Loading purchase orders…</p></div></div>
-        </div>
-        <p class="procurement-message" id="procurementMessage" role="status" aria-live="polite"></p>
-      </section>
       <section class="panel teacher-analytics" id="teacherTahlillar" hidden>
         <div class="panel-heading">
           <div><div class="section-kicker">CLASSROOM PERFORMANCE</div><h2>Operational analytics</h2></div>
