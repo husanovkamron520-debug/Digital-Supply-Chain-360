@@ -144,16 +144,16 @@ function runStep(index){
    truck.visible=true;truck.position.set(-23,0,-10);
    animateCustom(2600,t=>{truck.position.x=-23+6*t;forklift.position.set(-16*t,0,10-20*t);},finish);
   }else if(index===1){
-   scanBeam.visible=true;animateCustom(2300,t=>{scanBeam.position.x=-1.05+2.1*t;scanBeam.material.emissiveIntensity=1+Math.sin(t*18)*.9;},()=>{scanBeam.visible=false;finish();});
+   scanBeam.visible=true;animateCustom(2300,t=>{scanBeam.position.x=-1.05+2.1*t;scanBeam.material.emissiveIntensity=1+Math.sin(t*18)*.9;forklift.position.set(-16+8*t,0,-10);},()=>{scanBeam.visible=false;finish();});
   }else if(index===2){
    const rackX=-12+(Math.max(0,currentInventory.length-1)*3);
-   animateForklift([[ -8,0,-10],[rackX,0,-7],[rackX,0,-1],[rackX,0,1]],3300,finish);
+   animateForklift([[-8,0,-10],[rackX,0,-7],[rackX,0,4.5]],3300,finish);
   }else if(index===3){
-   animateForklift([[-12,0,1],[-5,0,4],[0,0,8],[3,0,8]],3000,finish);
+   const rackX=-12+(Math.max(0,currentInventory.length-1)*3);animateForklift([[rackX,0,4.5],[-5,0,5],[0,0,8],[3,0,8]],3000,finish);
   }else if(index===4){
    animateCustom(3000,t=>{conveyorPackages.forEach((p,i)=>{p.position.x=-2.3+((i*1.4+t*5.2)%5.4);p.position.y=1.18+Math.sin(t*12+i)*.025;});},finish);
   }else{
-   animateCustom(2800,t=>{truck.position.x=-19+42*t;},()=>{truck.position.x=19;finish();});
+   const startX=truck.position.x,startZ=truck.position.z;animateCustom(2800,t=>{truck.position.x=startX+(19-startX)*t;truck.position.z=startZ+(8-startZ)*t;},()=>{truck.position.set(19,0,8);finish();});
   }
  });
 }
