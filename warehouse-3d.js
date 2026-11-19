@@ -7,7 +7,7 @@ const workspace = $("warehouse3dWorkspace");
 const sceneHost = $("warehouse3dScene");
 let renderer=null,scene=null,camera=null,controls=null,animationFrame=0,resizeObserver=null;
 let stockMeshes=[],currentInventory=[],selectedMesh=null,forklift=null,truck=null,scanBeam=null,conveyorPackages=[];
-let motion=null,completedSteps=new Set(),busy=false;
+let motion=null,completedSteps=new Set(),busy=false,currentWarehouseState=null;
 const defaultInventory=[
  {sku:"SKU-01",item_name:"Wireless Earbuds",quantity:500,reorder_level:180,unit_cost:12},
  {sku:"SKU-02",item_name:"Wireless Mouse",quantity:700,reorder_level:220,unit_cost:8},
@@ -157,23 +157,145 @@ function runStep(index){
   }
  });
 }
+function operationCard(host,title,description){
+ const card=document.createElement("section");card.className="warehouse3d-op-card";
+ const head=document.createElement("div");head.className="warehouse3d-op-head";
+ const name=document.createElement("b");name.textContent=title;head.append(name);
+ const body=document.createElement("p");body.textContent=description;
+ card.append(head,body);host.append(card);return card;
+}
+function operationForm(parent,fields,label,disabled,submit){
+ const form=document.createElement("form");form.className="warehouse3d-op-form";
+ const inputs=[];
+ fields.forEach(spec=>{
+  const input=document.createElement(spec.tag||"input");
+  if(input.tagName==="SELECT"){
+   (spec.options||[]).forEach(item=>{const option=document.createElement("option");option.value=item.value;option.textContent=item.label;input.append(option);});
+  }else input.type=spec.type||"number";
+  if(spec.value!==undefined)input.value=String(spec.value);
+  if(spec.min!==undefined)input.min=String(spec.min);
+  if(spec.max!==undefined)input.max=String(spec.max);
+  if(spec.placeholder)input.placeholder=spec.placeholder;
+  if(spec.required!==false)input.required=true;
+  input.setAttribute("aria-label",spec.placeholder||label);
+  form.append(input);inputs.push(input);
+ });
+ const button=document.createElement("button");button.type="submit";button.className="secondary-button";button.textContent=label;button.disabled=!!disabled;form.append(button);
+ form.addEventListener("submit",async event=>{event.preventDefault();button.disabled=true;try{await submit(inputs); }catch(error){setProcessStatus("Xatolik: "+(error?.message||"Operatsiya bajarilmadi"));button.disabled=false;}});
+ parent.append(form);return form;
+}
+function roleAllowed(state,role){return !!state?.canAct&&state.role===role;}
+async function runWarehouseAction(method,args,successText){
+ const bridge=window.supplyChainWarehouseBridge;
+ if(!bridge||typeof bridge[method]!=="function")throw new Error("Ombor operatsiyalari bilan aloqa yo‘q. Keys sahifasini yangilang.");
+ setProcessStatus("Bajarilmoqda…");
+ await bridge[method](...args);
+ const fresh=window.supplyChainWarehouseBridge?.getState?.()||bridge.getState?.();
+ currentWarehouseState=fresh||null;
+ currentInventory=Array.isArray(fresh?.inventory)?fresh.inventory:currentInventory;
+ if(renderer){destroyScene();buildScene(currentInventory);}
+ setProcessStatus(successText);
+ renderProcessPanel();
+}
 function renderProcessPanel(){
  const host=$("warehouse3dProcessPanel");if(!host)return;host.replaceChildren();
+ const bridge=window.supplyChainWarehouseBridge;
+ const state=bridge?.getState?.()||currentWarehouseState;
  const head=document.createElement("div");head.className="warehouse3d-process-head";
- const title=document.createElement("b");title.textContent="END-TO-END OMBOR JARAYONI";
- const count=document.createElement("span");count.textContent=completedSteps.size+"/"+steps.length+" bosqich";
- head.append(title,count);host.append(head);
- const progress=document.createElement("div");progress.className="warehouse3d-progress";const fill=document.createElement("i");fill.style.width=(completedSteps.size/steps.length*100)+"%";progress.append(fill);host.append(progress);
- const list=document.createElement("div");list.className="warehouse3d-process-list";
- steps.forEach((s,i)=>{
-  const card=document.createElement("div");card.className="warehouse3d-process-card"+(completedSteps.has(i)?" is-done":i===completedSteps.size?" is-next":"");
-  const meta=document.createElement("div");meta.className="warehouse3d-process-meta";const n=document.createElement("span");n.textContent=String(i+1).padStart(2,"0");const name=document.createElement("b");name.textContent=s.uz;const state=document.createElement("small");state.textContent=completedSteps.has(i)?"BAJARILDI":i===completedSteps.size?(busy?"JARAYONDA":"KEYINGI"):"KUTILMOQDA";meta.append(n,name,state);
-  const desc=document.createElement("p");desc.textContent=s.desc;const button=document.createElement("button");button.type="button";button.className="secondary-button";button.textContent=completedSteps.has(i)?"✓ Bajarildi":i===completedSteps.size?(busy?"Jarayonda…":"Jarayonni boshlash"):"Oldingi bosqichni kuting";button.disabled=busy||i!==completedSteps.size;button.addEventListener("click",()=>runStep(i));card.append(meta,desc,button);list.append(card);
- });host.append(list);
- const actions=document.createElement("div");actions.className="warehouse3d-process-actions";
- const all=document.createElement("button");all.type="button";all.className="primary-button";all.textContent=busy?"Jarayon bajarilmoqda…":completedSteps.size===steps.length?"Barcha bosqichlar bajarildi":"▶ To‘liq siklni bajarish";all.disabled=busy||completedSteps.size===steps.length;all.addEventListener("click",async()=>{all.disabled=true;for(let i=completedSteps.size;i<steps.length;i++)await runStep(i);}); 
- const reset=document.createElement("button");reset.type="button";reset.className="secondary-button";reset.textContent="Simulyatsiyani qayta boshlash";reset.disabled=busy||completedSteps.size===0;reset.addEventListener("click",resetSimulation);actions.append(all,reset);host.append(actions);
- const note=document.createElement("p");note.className="warehouse3d-simulation-note";note.textContent="O‘quv simulyatsiyasi: jarayonlar 3D sahnada animatsiya qilinadi. Bu bosqichlar hozircha Supabase’dagi zaxira, purchase order yoki shipment yozuvlarini o‘zgartirmaydi.";host.append(note);
+ const title=document.createElement("b");title.textContent="REAL-TIME WAREHOUSE OPERATIONS";
+ const refresh=document.createElement("button");refresh.type="button";refresh.className="secondary-button";refresh.textContent="↻ Yangilash";
+ refresh.addEventListener("click",async()=>{refresh.disabled=true;try{if(bridge?.refresh)await bridge.refresh();const fresh=window.supplyChainWarehouseBridge?.getState?.();currentWarehouseState=fresh||null;currentInventory=fresh?.inventory||currentInventory;if(renderer){destroyScene();buildScene(currentInventory);}renderProcessPanel();}catch(error){setProcessStatus(error.message);}finally{refresh.disabled=false;}});
+ head.append(title,refresh);host.append(head);
+ if(!state){
+  const note=document.createElement("p");note.className="warehouse3d-simulation-note";note.textContent="Haqiqiy operatsiyalarni ko‘rish uchun faol Amazon case jamoasiga kiring. Hozircha 3D sahna faqat ko‘rish rejimida.";host.append(note);return;
+ }
+ const summary=document.createElement("div");summary.className="warehouse3d-live-summary";
+ const role=document.createElement("b");role.textContent="Rol: "+(state.role||"—").toUpperCase();
+ const round=document.createElement("span");round.textContent="Round "+state.currentRound+" · "+(state.canAct?"Faol":"Yopiq / faqat ko‘rish");
+ summary.append(role,round);host.append(summary);
+ const inventory=state.inventory||[],pos=state.purchaseOrders||[],orders=state.orders||[],shipments=state.shipments||[],fulfilment=state.fulfilment||[],receipts=state.qualityReceipts||[],putawayEvents=state.putawayEvents||[];
+ const openPOs=pos.filter(po=>["placed","partially_received"].includes(po.status));
+ const readyMap=new Map(fulfilment.map(item=>[item.order_id,Number(item.ready_quantity)||0]));
+ const shippedFor=orderId=>shipments.filter(s=>s.order_id===orderId&&s.status!=="cancelled").reduce((sum,s)=>sum+Number(s.quantity||0),0);
+ const putawayFor=receiptId=>putawayEvents.filter(e=>e.metadata?.quality_receipt_id===receiptId).reduce((sum,e)=>sum+Number(e.metadata?.quantity||0),0);
+ const roleText=role=>state.role===role?"Sizning rolingiz":role.toUpperCase()+" bajaradi";
+ const receiving=operationCard(host,"01 · RECEIVING — Yukni qabul qilish","Kutilayotgan PO’larni tekshiring. Qabul qilish zaxira, xarajat va sifat kvitansiyasini bazada yangilaydi.");
+ if(!openPOs.length){const p=document.createElement("small");p.textContent="Ochiq inbound purchase order yo‘q.";receiving.append(p);}
+ openPOs.forEach(po=>{
+  const left=Math.max(0,Number(po.quantity)-Number(po.received_quantity));
+  const line=document.createElement("div");line.className="warehouse3d-op-record";
+  const copy=document.createElement("span");copy.textContent=po.po_number+" · "+po.item_name+" · "+left+" dona qoldi";
+  const eta=document.createElement("small");eta.textContent="ETA: "+new Date(po.available_at||po.expected_at).toLocaleDateString();
+  line.append(copy,eta);receiving.append(line);
+  const available=new Date(po.available_at||po.expected_at)<=new Date(state.roundVirtualEnd);
+  if(left>0)operationForm(receiving,[{value:left,min:1,max:left,placeholder:"Qabul qilinadigan dona"}],"Qabul qilish",!roleAllowed(state,"warehouse")||!available,async inputs=>{
+   await runWarehouseAction("receive",[po.id,Number(inputs[0].value)],"PO qabul qilindi. Zaxira va QC natijasi yangilandi.");
+  });
+ });
+ const qc=operationCard(host,"02 · QUALITY CONTROL — Sifat nazorati","Har bir qabul qilingan partiya bo‘yicha supplier defect foizi hisoblanadi. Nuqsonli mahsulot karantinda saqlanadi.");
+ if(!receipts.length){const p=document.createElement("small");p.textContent="Hozircha sifat tekshiruvi uchun receipt yo‘q.";qc.append(p);}
+ receipts.forEach(receipt=>{
+  const remaining=Math.max(0,Number(receipt.defective_quantity)-Number(receipt.disposed_quantity||0));
+  const line=document.createElement("div");line.className="warehouse3d-op-record";
+  const copy=document.createElement("span");copy.textContent=receipt.sku+" · qabul "+receipt.received_quantity+" · yaroqli "+receipt.usable_quantity;
+  const defect=document.createElement("small");defect.textContent="Defect "+receipt.defective_quantity+" · karantinda "+remaining;
+  line.append(copy,defect);qc.append(line);
+  if(remaining>0)operationForm(qc,[{value:remaining,min:1,max:remaining,placeholder:"Ajratiladigan nuqsonli dona"},{type:"text",value:"Supplier return / disposal after QC",placeholder:"Sabab (kamida 8 belgi)"}],"Nuqsonni karantindan chiqarish",!roleAllowed(state,"warehouse"),async inputs=>{
+   await runWarehouseAction("disposeDefects",[receipt.id,Number(inputs[0].value),inputs[1].value],"QC karantin harakati bazaga yozildi.");
+  });
+ });
+ const putaway=operationCard(host,"03 · PUT-AWAY — Javonga joylashtirish","Qabul qilingan yaroqli partiyani ombor lokatsiyasiga biriktiring. Har bir receipt bo‘yicha joylashtirish miqdori cheklanadi.");
+ if(!receipts.length){const p=document.createElement("small");p.textContent="Joylashtirish uchun qabul qilingan partiya yo‘q.";putaway.append(p);}
+ receipts.forEach(receipt=>{
+  const done=putawayFor(receipt.id),remaining=Math.max(0,Number(receipt.usable_quantity)-done);
+  const line=document.createElement("div");line.className="warehouse3d-op-record";
+  const copy=document.createElement("span");copy.textContent=receipt.sku+" · joylashtirilgan "+done+"/"+receipt.usable_quantity;
+  line.append(copy);putaway.append(line);
+  if(remaining>0)operationForm(putaway,[{value:remaining,min:1,max:remaining,placeholder:"Joylashtiriladigan dona"},{type:"text",value:"RACK-"+String(receipt.sku).replace(/[^A-Za-z0-9]/g,""),placeholder:"Raf / lokatsiya kodi"}],"Javonga joylashtirish",!roleAllowed(state,"warehouse"),async inputs=>{
+   await runWarehouseAction("putaway",[receipt.id,Number(inputs[0].value),inputs[1].value],"Put-away lokatsiyasi bazada qayd etildi.");
+  });
+ });
+ const picking=operationCard(host,"04–05 · PICKING & PACKING — Buyurtmani tayyorlash","Fulfillment Operations Manager buyurtma uchun zaxirani ajratadi va qadoqlashga tayyor holatga chiqaradi.");
+ const activeOrders=orders.filter(order=>!["delivered","cancelled"].includes(order.status));
+ if(!activeOrders.length){const p=document.createElement("small");p.textContent="Ochiq customer order yo‘q.";picking.append(p);}
+ activeOrders.forEach(order=>{
+  const shipped=shippedFor(order.id),ready=readyMap.get(order.id)||0,remaining=Math.max(0,Number(order.quantity)-shipped-ready);
+  const line=document.createElement("div");line.className="warehouse3d-op-record";
+  const copy=document.createElement("span");copy.textContent=order.order_number+" · "+order.item_name+" · ready "+ready+" · shipped "+shipped;
+  const outstanding=document.createElement("small");outstanding.textContent="Terish uchun qolgan: "+remaining;
+  line.append(copy,outstanding);picking.append(line);
+  if(remaining>0)operationForm(picking,[{value:remaining,min:1,max:remaining,placeholder:"Teriladigan / qadoqlanadigan dona"}],"Picking + packing",!roleAllowed(state,"manufacturer"),async inputs=>{
+   await runWarehouseAction("fulfill",[order.id,Number(inputs[0].value)],"Picking / packing miqdori fulfillment tizimida qayd etildi.");
+  });
+ });
+ const shipping=operationCard(host,"06 · SHIPPING — Dispatch & delivery","Transport Manager jo‘natmani xizmat darajasi bilan dispatch qiladi va yetkazilganini tasdiqlaydi.");
+ let readyOrders=0;
+ activeOrders.forEach(order=>{
+  const ready=readyMap.get(order.id)||0;if(ready<=0)return;readyOrders++;
+  const line=document.createElement("div");line.className="warehouse3d-op-record";
+  const copy=document.createElement("span");copy.textContent=order.order_number+" · "+order.item_name+" · "+ready+" dona jo‘natishga tayyor";
+  line.append(copy);shipping.append(line);
+  operationForm(shipping,[
+   {value:ready,min:1,max:ready,placeholder:"Jo‘natiladigan dona"},
+   {type:"text",value:"Regional carrier",placeholder:"Carrier nomi"},
+   {tag:"select",value:"standard",placeholder:"Transport xizmati",options:[{value:"economy",label:"Economy · 3 kun"},{value:"standard",label:"Standard · 2 kun"},{value:"express",label:"Express · 1 kun"}]}
+  ],"Dispatch qilish",!roleAllowed(state,"transport"),async inputs=>{
+   await runWarehouseAction("dispatch",[order.id,Number(inputs[0].value),inputs[1].value,inputs[2].value],"Jo‘natma dispatch qilindi va shipment qayd etildi.");
+  });
+ });
+ if(!readyOrders){const p=document.createElement("small");p.textContent="Hozircha dispatch uchun tayyor buyurtma yo‘q.";shipping.append(p);}
+ const openShipments=shipments.filter(s=>["in_transit","delayed"].includes(s.status));
+ openShipments.forEach(shipment=>{
+  const line=document.createElement("div");line.className="warehouse3d-op-record";
+  const copy=document.createElement("span");copy.textContent=shipment.destination+" · "+shipment.quantity+" dona · "+shipment.status;
+  const eta=document.createElement("small");eta.textContent="ETA: "+new Date(shipment.eta).toLocaleDateString();line.append(copy,eta);shipping.append(line);
+  if(new Date(shipment.eta)<=new Date(state.roundVirtualEnd))operationForm(shipping,[],"Yetkazilganini tasdiqlash",!roleAllowed(state,"transport"),async()=>{
+   await runWarehouseAction("deliver",[shipment.id],"Delivery tasdiqlandi. Revenue va KPI yozuvlari yangilandi.");
+  });
+ });
+ const note=document.createElement("p");note.className="warehouse3d-simulation-note";
+ note.textContent="Amallar jamoa roli va raund holati bilan serverda tekshiriladi. Receiving zaxira va QC yozuvlarini, Put-away lokatsiya hodisasini, Picking/Packing fulfillmentni, Dispatch va Delivery esa shipment hamda moliyaviy yozuvlarni yangilaydi.";
+ host.append(note);
 }
 function setProcessStatus(value){const el=$("warehouse3dProcessStatus");if(el)el.textContent=value;}
 function resetSimulation(){
@@ -192,8 +314,10 @@ function destroyScene(){
  controls?.dispose();renderer=null;scene=null;camera=null;controls=null;forklift=null;truck=null;scanBeam=null;stockMeshes=[];selectedMesh=null;conveyorPackages=[];
 }
 function openWarehouse(){
- const live=Array.isArray(window.supplyChainWarehouseInventory)&&window.supplyChainWarehouseInventory.length>0;
- currentInventory=live?window.supplyChainWarehouseInventory:defaultInventory;completedSteps.clear();busy=false;
+ currentWarehouseState=window.supplyChainWarehouseBridge?.getState?.()||null;
+ const live=Array.isArray(currentWarehouseState?.inventory)&&currentWarehouseState.inventory.length>0;
+ const fallback=Array.isArray(window.supplyChainWarehouseInventory)&&window.supplyChainWarehouseInventory.length>0;
+ currentInventory=live?currentWarehouseState.inventory:fallback?window.supplyChainWarehouseInventory:defaultInventory;completedSteps.clear();busy=false;
  $("warehouse3dStatus").textContent=(live?"LIVE TEAM INVENTORY · "+(window.supplyChainWarehouseTeamName||"Jamoa"):"NAMUNAVIY KO‘RINISH · Demo zaxira")+" · 3D jarayonlar simulyatsiyasi";
  $("warehouse3dProcessStatus").textContent="Jarayon boshlashga tayyor.";
  document.body.classList.add("warehouse3d-open");workspace.hidden=false;
