@@ -345,11 +345,12 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    if(task.score!==null&&task.score!==undefined)card.append(el("p","competition-review-note","Teacher score: "+Number(task.score).toFixed(1)+"/100 · "+(task.feedback||task.review_note||"")));
    if(task.status==="submitted"){
     const review=el("form","competition-review");
-    const score=el("input","");score.type="number";score.min="0";score.max="100";score.step="1";score.required=true;score.placeholder="Final score /100 — edit suggestion if needed";if(task.ai_grade)score.value=String(task.ai_grade.academic_score??task.ai_grade.score??task.score??"");
+    const score=el("input","");score.type="number";score.min="0";score.max="100";score.step="0.01";score.required=true;score.placeholder="Final score /100 — edit suggestion if needed";if(task.ai_grade)score.value=String(task.ai_grade.academic_score??task.ai_grade.score??task.score??"");
     const note=el("textarea","");note.rows=2;note.maxLength=2000;note.placeholder="Feedback: strengths, calculation errors and improvement advice";if(task.ai_grade)note.value=String(task.ai_grade.summary||"AI dastlabki bahosi: "+task.ai_grade.score+"/100");
     const approve=el("button","secondary-button","Save score & approve");approve.type="submit";
     const reject=el("button","secondary-button","Request changes");reject.type="button";
     review.append(score,note,approve,reject);
+     if(task.ai_grade)review.append(el("small","form-hint","Boshlang‘ich ball — akademik rubrika natijasi. AI-detektor taxmini isbot emas; tavsiya etilgan chegirma avtomatik qo‘llanmaydi. O‘qituvchi dalillarni mustaqil tekshirib, zarur bo‘lsa ballni qo‘lda o‘zgartiradi."));
     review.addEventListener("submit",async e=>{
      e.preventDefault();approve.disabled=true;
      try{const {error}=await db.rpc("evaluate_competition_task",{p_task_id:task.id,p_score:Number(score.value),p_feedback:note.value.trim()});if(error)throw error;say("Task graded and approved.",true);await loadCompetition();}
