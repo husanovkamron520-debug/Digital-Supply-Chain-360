@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2.119.0";
+import { buildAiAuthorshipAssessment, collectSubmissionText, parseModelJson, validateRubric, type Criterion, type GradeCriterion } from "./grading-policy.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -22,69 +23,6 @@ const DEFAULT_RUBRIC = {
   ],
 };
 
-type Criterion = { name: string; max_points: number; description: string };
-type GradeCriterion = {
-  name: string;
-  max_points: number;
-  awarded_points: number;
-  evidence: string;
-  feedback: string;
-};
-
-function validateRubric(value: unknown): Criterion[] {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error("Rubric must be an object containing criteria.");
-  }
-  const raw = (value as Record<string, unknown>).criteria;
-  if (!Array.isArray(raw) || raw.length < 1 || raw.length > 10) {
-    throw new Error("Rubric must contain 1–10 criteria.");
-  }
-  const criteria = raw.map((item): Criterion => {
-    if (!item || typeof item !== "object") throw new Error("Invalid rubric criterion.");
-    const x = item as Record<string, unknown>;
-    if (typeof x.name !== "string" || !x.name.trim() ||
-        typeof x.description !== "string" ||
-        typeof x.max_points !== "number" || !Number.isFinite(x.max_points) ||
-        x.max_points < 0 || x.max_points > 100) {
-      throw new Error("Invalid rubric criterion fields.");
-    }
-    return { name: x.name.trim(), description: x.description, max_points: x.max_points };
-  });
-  const total = criteria.reduce((sum, x) => sum + x.max_points, 0);
-  if (Math.abs(total - 100) > 0.001) throw new Error("Rubric weights must total exactly 100.");
-  return criteria;
-}
-
-function parseModelJson(text: string): Record<string, unknown> {
-  const cleaned = text.trim().replace(/^\x60{3}(?:json)?\s*/i, "").replace(/\s*\x60{3}$/i, "");
-  const parsed = JSON.parse(cleaned);
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new Error("AI returned a non-object result.");
-  }
-  return parsed as Record<string, unknown>;
-}
-
-function collectSubmissionText(value: unknown): string {
-  if (typeof value === "string") return value;
-  if (typeof value === "number" || typeof value === "boolean") return String(value);
-  if (Array.isArray(value)) return value.map(collectSubmissionText).join(" ");
-  if (value && typeof value === "object") {
-    return Object.entries(value as Record<string, unknown>)
-      .map(([key, item]) => key + " " + collectSubmissionText(item))
-      .join(" ");
-  }
-  return "";
-}
-
-function penaltyRateForLikelihood(likelihood: number): number {
-  if (likelihood >= 90) return 0.80;
-  if (likelihood >= 80) return 0.65;
-  if (likelihood >= 70) return 0.45;
-  if (likelihood >= 60) return 0.30;
-  if (likelihood >= 50) return 0.15;
-  return 0;
-}
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Method not allowed." }, 405);
@@ -96,9 +34,11 @@ Deno.serve(async (req) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  const geminiKey = Deno.env.get("GEMINI_API_KEY");
-  const model = Deno.env.get("GEMINI_MODEL") ?? "gemini-3.8-flash";
-  if (!supabaseUrl || !anonKey || !serviceKey || !geminiKey) {
+  const geminiKeys = [Deno.env.get("GEMINI_API_KEY"), ...(Deno.env.get("GEMINI_API_KEYS") ?? "").split(/[\s,;]+/), Deno.env.get("GEMINI_API_KEY_2"), Deno.env.get("GEMINI_API_KEY_3")].map((key) => key?.trim() ?? "").filter((key, index, all) => key && all.indexOf(key) === index);
+  const primaryModel = Deno.env.get("GEMINI_MODEL")?.trim() || "gemini-3.8-flash";
+  const fallbackModels = (Deno.env.get("GEMINI_FALLBACK_MODELS") ?? "").split(/[\s,;]+/).map((name) => name.trim()).filter(Boolean);
+  const models = [primaryModel, ...fallbackModels].filter((name, index, all) => all.indexOf(name) === index);
+  if (!supabaseUrl || !anonKey || !serviceKey || !geminiKeys.length) {
     return json({ error: "AI grading service is not configured. Contact the platform administrator." }, 503);
   }
 
@@ -211,45 +151,46 @@ Deno.serve(async (req) => {
   });
 
   let modelResponse: Response | null = null;
-  for (let attempt = 0; attempt < 3; attempt++) {
+  let selectedModel = primaryModel;
+  const providerPairs = models.flatMap((candidateModel) => geminiKeys.map((key) => ({ model: candidateModel, key })));
+  const providerAttempts = providerPairs.length === 1 ? [providerPairs[0], providerPairs[0], providerPairs[0]] : providerPairs.slice(0, 6);
+  let lastProviderStatus = 0;
+
+  for (let attempt = 0; attempt < providerAttempts.length; attempt++) {
+    const candidate = providerAttempts[attempt];
     try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-        {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 45_000);
+      let response: Response;
+      try {
+        response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(candidate.model) + ":generateContent", {
           method: "POST",
-          headers: { "Content-Type": "application/json", "x-goog-api-key": geminiKey },
+          signal: controller.signal,
+          headers: { "Content-Type": "application/json", "x-goog-api-key": candidate.key },
           body: JSON.stringify({
             systemInstruction: { parts: [{ text: systemPrompt }] },
             contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-            generationConfig: {
-              temperature: 0.1,
-              responseMimeType: "application/json",
-            },
+            generationConfig: { temperature: 0.1, responseMimeType: "application/json" },
           }),
-        },
-      );
-      if (response.ok) {
-        modelResponse = response;
-        break;
-      }
-      const providerBody = await response.text();
-      console.error("Gemini grading attempt failed", attempt + 1, response.status, providerBody.slice(0, 1200));
-      const retryable = [429, 500, 502, 503, 504].includes(response.status);
-      if (!retryable || attempt === 2) {
-        return await failAfterClaim("AI grading provider returned an error after " + (attempt + 1) + " attempt(s). No grade was saved.", 502);
-      }
+        });
+      } finally { clearTimeout(timeout); }
+      if (response.ok) { modelResponse = response; selectedModel = candidate.model; break; }
+      lastProviderStatus = response.status;
+      console.error("Gemini grading provider attempt failed", attempt + 1, response.status, candidate.model);
+      const retryable = [401, 403, 404, 408, 429, 500, 502, 503, 504].includes(response.status);
+      if (!retryable) break;
+      const retryAfterSeconds = Number(response.headers.get("retry-after"));
+      const waitMs = Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0 ? Math.min(2000, retryAfterSeconds * 1000) : Math.min(1500, 400 * (attempt + 1));
+      if (attempt + 1 < providerAttempts.length && [408, 429, 500, 502, 503, 504].includes(response.status)) await new Promise((resolve) => setTimeout(resolve, waitMs));
     } catch (error) {
-      console.error("Gemini grading network attempt failed", attempt + 1, error);
-      if (attempt === 2) {
-        return await failAfterClaim("AI provider could not be reached after 3 attempts. Please retry later.", 502);
-      }
+      lastProviderStatus = 0;
+      console.error("Gemini grading network attempt failed", attempt + 1, candidate.model, error);
+      if (attempt + 1 < providerAttempts.length) await new Promise((resolve) => setTimeout(resolve, Math.min(1500, 400 * (attempt + 1))));
     }
-    await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
   }
   if (!modelResponse) {
-    return await failAfterClaim("AI provider did not return a usable response. No grade was saved.", 502);
+    return await failAfterClaim("Gemini grading was unavailable after " + providerAttempts.length + " provider attempt(s)" + (lastProviderStatus ? " (HTTP " + lastProviderStatus + ")" : "") + ". No grade was saved.", 502);
   }
-
   let generatedText = "";
   try {
     const responseData = await modelResponse.json();
@@ -294,32 +235,14 @@ Deno.serve(async (req) => {
 
   const score = Math.round(normalized.reduce((sum, x) => sum + x.awarded_points, 0) * 100) / 100;
   const submissionText = collectSubmissionText(task.submission);
-  const aiWordCount = (submissionText.match(/[\p{L}\p{N}]+/gu) ?? []).length;
-  const aiLikelihoodRaw = Number(grade.ai_likelihood);
-  const aiLikelihood = Number.isFinite(aiLikelihoodRaw)
-    ? Math.max(0, Math.min(100, Math.round(aiLikelihoodRaw)))
-    : 0;
-  const confidenceValue = String(grade.ai_confidence ?? "low").toLowerCase();
-  const aiConfidence = ["low", "medium", "high"].includes(confidenceValue)
-    ? confidenceValue
-    : "low";
+  const authorship = buildAiAuthorshipAssessment(score, submissionText, grade.ai_likelihood, grade.ai_confidence);
   const aiReason = typeof grade.ai_reason === "string" ? grade.ai_reason.slice(0, 1000) : "No reliable authorship signal was provided.";
-  const penaltyDeferred = aiWordCount < 100 || submissionText.trim().length < 600 || aiConfidence === "low";
-  const penaltyRate = penaltyDeferred ? 0 : penaltyRateForLikelihood(aiLikelihood);
-  const penaltyPercent = Math.round(penaltyRate * 100);
-  const suggestedScore = Math.round(score * (1 - penaltyRate) * 100) / 100;
   const savedGrade = {
     version: "supplychain14-ai-v2",
-    model,
+    model: selectedModel,
     score,
-    ai_likelihood: aiLikelihood,
-    ai_confidence: aiConfidence,
+    ...authorship,
     ai_reason: aiReason,
-    ai_word_count: aiWordCount,
-    penalty_percent: penaltyPercent,
-    penalty_rate: penaltyRate,
-    penalty_deferred: penaltyDeferred,
-    suggested_score: suggestedScore,
     criteria: normalized,
     summary: grade.summary.slice(0, 2000),
     strengths: (grade.strengths as unknown[]).filter((x): x is string => typeof x === "string").slice(0, 8),
@@ -334,7 +257,7 @@ Deno.serve(async (req) => {
       ai_grade: savedGrade,
       ai_graded_at: savedGrade.graded_at,
       ai_grading_started_at: null,
-      ai_model: model,
+      ai_model: selectedModel,
     })
     .eq("id", taskId)
     .is("ai_graded_at", null)

@@ -1,11 +1,14 @@
 -- Private notification queue for Telegram-linked competition participants.
+create schema if not exists private;
 create table if not exists private.telegram_notification_queue (
   id uuid primary key default gen_random_uuid(),
   telegram_user_id bigint not null,
   message text not null check (length(message) between 1 and 3500),
   created_at timestamptz not null default now(),
-  delivered_at timestamptz
+  delivered_at timestamptz,
+  claimed_until timestamptz
 );
+alter table private.telegram_notification_queue add column if not exists claimed_until timestamptz;
 create index if not exists telegram_notification_queue_pending_idx on private.telegram_notification_queue(created_at) where delivered_at is null;
 create table if not exists private.telegram_notification_config (
   singleton boolean primary key default true check (singleton),
@@ -13,7 +16,7 @@ create table if not exists private.telegram_notification_config (
   updated_at timestamptz not null default now()
 );
 insert into private.telegram_notification_config(singleton,secret_hash) values(true,extensions.digest('migration-placeholder-not-a-live-secret','sha256'))
-on conflict(singleton) do update set secret_hash=excluded.secret_hash,updated_at=now();
+on conflict(singleton) do nothing;
 alter table private.telegram_notification_queue enable row level security;
 alter table private.telegram_notification_config enable row level security;
 revoke all on private.telegram_notification_queue,private.telegram_notification_config from public,anon,authenticated;
@@ -92,8 +95,27 @@ declare v_hash bytea; v_rows jsonb;
 begin
  select secret_hash into v_hash from private.telegram_notification_config where singleton=true;
  if v_hash is null or p_secret is null or extensions.digest(p_secret,'sha256')<>v_hash then raise exception 'Unauthorized notification poll'; end if;
- select coalesce(jsonb_agg(jsonb_build_object('id',q.id,'telegram_user_id',q.telegram_user_id,'message',q.message) order by q.created_at),'[]'::jsonb)
- into v_rows from (select id,telegram_user_id,message,created_at from private.telegram_notification_queue where delivered_at is null order by created_at limit 25) q;
+
+ -- Claim a batch atomically. SKIP LOCKED prevents two bot instances from
+ -- delivering the same pending row at the same time. Expired claims are retried.
+ with picked as materialized (
+   select id
+   from private.telegram_notification_queue
+   where delivered_at is null and (claimed_until is null or claimed_until <= now())
+   order by created_at
+   for update skip locked
+   limit 25
+ ), claimed as (
+   update private.telegram_notification_queue q
+      set claimed_until = now() + interval '5 minutes'
+     from picked
+    where q.id = picked.id
+   returning q.id, q.telegram_user_id, q.message, q.created_at
+ )
+ select coalesce(
+   jsonb_agg(jsonb_build_object('id',id,'telegram_user_id',telegram_user_id,'message',message) order by created_at),
+   '[]'::jsonb
+ ) into v_rows from claimed;
  return v_rows;
 end; $$;
 create or replace function public.ack_telegram_competition_notification(p_secret text,p_notification_id uuid)
@@ -103,7 +125,7 @@ declare v_hash bytea; v_count integer;
 begin
  select secret_hash into v_hash from private.telegram_notification_config where singleton=true;
  if v_hash is null or p_secret is null or extensions.digest(p_secret,'sha256')<>v_hash then raise exception 'Unauthorized notification acknowledgement'; end if;
- update private.telegram_notification_queue set delivered_at=now() where id=p_notification_id and delivered_at is null;
+ update private.telegram_notification_queue set delivered_at=now(),claimed_until=null where id=p_notification_id and delivered_at is null;
  get diagnostics v_count=row_count; return v_count=1;
 end; $$;
 revoke all on function public.fetch_telegram_competition_notifications(text) from public,authenticated;

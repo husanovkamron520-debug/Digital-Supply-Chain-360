@@ -17,26 +17,26 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  const requiredRoles=()=>isSupermarketCase()?["procurement","supplier","manufacturer","warehouse","transport","retailer"]:["procurement","supplier","manufacturer","warehouse","transport"];
  async function requestAiGrade(taskId,button){
   if(button)button.disabled=true;
-  let lastError=null;
-  for(let attempt=0;attempt<3;attempt++){
-   try{
-    const {data,error}=await db.functions.invoke("competition-ai-grade",{body:{task_id:taskId}});
-    if(error)throw error;
-    if(data?.error)throw new Error(data.error);
-    say("AI dastlabki bahosi: "+Number(data.score).toFixed(1)+"/100. O‘qituvchi tasdig‘ini kutmoqda.",true);
-    await loadCompetition();
-    return;
-   }catch(err){
-    lastError=err;
-    const status=Number(err?.context?.status||err?.status||0);
-    const retryable=!status||[429,500,502,503,504].includes(status);
-    if(!retryable||attempt===2)break;
-    await new Promise(resolve=>setTimeout(resolve,700*(attempt+1)));
+  try{
+   // The Edge Function owns bounded provider retries and key/model rotation.
+   // Do not retry here: a second client request can race the server-side claim.
+   const {data,error}=await db.functions.invoke("competition-ai-grade",{body:{task_id:taskId}});
+   if(error)throw error;
+   if(data?.error)throw new Error(data.error);
+   if(!Number.isFinite(Number(data?.score)))throw new Error("AI baholash natijasi noto‘g‘ri formatda qaytdi.");
+   say("AI dastlabki bahosi: "+Number(data.score).toFixed(1)+"/100. O‘qituvchi tasdig‘ini kutmoqda.",true);
+   await loadCompetition();
+  }catch(err){
+   const status=Number(err?.context?.status||err?.status||0);
+   if(status===409){
+    try{await loadCompetition();}catch(_){}
+    say("Bu topshiriq allaqachon baholanmoqda yoki baholab bo‘lingan. Natijani yangilab tekshiring.");
+   }else{
+    say("AI baholash amalga oshmadi. Javobingiz saqlangan; qayta urinish mumkin. "+(err?.message||"Noma’lum xatolik"));
    }
+   if(button)button.disabled=false;
   }
-  say("AI baholash amalga oshmadi. 3 urinishdan keyin ham xatolik: "+(lastError?.message||"Noma’lum xatolik")+". Javob saqlangan — keyin qayta urinib ko‘ring.");
-  if(button)button.disabled=false;
-}
+ }
  function appendAiGrade(card,task){
   if(!task.ai_grade)return;
   const grade=task.ai_grade;
@@ -46,7 +46,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    panel.append(el("p","","AI mualliflik taxmini: "+Number(grade.ai_likelihood).toFixed(0)+"% · ishonchlilik: "+String(grade.ai_confidence||"low")));
    if(grade.ai_reason)panel.append(el("small","",String(grade.ai_reason)));
    if(grade.penalty_deferred){
-    panel.append(el("small","","Avtomatik chegirma qo‘llanmadi: javob qisqa yoki detector ishonchliligi past. O‘qituvchi mustaqil tekshiradi."));
+    panel.append(el("small","","Chegirma tavsiya qilinmadi: javob qisqa yoki detector ishonchliligi yetarli emas. O‘qituvchi mustaqil tekshiradi."));
    }else if(Number(grade.penalty_percent)>0){
     panel.append(el("strong","","Tavsiya etilgan chegirma: "+Number(grade.penalty_percent)+"% · tavsiya etilgan ball: "+Number(grade.suggested_score).toFixed(1)+"/100"));
    }
@@ -60,7 +60,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    }
    panel.append(list);
   }
-  if(grade.status==="ai_graded_pending_teacher_review")panel.append(el("small","","AI natijasi yakuniy emas. Tavsiya etilgan chegirma ham avtomatik yakuniy baho emas — o‘qituvchi ballni tasdiqlashi yoki istalgancha o‘zgartirishi mumkin."));
+  if(grade.status==="ai_graded_pending_teacher_review")panel.append(el("small","","AI ehtimoli isbot emas va akademik ballni avtomatik o‘zgartirmaydi. Har qanday chegirma faqat o‘qituvchi dalillarni tekshirib, ballni qo‘lda o‘zgartirgan taqdirdagina qo‘llanadi."));
   card.append(panel);
  }
  function localDateTimeValue(value){const d=new Date(value);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);}
@@ -345,11 +345,12 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    if(task.score!==null&&task.score!==undefined)card.append(el("p","competition-review-note","Teacher score: "+Number(task.score).toFixed(1)+"/100 · "+(task.feedback||task.review_note||"")));
    if(task.status==="submitted"){
     const review=el("form","competition-review");
-    const score=el("input","");score.type="number";score.min="0";score.max="100";score.step="1";score.required=true;score.placeholder="Final score /100 — edit suggestion if needed";if(task.ai_grade)score.value=String(task.ai_grade.suggested_score??task.ai_grade.score??task.score??"");
+    const score=el("input","");score.type="number";score.min="0";score.max="100";score.step="0.01";score.required=true;score.placeholder="Final score /100 — edit suggestion if needed";if(task.ai_grade)score.value=String(task.ai_grade.academic_score??task.ai_grade.score??task.score??"");
     const note=el("textarea","");note.rows=2;note.maxLength=2000;note.placeholder="Feedback: strengths, calculation errors and improvement advice";if(task.ai_grade)note.value=String(task.ai_grade.summary||"AI dastlabki bahosi: "+task.ai_grade.score+"/100");
     const approve=el("button","secondary-button","Save score & approve");approve.type="submit";
     const reject=el("button","secondary-button","Request changes");reject.type="button";
     review.append(score,note,approve,reject);
+     if(task.ai_grade)review.append(el("small","form-hint","Boshlang‘ich ball — akademik rubrika natijasi. AI-detektor taxmini isbot emas; tavsiya etilgan chegirma avtomatik qo‘llanmaydi. O‘qituvchi dalillarni mustaqil tekshirib, zarur bo‘lsa ballni qo‘lda o‘zgartiradi."));
     review.addEventListener("submit",async e=>{
      e.preventDefault();approve.disabled=true;
      try{const {error}=await db.rpc("evaluate_competition_task",{p_task_id:task.id,p_score:Number(score.value),p_feedback:note.value.trim()});if(error)throw error;say("Task graded and approved.",true);await loadCompetition();}
