@@ -23,6 +23,8 @@ jobs:
           deno-version: v2.x
       - name: Type-check AI grading Edge Function
         run: deno check supabase/functions/competition-ai-grade/index.ts
+      - name: Test deterministic AI grading policy
+        run: deno test supabase/functions/competition-ai-grade/grading-policy.test.ts
       - name: Type-check Telegram password recovery Edge Function
         run: deno check supabase/functions/telegram-password-recovery/index.ts
       - name: Validate registration migration SQL grammar
@@ -31,7 +33,11 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           from pglast import parse_sql
-          path = Path("supabase/migrations/20261117190000_telegram_email_registration.sql")
-          parse_sql(path.read_text())
-          print("Migration SQL parsed successfully")
+          paths = [
+              Path("supabase/migrations/20261117190000_telegram_email_registration.sql"),
+              Path("supabase/migrations/202611200001_supplychain14_telegram_notifications.sql"),
+          ]
+          for path in paths:
+              parse_sql(path.read_text())
+              print(f"Migration SQL parsed successfully: {path}")
           PY
