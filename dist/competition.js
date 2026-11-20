@@ -8,7 +8,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
  const option=(label,value)=>{const n=el("option","",label);n.value=value;return n;};
  const roles=["procurement","manufacturer","warehouse","transport","operations","supplier","retailer","customer","finance","analyst"];
- let user=null,isTeacher=false,classrooms=[],templates=[],activeClassId=null,activeCompetition=null,activeTeam=null,activeRole=null,amazonRoundTimerInterval=null;
+ let user=null,isTeacher=false,classrooms=[],templates=[],activeClassId=null,activeCompetition=null,activeTeam=null,activeRole=null,activeRoles=[],amazonRoundTimerInterval=null;
 
  function say(message,success=false){$("competitionMessage").textContent=message;$("competitionMessage").classList.toggle("success",success);}
  function statusLabel(value){if(value==="manufacturer")return "FULFILLMENT OPERATIONS MANAGER";if(value==="retailer")return "STORE & DEMAND MANAGER";return (value||"").replaceAll("_"," ").toUpperCase();}
@@ -196,7 +196,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    const eligible=[];
    for(const comp of classroomCompetitions.filter(c=>["active","paused"].includes(c.status))){
     const {data:membership,error:memberError}=await db.from("competition_team_members").select("id,team_id,operational_role")
-     .eq("competition_id",comp.id).eq("student_id",user.id).maybeSingle();
+     .eq("competition_id",comp.id).eq("student_id",user.id).limit(1).maybeSingle();
     if(memberError)throw memberError;
     if(membership)eligible.push({...comp,membership});
    }
@@ -246,22 +246,16 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   ]);
   for(const e of [teamError,studentError,taskError,decisionError,memberError])if(e)throw e;
   const teamRows=teams||[],studentRows=students||[],taskRows=tasks||[],decisionRows=decisions||[];
-  const teamSize=isSupermarketCase()?6:5;
-  const minimumTeamCount=2;
-  const minimumStudents=minimumTeamCount*teamSize;
-  const recommendedTeamCount=Math.max(2,Math.min(4,Math.floor(studentRows.length/teamSize)));
+  const coreRoles=requiredRoles();
+  const recommendedTeamCount=Math.max(2,Math.min(4,Math.ceil(studentRows.length/coreRoles.length)));
   const teamSizesRecommended=Array.from({length:recommendedTeamCount},(_,i)=>Math.floor(studentRows.length/recommendedTeamCount)+(i<studentRows.length%recommendedTeamCount?1:0));
   const teamPlan=teamSizesRecommended.join("+");
-   $("competitionSetupNote").textContent=isSupermarketCase()?"Supermarket: "+studentRows.length+" talaba → "+recommendedTeamCount+" jamoa ("+teamPlan+"). Har bir jamoada 6 asosiy rol; ortiqcha talabalar takroriy rollarda alohida topshiriq oladi.":"Amazon case: 5 ta asosiy rol. Jamoalar bir xil sharoitda ishlaydi.";
-   $("competitionAutoSetupButton").textContent=isSupermarketCase()?recommendedTeamCount+" ta jamoaga teng taqsimlash ("+teamPlan+")":"Jamoalarni teng taqsimlash";
-   $("competitionTaskPackButton").textContent=isSupermarketCase()?"6 menejer uchun keys savollarini yaratish":"Har bir jamoa uchun menejer keyslarini yaratish";
-  $("competitionTeamCount").value=String(recommendedTeamCount);
-  $("competitionTeamCount").dataset.studentCount=String(studentRows.length);
-  for(const opt of $("competitionTeamCount").options)opt.disabled=studentRows.length<Number(opt.value)*teamSize;
-  $("competitionTeamCount").disabled=studentRows.length<minimumStudents;
+  $("competitionSetupNote").textContent=studentRows.length+" talaba · tavsiya: "+teamPlan+". Kichik jamoalarda bir talaba bir nechta rol oladi.";
+  $("competitionAutoSetupButton").textContent="Jamoalarni yaratish va rollarni taqsimlash";
+  $("competitionTaskPackButton").textContent="Har bir rol uchun individual keys topshiriqlarini yaratish";
+  if(!teamRows.length)$("competitionTeamSizes").value=teamSizesRecommended.join(",");
   $("competitionTeams").replaceChildren();
-  let assignedStudentCount=0;const teamSizes=[];let allTeamsReady=teamRows.length>=2&&teamRows.length<=4;
-  const coreRoles=requiredRoles();
+  let assignedStudentCount=new Set((allMemberRows||[]).map(m=>m.student_id)).size;const teamSizes=[];let allTeamsReady=teamRows.length>=2&&teamRows.length<=20;
   if(!teamRows.length){
    addEmpty($("competitionTeams"),"Create balanced teams to assign students and company models.");
   }else{
@@ -277,14 +271,14 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
     const {data:members,error:membersError}=await db.from("competition_team_members").select("id,student_id,operational_role,profiles(full_name)")
      .eq("competition_id",activeCompetition.id).eq("team_id",team.id).order("joined_at");
     if(membersError)throw membersError;
-    const teamMembers=members||[];assignedStudentCount+=teamMembers.length;teamSizes.push(teamMembers.length);
+    const teamMembers=members||[];const distinctTeamStudents=new Set(teamMembers.map(m=>m.student_id));teamSizes.push(distinctTeamStudents.size);
     const presentRoles=new Set(teamMembers.map(member=>member.operational_role));
     const missingRoles=coreRoles.filter(role=>!presentRoles.has(role));
-    const teamReady=teamMembers.length>=coreRoles.length&&missingRoles.length===0;
+    const teamReady=distinctTeamStudents.size>0&&missingRoles.length===0;
     if(!teamReady)allTeamsReady=false;
     head.lastChild.textContent=presentRoles.size+"/"+coreRoles.length+" core roles";
     const readiness=el("small","competition-readiness",teamReady
-      ?"Ready · "+teamMembers.length+" students"
+      ?"Ready · "+distinctTeamStudents.size+" students"
       :"Needs "+(missingRoles.length?missingRoles.map(statusLabel).join(", "):"")+" "+(teamMembers.length<coreRoles.length?"· "+(coreRoles.length-teamMembers.length)+" more student(s)":""));
     const list=el("div","competition-member-list");
     for(const member of teamMembers){
@@ -531,9 +525,10 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  }
 
  async function renderStudentCompetition(){
-  const {data:membership,error}=await db.from("competition_team_members").select("team_id,operational_role")
-   .eq("competition_id",activeCompetition.id).eq("student_id",user.id).single();
-  if(error)throw error;activeTeam=membership.team_id;activeRole=membership.operational_role;
+  const {data:memberships,error}=await db.from("competition_team_members").select("team_id,operational_role")
+   .eq("competition_id",activeCompetition.id).eq("student_id",user.id).order("created_at");
+  if(error)throw error;if(!memberships?.length)throw new Error("You are not assigned to a team.");
+  activeTeam=memberships[0].team_id;activeRoles=[...new Set(memberships.map(m=>m.operational_role))];activeRole=activeRoles[0];
   const {data:team,error:teamError}=await db.from("competition_teams").select("id,name,company_templates(name,industry,business_model,case_study_note,source_urls)")
    .eq("id",activeTeam).single();
   if(teamError)throw teamError;
@@ -541,11 +536,11 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
    $("competitionStudentCompanyNote").textContent=team.company_templates?.case_study_note||"Educational case study; simulation figures are synthetic.";
    const studentSources=$("competitionStudentCompanySources");studentSources.replaceChildren();
    (team.company_templates?.source_urls||[]).forEach((url,i)=>{const link=el("a","", "Official source "+(i+1));link.href=url;link.target="_blank";link.rel="noopener noreferrer";studentSources.append(link);});
-  $("competitionStudentRole").textContent=statusLabel(activeRole);
+  $("competitionStudentRole").textContent=activeRoles.map(statusLabel).join(" / ");
   const {data:tasks,error:taskError}=await db.from("competition_tasks").select("id,title,description,assigned_role,assigned_to,status,due_at,due_round,submitted_round,submission,review_note,score,feedback,ai_grade,ai_graded_at,ai_model")
    .eq("competition_id",activeCompetition.id).eq("team_id",activeTeam).order("created_at",{ascending:false});
   if(taskError)throw taskError;
-  const myTasks=(tasks||[]).filter(t=>(!t.assigned_to||t.assigned_to===user.id)&&(!t.assigned_role||t.assigned_role===activeRole));
+  const myTasks=(tasks||[]).filter(t=>(!t.assigned_to||t.assigned_to===user.id)&&(!t.assigned_role||activeRoles.includes(t.assigned_role)));
   $("competitionStudentTasks").replaceChildren();
   if(!myTasks.length)addEmpty($("competitionStudentTasks"),"No tasks have been assigned to your role yet.");
   for(const task of myTasks){
@@ -567,7 +562,7 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
       if(!response){say("Javobni kiriting.");btn.disabled=false;return;}
       if(!navigator.onLine){say("Internet yo‘q. Javob ushbu qurilmada saqlandi; internet qaytgach Submit tugmasini bosing.");btn.disabled=false;return;}
       try{
-       const {error}=await db.rpc("submit_competition_task",{p_task_id:task.id,p_submission:{response,role:activeRole,submitted_at:new Date().toISOString()}});
+       const {error}=await db.rpc("submit_competition_task",{p_task_id:task.id,p_submission:{response,role:task.assigned_role||activeRole,submitted_at:new Date().toISOString()}});
        if(error)throw error;
        try{localStorage.removeItem(draftKey);}catch(_){}
        say("Javob yuborildi. AI baholashi boshlanmoqda…",true);await loadCompetition();await requestAiGrade(task.id,null);
@@ -1094,7 +1089,9 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
  });
  $("competitionAutoSetupButton").addEventListener("click",async()=>{
   const btn=$("competitionAutoSetupButton");btn.disabled=true;
-  try{const {data,error}=await db.rpc("create_balanced_competition_teams",{p_competition_id:activeCompetition.id,p_team_count:Number($("competitionTeamCount").value)});if(error)throw error;
+  try{const sizes=$("competitionTeamSizes").value.split(",").map(v=>Number(v.trim()));
+   if(sizes.some(v=>!Number.isInteger(v)||v<1))throw new Error("Guruh hajmlarini vergul bilan yozing: 3,4,4");
+   const {data,error}=await db.rpc("create_flexible_competition_teams",{p_competition_id:activeCompetition.id,p_team_sizes:sizes,p_randomize:$("competitionRandomize").checked});if(error)throw error;
    say(data.team_count+" balanced teams created and "+data.student_count+" students assigned.",true);await loadCompetition();
   }catch(err){say(err.message);btn.disabled=false;}
  });
