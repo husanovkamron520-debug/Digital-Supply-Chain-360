@@ -179,8 +179,10 @@
           <div class="competition-setup">
             <div class="competition-section-head"><h3>Kompaniya jamoalari</h3><p id="competitionSetupNote">Muvozanatli jamoalar tuzing va talabalarni taqsimlang.</p></div>
             <div class="competition-auto-setup" id="competitionAutoSetup">
-              <label for="competitionTeamCount">Jamoalar soni</label>
-              <select id="competitionTeamCount"><option value="2" selected>2 ta jamoa</option><option value="3">3 ta jamoa</option><option value="4">4 ta jamoa</option></select>
+              <label for="competitionTeamSizes">Guruhlar hajmi (vergul bilan)</label>
+              <input id="competitionTeamSizes" type="text" inputmode="numeric" placeholder="Masalan: 3,4,4">
+              <label><input id="competitionRandomize" type="checkbox" checked> Talabalarni random taqsimlash</label>
+              <p class="form-hint">Guruhlar sonini o‘zingiz yozing. Sonlar yig‘indisi sinfdagi talabalar soniga teng bo‘lishi kerak.</p>
               <button class="primary-button" id="competitionAutoSetupButton" type="button">Jamoalarni teng taqsimlash</button>
               <p class="form-hint">Barcha jamoalar bir xil keys, budjet, talab va inqiroz sharoitida ishlaydi — natijalar adolatli taqqoslanadi.</p>
             </div>
