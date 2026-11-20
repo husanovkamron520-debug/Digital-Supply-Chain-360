@@ -68,8 +68,8 @@ DECLARE
   registration_result jsonb;
 BEGIN
   resolved_user := public.get_telegram_registration_user_id(repeat('a', 64));
-  IF resolved_user <> '11111111-1111-4111-8111-111111111111' THEN
-    RAISE EXCEPTION 'Telegram registration token resolved to the wrong user';
+  IF resolved_user <> '987654321' THEN
+    RAISE EXCEPTION 'Telegram registration token resolved to the wrong Telegram ID';
   END IF;
   registration_result := public.complete_telegram_registration(repeat('a', 64));
   IF registration_result ->> 'telegram_linked' <> 'true' THEN
