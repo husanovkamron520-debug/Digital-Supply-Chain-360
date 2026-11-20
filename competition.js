@@ -249,9 +249,9 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   const teamSize=isSupermarketCase()?6:5;
   const minimumTeamCount=2;
   const minimumStudents=minimumTeamCount*teamSize;
+  const recommendedTeamCount=Math.max(2,Math.min(4,Math.floor(studentRows.length/teamSize)));
   const teamSizesRecommended=Array.from({length:recommendedTeamCount},(_,i)=>Math.floor(studentRows.length/recommendedTeamCount)+(i<studentRows.length%recommendedTeamCount?1:0));
   const teamPlan=teamSizesRecommended.join("+");
-   const recommendedTeamCount=Math.max(2,Math.min(4,Math.floor(studentRows.length/teamSize)));
    $("competitionSetupNote").textContent=isSupermarketCase()?"Supermarket: "+studentRows.length+" talaba → "+recommendedTeamCount+" jamoa ("+teamPlan+"). Har bir jamoada 6 asosiy rol; ortiqcha talabalar takroriy rollarda alohida topshiriq oladi.":"Amazon case: 5 ta asosiy rol. Jamoalar bir xil sharoitda ishlaydi.";
    $("competitionAutoSetupButton").textContent=isSupermarketCase()?recommendedTeamCount+" ta jamoaga teng taqsimlash ("+teamPlan+")":"Jamoalarni teng taqsimlash";
    $("competitionTaskPackButton").textContent=isSupermarketCase()?"6 menejer uchun keys savollarini yaratish":"Har bir jamoa uchun menejer keyslarini yaratish";
