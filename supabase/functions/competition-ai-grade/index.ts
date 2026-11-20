@@ -181,7 +181,7 @@ Deno.serve(async (req) => {
       if (!retryable) break;
       const retryAfterSeconds = Number(response.headers.get("retry-after"));
       const waitMs = Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0 ? Math.min(2000, retryAfterSeconds * 1000) : Math.min(1500, 400 * (attempt + 1));
-      if (attempt + 1 < providerAttempts.length && [408, 500, 502, 503, 504].includes(response.status)) await new Promise((resolve) => setTimeout(resolve, waitMs));
+      if (attempt + 1 < providerAttempts.length && [408, 429, 500, 502, 503, 504].includes(response.status)) await new Promise((resolve) => setTimeout(resolve, waitMs));
     } catch (error) {
       lastProviderStatus = 0;
       console.error("Gemini grading network attempt failed", attempt + 1, candidate.model, error);
