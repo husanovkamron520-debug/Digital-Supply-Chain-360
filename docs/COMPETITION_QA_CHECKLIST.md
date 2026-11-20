@@ -59,6 +59,27 @@ Run this checklist with a dedicated teacher account and at least 20 test student
 - [ ] Empty states, paused state, completed state, network errors, and permission errors are understandable.
 - [ ] Verify a second teacher cannot access another teacher's classroom competition.
 
+## 6. AI grading and Telegram integration
+
+- [ ] A student can request AI grading only for their own assigned task and role.
+- [ ] Two simultaneous requests for one task result in one Gemini grading call and one saved grade.
+- [ ] The Edge Function retries provider failures within a bounded request budget and rotates through configured keys/models.
+- [ ] Configure `GEMINI_API_KEY`; optional additional keys: `GEMINI_API_KEYS` (comma/space/newline separated), `GEMINI_API_KEY_2`, `GEMINI_API_KEY_3`. Optional model fallback list: `GEMINI_FALLBACK_MODELS`; primary model remains `GEMINI_MODEL` or the default.
+- [ ] Correct calculations and defensible alternative recommendations receive rubric credit even when wording differs from the reference answer.
+- [ ] AI authorship likelihood is displayed as an uncertain signal, never as proof.
+- [ ] Short answers and anything below high detector confidence do not receive a deduction suggestion.
+- [ ] The teacher review score starts from the academic rubric score, not the suggested detector-adjusted score. Any change is manual and teacher-controlled.
+- [ ] Decimal AI scores can be saved without browser step-validation errors.
+- [ ] Telegram link codes expire, are single-use, and cannot link one Telegram account to multiple platform accounts.
+- [ ] A competition notification is claimed once, delivered to the linked Telegram account, and acknowledged only after send success (or a permanent blocked-bot response).
+- [ ] Failed Telegram deliveries remain pending and become claimable again after the lease expires.
+- [ ] A second concurrent notification poll does not receive rows already leased by the first poll.
+- [ ] The bot notification secret and the database notification secret hash match; the migration must not overwrite an existing live hash.
+
+### Gemini environment configuration
+
+The Edge Function accepts one primary key and optional additional keys. Set only model IDs verified for the Google AI project in use; fallback model IDs are not guessed or enabled automatically. The browser makes one request; provider retries and fallback are owned by the Edge Function to avoid duplicate concurrent grades.
+
 ## Current verification boundary
 
 Database migrations, role-checked RPC definitions, RLS policies, view definitions, HTML element references, JavaScript syntax validation, and Cloudflare deployment have been checked. A full authenticated teacher-plus-20-student browser test still needs to be run against real test accounts.
