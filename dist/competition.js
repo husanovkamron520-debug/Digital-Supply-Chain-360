@@ -247,14 +247,18 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   for(const e of [teamError,studentError,taskError,decisionError,memberError])if(e)throw e;
   const teamRows=teams||[],studentRows=students||[],taskRows=tasks||[],decisionRows=decisions||[];
   const teamSize=isSupermarketCase()?6:5;
+  const minimumTeamCount=2;
+  const minimumStudents=minimumTeamCount*teamSize;
+  const teamSizesRecommended=Array.from({length:recommendedTeamCount},(_,i)=>Math.floor(studentRows.length/recommendedTeamCount)+(i<studentRows.length%recommendedTeamCount?1:0));
+  const teamPlan=teamSizesRecommended.join("+");
    const recommendedTeamCount=Math.max(2,Math.min(4,Math.floor(studentRows.length/teamSize)));
-   $("competitionSetupNote").textContent=isSupermarketCase()?"Supermarket Crisis: 3 ta jamoa × 6 menejer. 18 talaba kerak; barcha jamoalar bir xil sharoitda ishlaydi.":"Amazon case: 5 ta asosiy rol. Jamoalar bir xil sharoitda ishlaydi.";
-   $("competitionAutoSetupButton").textContent=isSupermarketCase()?"3 ta 6 kishilik jamoani teng taqsimlash":"Jamoalarni teng taqsimlash";
+   $("competitionSetupNote").textContent=isSupermarketCase()?"Supermarket: "+studentRows.length+" talaba → "+recommendedTeamCount+" jamoa ("+teamPlan+"). Har bir jamoada 6 asosiy rol; ortiqcha talabalar takroriy rollarda alohida topshiriq oladi.":"Amazon case: 5 ta asosiy rol. Jamoalar bir xil sharoitda ishlaydi.";
+   $("competitionAutoSetupButton").textContent=isSupermarketCase()?recommendedTeamCount+" ta jamoaga teng taqsimlash ("+teamPlan+")":"Jamoalarni teng taqsimlash";
    $("competitionTaskPackButton").textContent=isSupermarketCase()?"6 menejer uchun keys savollarini yaratish":"Har bir jamoa uchun menejer keyslarini yaratish";
   $("competitionTeamCount").value=String(recommendedTeamCount);
   $("competitionTeamCount").dataset.studentCount=String(studentRows.length);
   for(const opt of $("competitionTeamCount").options)opt.disabled=studentRows.length<Number(opt.value)*teamSize;
-  $("competitionTeamCount").disabled=studentRows.length<10;
+  $("competitionTeamCount").disabled=studentRows.length<minimumStudents;
   $("competitionTeams").replaceChildren();
   let assignedStudentCount=0;const teamSizes=[];let allTeamsReady=teamRows.length>=2&&teamRows.length<=4;
   const coreRoles=requiredRoles();
@@ -514,16 +518,16 @@ if(root && SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.startsWith(
   $("competitionStartButton").disabled=!readyToStart;
   setHidden("competitionPauseButton",!["active","paused"].includes(activeCompetition.status));
   $("competitionPauseButton").textContent=activeCompetition.status==="paused"?"Resume competition":"Pause competition";
-  $("competitionAutoSetupButton").disabled=!draft||teamRows.length>0||studentRows.length<10;
+  $("competitionAutoSetupButton").disabled=!draft||teamRows.length>0||studentRows.length<(isSupermarketCase()?12:10);
   setHidden("competitionManualTeamForm",!draft||teamRows.length>=4);
   if(!draft){$("competitionSetupNote").textContent="Teams are locked after the competition starts."; }
   else $("competitionSetupNote").textContent=isAmazonCase()
    ?(studentRows.length<10
     ?"Amazon case uchun kamida 10 o‘quvchi kerak (2 jamoa × 5 rol). Hozir: "+studentRows.length+"."
     :"Amazon case: "+recommendedTeamCount+" jamoa tavsiya etiladi. Har bir jamoada 5 ta alohida rol bo‘ladi.")
-   :(studentRows.length<10
-    ?"Only "+studentRows.length+" students are enrolled. At least 10 are required to create two valid teams."
-    :"Recommended setup: "+recommendedTeamCount+" teams for "+studentRows.length+" enrolled students. Each team needs at least 5 students and all 5 core roles.");
+   :(studentRows.length<minimumStudents
+    ?"Supermarket case uchun kamida "+minimumStudents+" talaba kerak (2 jamoa × 6 rol). Hozir: "+studentRows.length+"."
+    :"Supermarket: "+studentRows.length+" talaba uchun "+recommendedTeamCount+" jamoa tavsiya etiladi ("+teamPlan+"). Har bir jamoada 6 asosiy rol bo‘ladi; takrorlangan rollar ham alohida topshiriq oladi.");
  }
 
  async function renderStudentCompetition(){
