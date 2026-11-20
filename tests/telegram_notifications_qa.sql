@@ -1,16 +1,18 @@
 \set ON_ERROR_STOP on
 
+-- Minimal Supabase-compatible schemas in an isolated PostgreSQL service.
 CREATE SCHEMA IF NOT EXISTS extensions;
 CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
 CREATE SCHEMA IF NOT EXISTS auth;
 CREATE TABLE IF NOT EXISTS auth.users (id uuid PRIMARY KEY);
-CREATE SCHEMA IF NOT EXISTS private;
-CREATE TABLE IF NOT EXISTS private.telegram_accounts (
-  user_id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  telegram_user_id bigint NOT NULL UNIQUE,
-  telegram_username text,
-  linked_at timestamptz NOT NULL DEFAULT now()
+CREATE OR REPLACE FUNCTION auth.uid()
+RETURNS uuid LANGUAGE sql STABLE
+AS $$ SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+CREATE TABLE IF NOT EXISTS public.profiles (
+  id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  full_name text
 );
+
 CREATE TABLE IF NOT EXISTS public.competitions (
   id uuid PRIMARY KEY,
   title text NOT NULL,
@@ -43,14 +45,67 @@ DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN CREATE ROLE anon NOLOGIN; END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN CREATE ROLE authenticated NOLOGIN; END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN CREATE ROLE service_role NOLOGIN BYPASSRLS; END IF;
 END
 $$;
 
+-- This migration must create the private schema and Telegram account table itself.
+\i supabase/migrations/20261117190000_telegram_email_registration.sql
 \i supabase/migrations/202611200001_supplychain14_telegram_notifications.sql
 
 INSERT INTO auth.users(id) VALUES ('11111111-1111-4111-8111-111111111111');
-INSERT INTO private.telegram_accounts(user_id, telegram_user_id, telegram_username)
-VALUES ('11111111-1111-4111-8111-111111111111', 987654321, 'qa_user');
+INSERT INTO public.profiles(id, full_name)
+VALUES ('11111111-1111-4111-8111-111111111111', 'QA Student');
+
+SELECT public.create_telegram_registration_pending(
+  repeat('a', 64), 987654321, 'qa_user', 'QA Student'
+);
+SELECT set_config('request.jwt.claim.sub', '11111111-1111-4111-8111-111111111111', false);
+
+DO $$
+DECLARE
+  resolved_user text;
+  registration_result jsonb;
+BEGIN
+  resolved_user := public.get_telegram_registration_user_id(repeat('a', 64));
+  IF resolved_user <> '11111111-1111-4111-8111-111111111111' THEN
+    RAISE EXCEPTION 'Telegram registration token resolved to the wrong user';
+  END IF;
+  registration_result := public.complete_telegram_registration(repeat('a', 64));
+  IF registration_result ->> 'telegram_linked' <> 'true' THEN
+    RAISE EXCEPTION 'Telegram registration did not complete';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM private.telegram_registration_pending
+    WHERE token_hash = extensions.digest(repeat('a', 64), 'sha256')
+  ) THEN
+    RAISE EXCEPTION 'Registration token was not consumed';
+  END IF;
+END
+$$;
+
+SELECT public.create_telegram_password_recovery_pending(repeat('b', 64), 987654321);
+DO $$
+DECLARE
+  claim jsonb;
+  second_claim_rejected boolean := false;
+BEGIN
+  claim := public.consume_telegram_password_recovery(repeat('b', 64));
+  IF claim ->> 'user_id' <> '11111111-1111-4111-8111-111111111111'
+     OR claim ->> 'telegram_user_id' <> '987654321' THEN
+    RAISE EXCEPTION 'Password recovery token resolved to the wrong account';
+  END IF;
+  BEGIN
+    PERFORM public.consume_telegram_password_recovery(repeat('b', 64));
+  EXCEPTION WHEN OTHERS THEN
+    second_claim_rejected := true;
+  END;
+  IF NOT second_claim_rejected THEN
+    RAISE EXCEPTION 'Password recovery token was not single-use';
+  END IF;
+END
+$$;
+
 UPDATE private.telegram_notification_config
 SET secret_hash = extensions.digest('supplychain14-qa-secret', 'sha256')
 WHERE singleton = true;
@@ -171,4 +226,4 @@ BEGIN
 END
 $$;
 
-SELECT 'PASS: notification trigger, lease, retry, and acknowledgement tests' AS result;
+SELECT 'PASS: Telegram registration, recovery, notification triggers, lease, retry, and acknowledgement tests' AS result;
