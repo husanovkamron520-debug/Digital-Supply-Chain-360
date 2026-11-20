@@ -2,6 +2,19 @@
 -- The bot creates pending intents with its server-side service-role credential.
 -- A signed-in Supabase Auth user explicitly confirms the Telegram link on the website.
 
+-- This migration is intentionally self-contained for fresh CI/local databases.
+create schema if not exists private;
+revoke all on schema private from public, anon, authenticated;
+
+create table if not exists private.telegram_accounts (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  telegram_user_id bigint not null unique check (telegram_user_id > 0),
+  telegram_username text,
+  linked_at timestamptz not null default now()
+);
+alter table private.telegram_accounts enable row level security;
+revoke all on private.telegram_accounts from public, anon, authenticated;
+
 create table if not exists private.telegram_registration_pending (
   token_hash bytea primary key,
   telegram_user_id bigint not null unique check (telegram_user_id > 0),
