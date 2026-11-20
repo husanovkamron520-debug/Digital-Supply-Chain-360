@@ -34,9 +34,9 @@ Deno.serve(async (req) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  const geminiKeys = [Deno.env.get("GEMINI_API_KEY"), ...(Deno.env.get("GEMINI_API_KEYS") ?? "").split(/[\\s,;]+/), Deno.env.get("GEMINI_API_KEY_2"), Deno.env.get("GEMINI_API_KEY_3")].map((key) => key?.trim() ?? "").filter((key, index, all) => key && all.indexOf(key) === index);
+  const geminiKeys = [Deno.env.get("GEMINI_API_KEY"), ...(Deno.env.get("GEMINI_API_KEYS") ?? "").split(/[\s,;]+/), Deno.env.get("GEMINI_API_KEY_2"), Deno.env.get("GEMINI_API_KEY_3")].map((key) => key?.trim() ?? "").filter((key, index, all) => key && all.indexOf(key) === index);
   const primaryModel = Deno.env.get("GEMINI_MODEL")?.trim() || "gemini-3.8-flash";
-  const fallbackModels = (Deno.env.get("GEMINI_FALLBACK_MODELS") ?? "").split(/[\\s,;]+/).map((name) => name.trim()).filter(Boolean);
+  const fallbackModels = (Deno.env.get("GEMINI_FALLBACK_MODELS") ?? "").split(/[\s,;]+/).map((name) => name.trim()).filter(Boolean);
   const models = [primaryModel, ...fallbackModels].filter((name, index, all) => all.indexOf(name) === index);
   if (!supabaseUrl || !anonKey || !serviceKey || !geminiKeys.length) {
     return json({ error: "AI grading service is not configured. Contact the platform administrator." }, 503);
